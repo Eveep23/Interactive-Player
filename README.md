@@ -21,7 +21,9 @@ This is an emulator for Netflix's interactive movies.
 
 * UI support,
 
-* Use MPV instead of VLC
+* Subtitle Support
+
+* Switch from VLC to MPV
 
 # How to Use:
 
