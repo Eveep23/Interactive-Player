@@ -5,7 +5,7 @@ This is an emulator for Netflix's interactive movies.
 
 * Multiple language support! You can switch the audio track when watching an interactive with the "L" key!
 
-* Initial Segment Support, witch decides which segment to play first!
+* Initial Segment Support, which decides which segment to play first!
 
 * Support for the Default Choice Index!
 
