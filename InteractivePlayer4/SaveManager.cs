@@ -10,7 +10,7 @@ public static class SaveManager
         {
             Console.WriteLine("Save file detected. Would you like to:");
             Console.WriteLine("1: Continue where you left off");
-            Console.WriteLine("2: Restart the movie");
+            Console.WriteLine("2: Restart the Interactive");
 
             Console.Write("Enter your choice: ");
             if (int.TryParse(Console.ReadLine(), out int choice))
@@ -22,12 +22,12 @@ public static class SaveManager
                 }
                 else if (choice == 2)
                 {
-                    Console.WriteLine("Restarting the movie...");
+                    Console.WriteLine("Restarting the Interactive...");
                     return null;
                 }
             }
 
-            Console.WriteLine("Invalid choice. Restarting the movie...");
+            Console.WriteLine("Invalid choice. Restarting the Interactive...");
         }
         return null;
     }

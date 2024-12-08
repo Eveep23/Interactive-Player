@@ -14,17 +14,17 @@ public static class Utilities
 
         if (movieFolders.Length == 0)
         {
-            Console.WriteLine("No movies found.");
+            Console.WriteLine("No Interactives found.");
             return null;
         }
 
-        Console.WriteLine("Available Movies:");
+        Console.WriteLine("Available Interactives:");
         for (int i = 0; i < movieFolders.Length; i++)
         {
             Console.WriteLine($"{i + 1}: {Path.GetFileName(movieFolders[i])}");
         }
 
-        Console.Write("Enter the number of the movie you want to play: ");
+        Console.Write("Enter the number of the Interactive you want to play: ");
         if (int.TryParse(Console.ReadLine(), out int choice) && choice > 0 && choice <= movieFolders.Length)
         {
             return movieFolders[choice - 1];

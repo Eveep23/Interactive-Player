@@ -14,7 +14,7 @@ class Program
         string movieFolder = Utilities.ShowMovieSelectionMenu();
         if (movieFolder == null)
         {
-            Console.WriteLine("No movie selected. Exiting.");
+            Console.WriteLine("No Interactive selected. Exiting.");
             return;
         }
 
@@ -26,7 +26,7 @@ class Program
 
         if (videoFile == null || mainJsonFile == null || infoJsonFile == null)
         {
-            Console.WriteLine("Error: Required files not found in the selected movie folder.");
+            Console.WriteLine("Error: Required files not found in the selected Interactive folder.");
             return;
         }
 
@@ -90,7 +90,7 @@ class Program
                 SaveManager.SaveProgress(saveFilePath, currentSegment);
             }
 
-            Console.WriteLine("Interactive movie finished.");
+            Console.WriteLine("Interactive finished.");
         }
         finally
         {
