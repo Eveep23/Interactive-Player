@@ -40,3 +40,11 @@ Each movie will need:
 It should look something like this:
 
 ![image](https://github.com/user-attachments/assets/660da037-9a18-4781-84c3-a4745a1afbe1)
+
+# Dependencies:
+
+* LibVLCSharp
+
+* VideoLAN.LibVLC.Windows
+
+* Newtonsoft.Json
