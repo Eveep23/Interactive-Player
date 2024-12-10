@@ -120,16 +120,30 @@ public static class UIManager
             }
         }
 
-        // Load the timer fill texture
+        // Load the timer textures
         string timerFillPath = Path.Combine(movieFolder, "timer_fill_2x.png");
+        string timerCapLPath = Path.Combine(movieFolder, "timer_capL_2x.png");
+        string timerCapRPath = Path.Combine(movieFolder, "timer_capR_2x.png");
+
         Bitmap timerFillSprite = File.Exists(timerFillPath) ? new Bitmap(timerFillPath) : null;
+        Bitmap timerCapLSprite = File.Exists(timerCapLPath) ? new Bitmap(timerCapLPath) : null;
+        Bitmap timerCapRSprite = File.Exists(timerCapRPath) ? new Bitmap(timerCapRPath) : null;
 
         int initialWidth = 1800;
         int timerBarHeight = timerFillSprite?.Height ?? 20;
         int formCenterX = formWidth / 2;
-
         int timerBarY = buttonTopMargin + buttonHeight + 40;
 
+        // Left cap
+        PictureBox timerCapL = new PictureBox
+        {
+            Location = new Point(formCenterX - (initialWidth / 2) - timerCapLSprite.Width, timerBarY),
+            Size = new Size(timerCapLSprite.Width, timerBarHeight),
+            Image = timerCapLSprite
+        };
+        choiceForm.Controls.Add(timerCapL);
+
+        // Timer Fill
         PictureBox timerBar = new PictureBox
         {
             Location = new Point(formCenterX - (initialWidth / 2), timerBarY),
@@ -138,6 +152,15 @@ public static class UIManager
             SizeMode = PictureBoxSizeMode.StretchImage
         };
         choiceForm.Controls.Add(timerBar);
+
+        // Right cap
+        PictureBox timerCapR = new PictureBox
+        {
+            Location = new Point(formCenterX + (initialWidth / 2), timerBarY),
+            Size = new Size(timerCapRSprite.Width, timerBarHeight),
+            Image = timerCapRSprite
+        };
+        choiceForm.Controls.Add(timerCapR);
 
         choiceForm.Height = timerBarY + timerBarHeight + 80;
 
@@ -157,6 +180,10 @@ public static class UIManager
                 int newWidth = (int)((double)initialWidth * remainingTime / (timeLimitMs / 1000));
                 timerBar.Size = new Size(newWidth, timerBarHeight);
                 timerBar.Location = new Point(formCenterX - (newWidth / 2), timerBarY);
+
+                // Move caps
+                timerCapL.Location = new Point(formCenterX - (newWidth / 2) - timerCapL.Width, timerBarY);
+                timerCapR.Location = new Point(formCenterX + (newWidth / 2), timerBarY);
             }
 
             if (remainingTime <= 0)
