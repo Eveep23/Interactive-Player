@@ -91,9 +91,40 @@ public static class JsonParser
                     segment.Choices = choiceMoment.Choices;
                     segment.ChoiceDisplayTimeMs = choiceMoment.UIDisplayMS ?? 0;
                     segment.HideChoiceTimeMs = choiceMoment.HideTimeoutUiMS ?? segment.EndTimeMs;
+
+                    // Assign segmentId to each choice
+                    if (segment.Choices != null)
+                    {
+                        foreach (var choice in segment.Choices)
+                        {
+                            if (string.IsNullOrEmpty(choice.SegmentId))
+                            {
+                                choice.SegmentId = choice.Id;
+                            }
+
+                            // Check if the segment exists, if not, trim it
+                            if (!segments.ContainsKey(choice.SegmentId))
+                            {
+                                choice.SegmentId = TrimSegmentId(choice.SegmentId);
+                            }
+                        }
+                    }
                 }
             }
         }
+    }
+
+    // Trim the segment ID
+    private static string TrimSegmentId(string segmentId)
+    {
+        if (segmentId.Contains("_"))
+        {
+            string trimmedId = segmentId.Split('_')[0];
+            Console.WriteLine($"Segment {segmentId} not found. Using trimmed ID: {trimmedId}");
+            return trimmedId;
+        }
+
+        return segmentId;
     }
 
     public static string HandleSegment(MediaPlayer mediaPlayer, Segment segment, Dictionary<string, Segment> segments, string movieFolder)

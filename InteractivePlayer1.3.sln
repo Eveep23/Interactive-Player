@@ -5,6 +5,17 @@ VisualStudioVersion = 17.13.35507.96
 MinimumVisualStudioVersion = 10.0.40219.1
 Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "InteractivePlayer1.3", "InteractivePlayer4\InteractivePlayer1.3.csproj", "{CFE7F590-AF10-4C31-9541-194EC70E9C71}"
 EndProject
+Project("{2150E333-8FDC-42A3-9474-1A3956D46DE8}") = "general", "general", "{02EA681E-C7D8-13C7-8484-4AC65E1B71E8}"
+	ProjectSection(SolutionItems) = preProject
+		D:\InteractivePlayer\general\text_background_sprite_2x.png = D:\InteractivePlayer\general\text_background_sprite_2x.png
+		D:\InteractivePlayer\general\timer_bottom_2x.png = D:\InteractivePlayer\general\timer_bottom_2x.png
+		D:\InteractivePlayer\general\timer_capL_2x.png = D:\InteractivePlayer\general\timer_capL_2x.png
+		D:\InteractivePlayer\general\timer_capR_2x.png = D:\InteractivePlayer\general\timer_capR_2x.png
+		D:\InteractivePlayer\general\timer_fill_2x.png = D:\InteractivePlayer\general\timer_fill_2x.png
+		D:\InteractivePlayer\general\timer_top_2x.png = D:\InteractivePlayer\general\timer_top_2x.png
+		D:\InteractivePlayer\general\web_2x.png = D:\InteractivePlayer\general\web_2x.png
+	EndProjectSection
+EndProject
 Global
 	GlobalSection(SolutionConfigurationPlatforms) = preSolution
 		Debug|Any CPU = Debug|Any CPU
