@@ -7,7 +7,7 @@
     <ProjectGuid>{CFE7F590-AF10-4C31-9541-194EC70E9C71}</ProjectGuid>
     <OutputType>Exe</OutputType>
     <RootNamespace>InteractivePlayer4</RootNamespace>
-    <AssemblyName>InteractivePlayer1.3</AssemblyName>
+    <AssemblyName>InteractivePlayer1.4</AssemblyName>
     <TargetFrameworkVersion>v4.8</TargetFrameworkVersion>
     <FileAlignment>512</FileAlignment>
     <AutoGenerateBindingRedirects>true</AutoGenerateBindingRedirects>
