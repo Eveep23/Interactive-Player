@@ -15,11 +15,11 @@ This is an emulator for Netflix's interactive movies.
 
 * Interactive Selection Menu!
 
+* UI Support!
+
 # Things to Add:
 
 * States and Preconditions,
-
-* UI support,
 
 * Subtitle Support
 
@@ -37,7 +37,7 @@ Each movie will need:
 
 * MKV Video File,
 
-* UI Files
+* UI Files (If you can't find them, use the ones in the general folder)
 
 It should look something like this:
 
