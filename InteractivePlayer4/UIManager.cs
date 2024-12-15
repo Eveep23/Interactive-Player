@@ -32,9 +32,12 @@ public static class UIManager
 
         AlignWithVideoPlayer(choiceForm);
 
-        int buttonHeight = 60;
-        int horizontalSpacing = 10;
-        int buttonTopMargin = 20;
+        // Calculate scaling factor based on the resized form
+        double scaleFactor = (double)choiceForm.Width / formWidth;
+
+        int buttonHeight = (int)(60 * scaleFactor);
+        int horizontalSpacing = (int)(10 * scaleFactor);
+        int buttonTopMargin = (int)(20 * scaleFactor);
 
         List<int> buttonWidths = new List<int>();
         List<Button> buttons = new List<Button>();
@@ -45,16 +48,16 @@ public static class UIManager
             if (spriteSheet != null)
             {
                 Bitmap defaultSprite = ExtractSprite(spriteSheet, 0);
-                buttonWidths.Add(defaultSprite.Width);
+                buttonWidths.Add((int)(defaultSprite.Width * scaleFactor));
             }
             else
             {
-                buttonWidths.Add(300);
+                buttonWidths.Add((int)(300 * scaleFactor));
             }
         }
 
         int totalButtonsWidth = buttonWidths.Sum() + (choices.Count - 1) * horizontalSpacing;
-        int buttonStartX = (formWidth - totalButtonsWidth) / 2;
+        int buttonStartX = (choiceForm.Width - totalButtonsWidth) / 2;
         int currentX = buttonStartX;
 
         for (int i = 0; i < choices.Count; i++)
@@ -67,14 +70,14 @@ public static class UIManager
                 Bitmap selectedSprite = ExtractSprite(spriteSheet, 2);
 
                 int buttonWidth = buttonWidths[i];
-                buttonHeight = defaultSprite.Height;
+                buttonHeight = (int)(defaultSprite.Height * scaleFactor);
 
                 var button = new Button
                 {
                     Text = choices[i].Text,
                     Size = new Size(buttonWidth, buttonHeight),
                     Location = new Point(currentX, buttonTopMargin),
-                    BackgroundImage = defaultSprite,
+                    BackgroundImage = new Bitmap(defaultSprite, new Size(buttonWidth, buttonHeight)),
                     BackgroundImageLayout = ImageLayout.Stretch,
                     Tag = choices[i].SegmentId,
                     FlatStyle = FlatStyle.Flat,
@@ -88,10 +91,10 @@ public static class UIManager
                 button.FlatAppearance.MouseOverBackColor = Color.Transparent;
                 button.FlatAppearance.CheckedBackColor = Color.Transparent;
 
-                button.MouseEnter += (sender, e) => { if (button.Enabled) button.BackgroundImage = focusedSprite; };
-                button.MouseLeave += (sender, e) => { if (button.Enabled) button.BackgroundImage = defaultSprite; };
-                button.MouseDown += (sender, e) => { if (button.Enabled) button.BackgroundImage = selectedSprite; };
-                button.MouseUp += (sender, e) => { if (button.Enabled) button.BackgroundImage = focusedSprite; };
+                button.MouseEnter += (sender, e) => { if (button.Enabled) button.BackgroundImage = new Bitmap(focusedSprite, new Size(buttonWidth, buttonHeight)); };
+                button.MouseLeave += (sender, e) => { if (button.Enabled) button.BackgroundImage = new Bitmap(defaultSprite, new Size(buttonWidth, buttonHeight)); };
+                button.MouseDown += (sender, e) => { if (button.Enabled) button.BackgroundImage = new Bitmap(selectedSprite, new Size(buttonWidth, buttonHeight)); };
+                button.MouseUp += (sender, e) => { if (button.Enabled) button.BackgroundImage = new Bitmap(focusedSprite, new Size(buttonWidth, buttonHeight)); };
 
                 button.Click += (sender, e) =>
                 {
@@ -100,7 +103,7 @@ public static class UIManager
                         selectedSegmentId = (string)((Button)sender).Tag;
                         inputCaptured = true;
 
-                        button.BackgroundImage = selectedSprite;
+                        button.BackgroundImage = new Bitmap(selectedSprite, new Size(buttonWidth, buttonHeight));
                         button.Enabled = false;
 
                         foreach (var btn in buttons)
@@ -143,10 +146,10 @@ public static class UIManager
         string timerTopPath = FindTexturePath(movieFolder, new[] { "timer_top_2x.png", "timer_top_2x_v2.png", "timer_top_3x.png" });
         string webPath = FindTexturePath(movieFolder, new[] { "web_2x.png", "web_2x_v2.png", "web_3x.png" });
 
-        // Handle cases where a texture wasn't found (optional)
+        // Handle cases where a texture wasn't found
         if (webPath == null)
         {
-            Console.WriteLine("Web texture not found.");
+            Console.WriteLine("Texture not found.");
         }
 
         Bitmap timerFillSprite = LoadBitmap(timerFillPath);
@@ -156,16 +159,16 @@ public static class UIManager
         Bitmap timerTopSprite = LoadBitmap(timerTopPath);
         Bitmap webSprite = LoadBitmap(webPath);
 
-        int initialWidth = 1800;
-        int timerBarHeight = timerFillSprite?.Height ?? 20;
-        int formCenterX = formWidth / 2;
-        int timerBarY = buttonTopMargin + buttonHeight + 40;
+        int initialWidth = (int)(1700 * scaleFactor);
+        int timerBarHeight = (int)((timerFillSprite?.Height ?? 20) * scaleFactor);
+        int formCenterX = choiceForm.Width / 2;
+        int timerBarY = buttonTopMargin + buttonHeight + (int)(40 * scaleFactor);
 
         // Create a Panel
         Panel drawingPanel = new Panel
         {
             Location = new Point(0, 0),
-            Size = new Size(formWidth, choiceForm.Height),
+            Size = new Size(choiceForm.Width, choiceForm.Height),
             BackColor = Color.Transparent
         };
 
@@ -178,18 +181,18 @@ public static class UIManager
             // Draw timer bottom
             if (timerBottomSprite != null)
             {
-                g.DrawImage(timerBottomSprite, new Rectangle((formWidth - 1800) / 2, alignedY, 1800, 50));
+                g.DrawImage(timerBottomSprite, new Rectangle((choiceForm.Width - (int)(1800 * scaleFactor)) / 2, alignedY, (int)(1800 * scaleFactor), (int)(50 * scaleFactor)));
             }
 
             // Draw timer fill
             if (timerFillSprite != null)
             {
                 // All this crap is due to System.Drawings applying a fade effect
-                int leftEdgeWidth = 10;
-                int rightEdgeWidth = 10;
+                int leftEdgeWidth = (int)(10 * scaleFactor);
+                int rightEdgeWidth = (int)(10 * scaleFactor);
                 int middleWidth = Math.Max(0, initialWidth - leftEdgeWidth - rightEdgeWidth);
                 int totalWidth = leftEdgeWidth + middleWidth + rightEdgeWidth;
-                int destX = (formWidth - totalWidth) / 2;
+                int destX = (choiceForm.Width - totalWidth) / 2;
                 int destY = alignedY;
                 int destHeight = timerBarHeight;
 
@@ -212,26 +215,26 @@ public static class UIManager
             // Draw left cap
             if (timerCapLSprite != null)
             {
-                g.DrawImage(timerCapLSprite, new Rectangle((formWidth - initialWidth) / 2 - timerCapLSprite.Width, alignedY, timerCapLSprite.Width, timerBarHeight));
+                g.DrawImage(timerCapLSprite, new Rectangle((choiceForm.Width - initialWidth) / 2 - (int)(timerCapLSprite.Width * scaleFactor), alignedY, (int)(timerCapLSprite.Width * scaleFactor), timerBarHeight));
             }
 
             // Draw right cap
             if (timerCapRSprite != null)
             {
-                g.DrawImage(timerCapRSprite, new Rectangle((formWidth + initialWidth) / 2, alignedY, timerCapRSprite.Width, timerBarHeight));
+                g.DrawImage(timerCapRSprite, new Rectangle((choiceForm.Width + initialWidth) / 2, alignedY, (int)(timerCapRSprite.Width * scaleFactor), timerBarHeight));
             }
 
             // Draw timer top
             if (timerTopSprite != null)
             {
-                g.DrawImage(timerTopSprite, new Rectangle((formWidth - 1800) / 2, alignedY, 1800, 50));
+                g.DrawImage(timerTopSprite, new Rectangle((choiceForm.Width - (int)(1800 * scaleFactor)) / 2, alignedY, (int)(1800 * scaleFactor), (int)(50 * scaleFactor)));
             }
 
             // Draw overlay
             if (webSprite != null)
             {
-                int webY = alignedY + (timerBarHeight / 2) - (webSprite.Height / 2);
-                g.DrawImage(webSprite, new Rectangle((formWidth - webSprite.Width) / 2, webY, webSprite.Width, webSprite.Height));
+                int webY = alignedY + (timerBarHeight / 2) - (int)(webSprite.Height * scaleFactor / 2);
+                g.DrawImage(webSprite, new Rectangle((choiceForm.Width - (int)(webSprite.Width * scaleFactor)) / 2, webY, (int)(webSprite.Width * scaleFactor), (int)(webSprite.Height * scaleFactor)));
             }
         };
 
@@ -239,10 +242,10 @@ public static class UIManager
 
         System.Windows.Forms.Timer countdownTimer = new System.Windows.Forms.Timer
         {
-            Interval = 1000
+            Interval = 750
         };
 
-        int remainingTime = timeLimitMs / 1000;
+        int remainingTime = timeLimitMs / 750;
 
         countdownTimer.Tick += (sender, e) =>
         {
@@ -250,7 +253,7 @@ public static class UIManager
 
             if (remainingTime >= 0)
             {
-                initialWidth = (int)((double)1800 * remainingTime / (timeLimitMs / 1000));
+                initialWidth = (int)((double)(1700 * scaleFactor) * remainingTime / (timeLimitMs / 750));
                 drawingPanel.Invalidate();
             }
 
@@ -279,11 +282,16 @@ public static class UIManager
             int playerWidth = rect.Right - rect.Left;
             int playerHeight = rect.Bottom - rect.Top;
 
+            // Resize the choiceForm to fit inside the VLC window
+            choiceForm.Width = Math.Min(choiceForm.Width, playerWidth);
+            choiceForm.Height = Math.Min(choiceForm.Height, playerHeight);
+
             // Center the choice window and align it with the bottom
             int centerX = rect.Left + (playerWidth / 2) - (choiceForm.Width / 2);
             int bottomY = rect.Bottom - choiceForm.Height;
 
             choiceForm.Location = new Point(centerX, bottomY);
+            SetWindowLong(choiceForm.Handle, GWL_HWNDPARENT, videoPlayerHandle);
         }
     }
 
@@ -301,6 +309,11 @@ public static class UIManager
 
     [DllImport("user32.dll", SetLastError = true)]
     private static extern IntPtr FindWindow(string lpClassName, string lpWindowName);
+
+    [DllImport("user32.dll", SetLastError = true)]
+    private static extern IntPtr SetWindowLong(IntPtr hWnd, int nIndex, IntPtr dwNewLong);
+
+    private const int GWL_HWNDPARENT = -8;
 
     private static Bitmap ExtractSprite(Bitmap spriteSheet, int rowIndex)
     {
