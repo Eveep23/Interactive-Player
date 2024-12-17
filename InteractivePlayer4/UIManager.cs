@@ -9,7 +9,7 @@ using System.Runtime.InteropServices;
 
 public static class UIManager
 {
-    public static string ShowChoiceUI(List<Choice> choices, List<Bitmap> buttonSprites, int timeLimitMs, string movieFolder)
+    public static string ShowChoiceUI(List<Choice> choices, List<Bitmap> buttonSprites, List<Bitmap> buttonIcons, int timeLimitMs, string movieFolder)
     {
         string selectedSegmentId = null;
         bool inputCaptured = false;
@@ -76,14 +76,16 @@ public static class UIManager
                 {
                     Text = choices[i].Text,
                     Size = new Size(buttonWidth, buttonHeight),
-                    Location = new Point(currentX, buttonTopMargin),
+                    Location = new Point(0, 0), // Position within the panel
                     BackgroundImage = new Bitmap(defaultSprite, new Size(buttonWidth, buttonHeight)),
                     BackgroundImageLayout = ImageLayout.Stretch,
                     Tag = choices[i].SegmentId,
                     FlatStyle = FlatStyle.Flat,
                     BackColor = Color.Transparent,
                     UseVisualStyleBackColor = false,
-                    TabStop = false
+                    TabStop = false,
+                    Font = new Font("Arial", 22, FontStyle.Bold), // Set font to Arial, bold
+                    ForeColor = Color.White
                 };
 
                 button.FlatAppearance.BorderSize = 0;
@@ -118,8 +120,34 @@ public static class UIManager
                     }
                 };
 
+                var buttonPanel = new Panel
+                {
+                    Size = new Size(buttonWidth, buttonHeight),
+                    Location = new Point(currentX, buttonTopMargin),
+                    BackColor = Color.Transparent
+                };
+
+                buttonPanel.Controls.Add(button);
+
+                if (buttonIcons[i] != null)
+                {
+                    int iconWidth = (int)(172 * scaleFactor);
+                    int iconHeight = (int)(128 * scaleFactor);
+                    var iconPictureBox = new PictureBox
+                    {
+                        Image = buttonIcons[i],
+                        SizeMode = PictureBoxSizeMode.Zoom,
+                        Size = new Size(iconWidth, iconHeight),
+                        Location = new Point(0, (buttonHeight - iconHeight) / 2), // Left aligned
+                        BackColor = Color.Transparent,
+                        Enabled = false
+                    };
+
+                    button.Controls.Add(iconPictureBox);
+                }
+
                 buttons.Add(button);
-                choiceForm.Controls.Add(button);
+                choiceForm.Controls.Add(buttonPanel);
 
                 currentX += buttonWidth + horizontalSpacing;
             }
@@ -282,9 +310,9 @@ public static class UIManager
             int playerWidth = rect.Right - rect.Left;
             int playerHeight = rect.Bottom - rect.Top;
 
-            // Set the choiceForm width to the player width and height to 25% of the player height
+            // Set the choiceForm width to the player width and height to 43% of the player height
             choiceForm.Width = playerWidth;
-            choiceForm.Height = (int)(playerHeight * 0.43);
+            choiceForm.Height = (int)(playerHeight * 0.40);
 
             // Center the choice window and align it with the bottom
             int centerX = rect.Left;

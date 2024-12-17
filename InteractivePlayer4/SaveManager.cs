@@ -52,7 +52,7 @@ public static class SaveManager
                 Dock = DockStyle.Fill,
                 FlowDirection = FlowDirection.LeftToRight,
                 WrapContents = false,
-                Padding = new Padding(0, 50, 0, 0), // Add padding to center the buttons vertically
+                Padding = new Padding(0, 50, 0, 0),
                 AutoSize = true,
                 AutoSizeMode = AutoSizeMode.GrowAndShrink
             };

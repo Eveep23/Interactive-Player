@@ -160,6 +160,10 @@ public static class JsonParser
                     if (!string.IsNullOrEmpty(url))
                     {
                         buttonSpritePath = Path.Combine(movieFolder, Path.GetFileName(new Uri(url).LocalPath));
+                        if (Path.GetExtension(buttonSpritePath).Equals(".webp", StringComparison.OrdinalIgnoreCase))
+                        {
+                            buttonSpritePath = Path.ChangeExtension(buttonSpritePath, ".png");
+                        }
                     }
 
                     // If specific button texture is not found, use the default button texture
@@ -179,7 +183,33 @@ public static class JsonParser
                     }
                 }
 
-                string selectedSegment = UIManager.ShowChoiceUI(segment.Choices, buttonSprites, (int)choiceDurationMs, movieFolder);
+                var buttonIcons = new List<Bitmap>();
+                foreach (var choice in segment.Choices)
+                {
+                    string iconPath = null;
+
+                    // Check for an icon URL in the choice's Icon field
+                    string iconUrl = choice?.Icon?.VisualStates?.Default?.Image?.Url;
+                    if (!string.IsNullOrEmpty(iconUrl))
+                    {
+                        iconPath = Path.Combine(movieFolder, Path.GetFileName(new Uri(iconUrl).LocalPath));
+                        if (Path.GetExtension(iconPath).Equals(".webp", StringComparison.OrdinalIgnoreCase))
+                        {
+                            iconPath = Path.ChangeExtension(iconPath, ".png");
+                        }
+                    }
+
+                    if (!string.IsNullOrEmpty(iconPath) && File.Exists(iconPath))
+                    {
+                        buttonIcons.Add(new Bitmap(iconPath));
+                    }
+                    else
+                    {
+                        buttonIcons.Add(null);
+                    }
+                }
+
+                string selectedSegment = UIManager.ShowChoiceUI(segment.Choices, buttonSprites, buttonIcons, (int)choiceDurationMs, movieFolder);
 
                 if (!string.IsNullOrEmpty(selectedSegment))
                 {
