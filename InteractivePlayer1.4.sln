@@ -7,9 +7,10 @@ Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "InteractivePlayer1.4", "Int
 EndProject
 Project("{2150E333-8FDC-42A3-9474-1A3956D46DE8}") = "general", "general", "{02EA681E-C7D8-13C7-8484-4AC65E1B71E8}"
 	ProjectSection(SolutionItems) = preProject
-		D:\InteractivePlayer\general\Interactive_player_logo.png = D:\InteractivePlayer\general\Interactive_player_logo.png
-		D:\InteractivePlayer\general\text_background_sprite_2x.png = D:\InteractivePlayer\general\text_background_sprite_2x.png
 		..\..\..\Downloads\Default_backdrop.png = ..\..\..\Downloads\Default_backdrop.png
+		D:\InteractivePlayer\general\Interactive_player_logo.png = D:\InteractivePlayer\general\Interactive_player_logo.png
+		..\..\..\Downloads\Save_backdrop.png = ..\..\..\Downloads\Save_backdrop.png
+		D:\InteractivePlayer\general\text_background_sprite_2x.png = D:\InteractivePlayer\general\text_background_sprite_2x.png
 		D:\InteractivePlayer\general\timer_bottom_2x.png = D:\InteractivePlayer\general\timer_bottom_2x.png
 		D:\InteractivePlayer\general\timer_capL_2x.png = D:\InteractivePlayer\general\timer_capL_2x.png
 		D:\InteractivePlayer\general\timer_capR_2x.png = D:\InteractivePlayer\general\timer_capR_2x.png

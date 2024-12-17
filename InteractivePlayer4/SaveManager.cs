@@ -12,7 +12,7 @@ public static class SaveManager
     {
         if (File.Exists(saveFilePath))
         {
-            string defaultBackdropPath = Path.Combine(Directory.GetCurrentDirectory(), "general", "Default_backdrop.png");
+            string defaultBackdropPath = Path.Combine(Directory.GetCurrentDirectory(), "general", "Save_backdrop.png");
             string topBarPath = Path.Combine(Directory.GetCurrentDirectory(), "general", "Top_bar.png");
             string logoPath = Path.Combine(Directory.GetCurrentDirectory(), "general", "Interactive_player_logo.png");
 

@@ -282,12 +282,12 @@ public static class UIManager
             int playerWidth = rect.Right - rect.Left;
             int playerHeight = rect.Bottom - rect.Top;
 
-            // Resize the choiceForm to fit inside the VLC window
-            choiceForm.Width = Math.Min(choiceForm.Width, playerWidth);
-            choiceForm.Height = Math.Min(choiceForm.Height, playerHeight);
+            // Set the choiceForm width to the player width and height to 25% of the player height
+            choiceForm.Width = playerWidth;
+            choiceForm.Height = (int)(playerHeight * 0.43);
 
             // Center the choice window and align it with the bottom
-            int centerX = rect.Left + (playerWidth / 2) - (choiceForm.Width / 2);
+            int centerX = rect.Left;
             int bottomY = rect.Bottom - choiceForm.Height;
 
             choiceForm.Location = new Point(centerX, bottomY);
