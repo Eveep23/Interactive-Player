@@ -50,18 +50,31 @@ public static class JsonParser
         }
     }
 
-    public static Dictionary<string, List<Moment>> ParseMoments(string jsonFile)
+    public static (Dictionary<string, List<Moment>>, string) ParseMoments(string jsonFile)
     {
         try
         {
             var json = JObject.Parse(File.ReadAllText(jsonFile));
             var video = json["jsonGraph"]?["videos"]?.First?.First;
-            if (video == null) throw new Exception("Video node not found in info JSON.");
 
-            var momentsBySegmentToken = video["interactiveVideoMoments"]?["value"]?["momentsBySegment"];
-            if (momentsBySegmentToken == null) throw new Exception("MomentsBySegment node not found.");
+            if (video == null)
+                throw new Exception("Video node not found in info JSON.");
+
+            // Extract video ID
+            var pathsArray = json["paths"] as JArray;
+            var videoId = pathsArray?[0]?[1]?.ToString();
+            if (string.IsNullOrEmpty(videoId))
+                throw new Exception("Video ID not found in info JSON.");
+
+            // Attempt to access momentsBySegment at different nesting levels
+            var momentsBySegmentToken = video["interactiveVideoMoments"]?["value"]?["momentsBySegment"]
+                                       ?? video["interactiveVideoMoments"]?["momentsBySegment"];
+
+            if (momentsBySegmentToken == null)
+                throw new Exception("MomentsBySegment node not found.");
 
             var momentsBySegment = new Dictionary<string, List<Moment>>();
+
             foreach (var property in momentsBySegmentToken.Children<JProperty>())
             {
                 var segmentId = property.Name;
@@ -70,12 +83,12 @@ public static class JsonParser
             }
 
             Console.WriteLine($"Loaded moments for {momentsBySegment.Count} segments.");
-            return momentsBySegment;
+            return (momentsBySegment, videoId);
         }
         catch (Exception ex)
         {
             Console.WriteLine($"Error parsing info JSON: {ex.Message}");
-            return null;
+            return (null, null);
         }
     }
 
@@ -127,7 +140,7 @@ public static class JsonParser
         return segmentId;
     }
 
-    public static string HandleSegment(MediaPlayer mediaPlayer, Segment segment, Dictionary<string, Segment> segments, string movieFolder)
+    public static string HandleSegment(MediaPlayer mediaPlayer, Segment segment, Dictionary<string, Segment> segments, string movieFolder, string videoId)
     {
         mediaPlayer.Time = segment.StartTimeMs;
         string nextSegment = segment.DefaultNext;
@@ -209,7 +222,7 @@ public static class JsonParser
                     }
                 }
 
-                string selectedSegment = UIManager.ShowChoiceUI(segment.Choices, buttonSprites, buttonIcons, (int)choiceDurationMs, movieFolder);
+                string selectedSegment = UIManager.ShowChoiceUI(segment.Choices, buttonSprites, buttonIcons, (int)choiceDurationMs, movieFolder, videoId);
 
                 if (!string.IsNullOrEmpty(selectedSegment))
                 {

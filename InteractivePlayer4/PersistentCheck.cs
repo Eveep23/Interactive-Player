@@ -8,7 +8,7 @@ class PersistentCheck
 {
     static void Main2(string[] args)
     {
-        string infoJsonFilePath = "Carmen Sandiego To Steal or Not to Steal 2020-info.json";
+        string infoJsonFilePath = "info.json";
 
         if (!File.Exists(infoJsonFilePath))
         {

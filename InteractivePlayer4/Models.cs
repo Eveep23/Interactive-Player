@@ -3,6 +3,7 @@
 public class SaveData
 {
     public string CurrentSegment { get; set; }
+    public Dictionary<string, bool> State { get; set; } = new Dictionary<string, bool>();
 }
 
 public class Segment
@@ -16,6 +17,12 @@ public class Segment
     public int HideChoiceTimeMs { get; set; }
     public List<Choice> Choices { get; set; }
     public int? DefaultChoiceIndex { get; set; }
+}
+
+public class SegmentGroup
+{
+    public string Segment { get; set; }
+    public string Precondition { get; set; }
 }
 
 public class Choice

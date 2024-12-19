@@ -9,7 +9,7 @@ using System.Runtime.InteropServices;
 
 public static class UIManager
 {
-    public static string ShowChoiceUI(List<Choice> choices, List<Bitmap> buttonSprites, List<Bitmap> buttonIcons, int timeLimitMs, string movieFolder)
+    public static string ShowChoiceUI(List<Choice> choices, List<Bitmap> buttonSprites, List<Bitmap> buttonIcons, int timeLimitMs, string movieFolder, string videoId)
     {
         string selectedSegmentId = null;
         bool inputCaptured = false;
@@ -21,8 +21,8 @@ public static class UIManager
             Text = "Make a Choice",
             StartPosition = FormStartPosition.Manual,
             FormBorderStyle = FormBorderStyle.None,
-            BackColor = Color.Green,
-            TransparencyKey = Color.Green,
+            BackColor = videoId == "81004016" ? Color.Black : Color.Tan,
+            TransparencyKey = Color.Tan,
             MaximizeBox = false,
             MinimizeBox = false,
             TopMost = true,
@@ -74,7 +74,7 @@ public static class UIManager
 
                 var button = new Button
                 {
-                    Text = choices[i].Text,
+                    Text = (new[] { "81019938", "81260654", "80149064", "81287545", "81054415", "80135585", "81054409", "81058723" }.Contains(videoId)) ? string.Empty : choices[i].Text,
                     Size = new Size(buttonWidth, buttonHeight),
                     Location = new Point(0, 0), // Position within the panel
                     BackgroundImage = new Bitmap(defaultSprite, new Size(buttonWidth, buttonHeight)),
@@ -84,7 +84,7 @@ public static class UIManager
                     BackColor = Color.Transparent,
                     UseVisualStyleBackColor = false,
                     TabStop = false,
-                    Font = new Font("Arial", 22, FontStyle.Bold), // Set font to Arial, bold
+                    Font = new Font("Arial", (float)(22 * scaleFactor), FontStyle.Bold), // Set font to Arial, bold and scale it
                     ForeColor = Color.White
                 };
 
@@ -310,7 +310,7 @@ public static class UIManager
             int playerWidth = rect.Right - rect.Left;
             int playerHeight = rect.Bottom - rect.Top;
 
-            // Set the choiceForm width to the player width and height to 43% of the player height
+            // Set the choiceForm width to the player width and height to 40% of the player height
             choiceForm.Width = playerWidth;
             choiceForm.Height = (int)(playerHeight * 0.40);
 
