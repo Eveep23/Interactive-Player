@@ -148,6 +148,17 @@ public static class JsonParser
 
         string defaultButtonTexturePath = FindDefaultButtonTexture(movieFolder, segment.Choices ?? new List<Choice>());
 
+        // Load audio and subtitle tracks from config save file after media is parsed
+        string configSaveFilePath = Path.Combine(AppDomain.CurrentDomain.BaseDirectory, "config.json");
+        mediaPlayer.Media.ParsedChanged += (sender, e) =>
+        {
+            if (e.ParsedStatus == MediaParsedStatus.Done)
+            {
+                AudioManager.LoadAudioTrackFromSaveFile(mediaPlayer, mediaPlayer.Media, configSaveFilePath);
+                SubtitleManager.LoadSubtitleTrackFromSaveFile(mediaPlayer, mediaPlayer.Media, configSaveFilePath);
+            }
+        };
+
         while (mediaPlayer.Time < segment.EndTimeMs)
         {
             if (!choiceDisplayed && segment.Choices != null && segment.Choices.Count > 0 &&
@@ -172,7 +183,7 @@ public static class JsonParser
                     string url = choice?.Background?.VisualStates?.Default?.Image?.Url;
                     if (!string.IsNullOrEmpty(url))
                     {
-                        buttonSpritePath = Path.Combine(movieFolder, Path.GetFileName(new Uri(url).LocalPath));
+                        buttonSpritePath = FindTexturePath(movieFolder, Path.GetFileName(new Uri(url).LocalPath));
                         if (Path.GetExtension(buttonSpritePath).Equals(".webp", StringComparison.OrdinalIgnoreCase))
                         {
                             buttonSpritePath = Path.ChangeExtension(buttonSpritePath, ".png");
@@ -205,7 +216,7 @@ public static class JsonParser
                     string iconUrl = choice?.Icon?.VisualStates?.Default?.Image?.Url;
                     if (!string.IsNullOrEmpty(iconUrl))
                     {
-                        iconPath = Path.Combine(movieFolder, Path.GetFileName(new Uri(iconUrl).LocalPath));
+                        iconPath = FindTexturePath(movieFolder, Path.GetFileName(new Uri(iconUrl).LocalPath));
                         if (Path.GetExtension(iconPath).Equals(".webp", StringComparison.OrdinalIgnoreCase))
                         {
                             iconPath = Path.ChangeExtension(iconPath, ".png");
@@ -254,7 +265,7 @@ public static class JsonParser
                 string url = choice?.Background?.VisualStates?.Default?.Image?.Url;
                 if (!string.IsNullOrEmpty(url))
                 {
-                    string localPath = Path.Combine(movieFolder, Path.GetFileName(new Uri(url).LocalPath));
+                    string localPath = FindTexturePath(movieFolder, Path.GetFileName(new Uri(url).LocalPath));
                     if (File.Exists(localPath))
                     {
                         return localPath;
@@ -265,17 +276,17 @@ public static class JsonParser
 
         string[] potentialDefaultTextures = new[]
         {
-        "choices_sprite_2x.png",
-        "text_background_sprite_2x.png",
-        "choice_bg_sprite_2x.png",
-        "default_button_sprite_2x.png",
-        "choice_container_sprite_2x.png",
-        "button_sprite.png"
-    };
+            "choices_sprite_2x.png",
+            "text_background_sprite_2x.png",
+            "choice_bg_sprite_2x.png",
+            "default_button_sprite_2x.png",
+            "choice_container_sprite_2x.png",
+            "button_sprite.png"
+        };
 
         foreach (string textureName in potentialDefaultTextures)
         {
-            string texturePath = Path.Combine(movieFolder, textureName);
+            string texturePath = FindTexturePath(movieFolder, textureName);
             if (File.Exists(texturePath))
             {
                 return texturePath;
@@ -284,6 +295,16 @@ public static class JsonParser
 
         // If no texture is found
         Console.WriteLine("Default button texture not found in the movie folder.");
+        return null;
+    }
+
+    private static string FindTexturePath(string folder, string textureName)
+    {
+        var files = Directory.GetFiles(folder, textureName, SearchOption.AllDirectories);
+        if (files.Length > 0)
+        {
+            return files[0];
+        }
         return null;
     }
 
@@ -314,7 +335,6 @@ public static class JsonParser
             return null;
         }
     }
-
 
     // Download and save sprite locally
     private static string DownloadSprite(string url)
@@ -371,6 +391,11 @@ public static class JsonParser
             case ConsoleKey.L:
                 Console.WriteLine("Switching audio track...");
                 AudioManager.ListAndSelectAudioTrack(mediaPlayer, mediaPlayer.Media);
+                break;
+
+            case ConsoleKey.S:
+                Console.WriteLine("Switching subtitles...");
+                SubtitleManager.ListAndSelectSubtitleTrack(mediaPlayer, mediaPlayer.Media);
                 break;
 
             default:

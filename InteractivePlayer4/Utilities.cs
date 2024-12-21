@@ -25,6 +25,7 @@ public static class Utilities
         string defaultBackdropPath = Path.Combine(Directory.GetCurrentDirectory(), "general", "Default_backdrop.png");
         string topBarPath = Path.Combine(Directory.GetCurrentDirectory(), "general", "Top_bar.png");
         string logoPath = Path.Combine(Directory.GetCurrentDirectory(), "general", "Interactive_player_logo.png");
+        string settingsWheelPath = Path.Combine(Directory.GetCurrentDirectory(), "general", "Settings_Wheel.png");
 
         Form form = new Form
         {
@@ -50,11 +51,27 @@ public static class Utilities
             BackColor = Color.Transparent
         };
 
+        PictureBox settingsPictureBox = new PictureBox
+        {
+            Image = Image.FromFile(settingsWheelPath),
+            SizeMode = PictureBoxSizeMode.AutoSize,
+            BackColor = Color.Transparent,
+            Cursor = Cursors.Hand
+        };
+
+        settingsPictureBox.Click += (sender, e) =>
+        {
+            SettingsMenu.ShowSettingsMenu();
+        };
+
         topBarPanel.Controls.Add(logoPictureBox);
+        topBarPanel.Controls.Add(settingsPictureBox);
         logoPictureBox.Location = new Point((topBarPanel.Width - logoPictureBox.Width) / 2, (topBarPanel.Height - logoPictureBox.Height) / 2);
+        settingsPictureBox.Location = new Point(topBarPanel.Width - settingsPictureBox.Width - 10, (topBarPanel.Height - settingsPictureBox.Height) / 2);
         topBarPanel.Resize += (sender, e) =>
         {
             logoPictureBox.Location = new Point((topBarPanel.Width - logoPictureBox.Width) / 2, (topBarPanel.Height - logoPictureBox.Height) / 2);
+            settingsPictureBox.Location = new Point(topBarPanel.Width - settingsPictureBox.Width - 10, (topBarPanel.Height - settingsPictureBox.Height) / 2);
         };
 
         FlowLayoutPanel panel = new FlowLayoutPanel

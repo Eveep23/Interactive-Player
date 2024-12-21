@@ -76,6 +76,8 @@
     <Compile Include="Program.cs" />
     <Compile Include="Properties\AssemblyInfo.cs" />
     <Compile Include="SaveManager.cs" />
+    <Compile Include="SettingsMenu.cs" />
+    <Compile Include="SubtitleManager.cs" />
     <Compile Include="UIManager.cs" />
     <Compile Include="Utilities.cs" />
   </ItemGroup>

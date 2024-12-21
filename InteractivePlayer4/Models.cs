@@ -6,6 +6,12 @@ public class SaveData
     public Dictionary<string, bool> State { get; set; } = new Dictionary<string, bool>();
 }
 
+public class Settings
+{
+    public string AudioLanguage { get; set; }
+    public string SubtitleLanguage { get; set; }
+    public int UISpeed { get; set; }
+}
 public class Segment
 {
     public string Id { get; set; }

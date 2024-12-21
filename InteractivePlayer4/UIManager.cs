@@ -6,9 +6,14 @@ using System.Linq;
 using System.Threading;
 using System.Windows.Forms;
 using System.Runtime.InteropServices;
+using Newtonsoft.Json;
+using LibVLCSharp.Shared;
+
 
 public static class UIManager
 {
+    private static readonly string ConfigFilePath = Path.Combine(Directory.GetCurrentDirectory(), "config.json");
+
     public static string ShowChoiceUI(List<Choice> choices, List<Bitmap> buttonSprites, List<Bitmap> buttonIcons, int timeLimitMs, string movieFolder, string videoId)
     {
         string selectedSegmentId = null;
@@ -30,7 +35,11 @@ public static class UIManager
             Height = 450
         };
 
-        AlignWithVideoPlayer(choiceForm);
+        AlignWithVideoPlayer(choiceForm, videoId);
+
+        // Load settings
+        var settings = LoadSettings();
+        int uiSpeed = settings.UISpeed;
 
         // Calculate scaling factor based on the resized form
         double scaleFactor = (double)choiceForm.Width / formWidth;
@@ -41,6 +50,14 @@ public static class UIManager
 
         List<int> buttonWidths = new List<int>();
         List<Button> buttons = new List<Button>();
+
+        // Initialize VLC
+        Core.Initialize();
+        var libVLC = new LibVLC();
+
+        // Load sound files
+        string hoverSoundPath = FindTexturePath(movieFolder, new[] { "CSD_Hover.m4a", "cap_focus.m4a", "sfx_focus.m4a", "sfx_focus_44100.m4a", "toggle.m4a", "sfx_focus.m4a" });
+        string selectSoundPath = FindTexturePath(movieFolder, new[] { "CSD_Select.m4a", "cap_select.m4a", "sfx_select.m4a", "sfx_selected_44100.m4a", "select.m4a", "spirit_select_48.m4a", "sfx_buttonSelect.m4a" });
 
         for (int i = 0; i < choices.Count; i++)
         {
@@ -93,10 +110,39 @@ public static class UIManager
                 button.FlatAppearance.MouseOverBackColor = Color.Transparent;
                 button.FlatAppearance.CheckedBackColor = Color.Transparent;
 
-                button.MouseEnter += (sender, e) => { if (button.Enabled) button.BackgroundImage = new Bitmap(focusedSprite, new Size(buttonWidth, buttonHeight)); };
-                button.MouseLeave += (sender, e) => { if (button.Enabled) button.BackgroundImage = new Bitmap(defaultSprite, new Size(buttonWidth, buttonHeight)); };
-                button.MouseDown += (sender, e) => { if (button.Enabled) button.BackgroundImage = new Bitmap(selectedSprite, new Size(buttonWidth, buttonHeight)); };
-                button.MouseUp += (sender, e) => { if (button.Enabled) button.BackgroundImage = new Bitmap(focusedSprite, new Size(buttonWidth, buttonHeight)); };
+                button.MouseEnter += (sender, e) =>
+                {
+                    if (button.Enabled)
+                    {
+                        button.BackgroundImage = new Bitmap(focusedSprite, new Size(buttonWidth, buttonHeight));
+                        if (File.Exists(hoverSoundPath))
+                        {
+                            var hoverPlayer = new MediaPlayer(new Media(libVLC, hoverSoundPath, FromType.FromPath));
+                            hoverPlayer.Play();
+                        }
+                    }
+                };
+                button.MouseLeave += (sender, e) =>
+                {
+                    if (button.Enabled)
+                    {
+                        button.BackgroundImage = new Bitmap(defaultSprite, new Size(buttonWidth, buttonHeight));
+                    }
+                };
+                button.MouseDown += (sender, e) =>
+                {
+                    if (button.Enabled)
+                    {
+                        button.BackgroundImage = new Bitmap(selectedSprite, new Size(buttonWidth, buttonHeight));
+                    }
+                };
+                button.MouseUp += (sender, e) =>
+                {
+                    if (button.Enabled)
+                    {
+                        button.BackgroundImage = new Bitmap(focusedSprite, new Size(buttonWidth, buttonHeight));
+                    }
+                };
 
                 button.Click += (sender, e) =>
                 {
@@ -116,6 +162,11 @@ public static class UIManager
                             }
                         }
 
+                        if (File.Exists(selectSoundPath))
+                        {
+                            var selectPlayer = new MediaPlayer(new Media(libVLC, selectSoundPath, FromType.FromPath));
+                            selectPlayer.Play();
+                        }
                         choiceForm.ActiveControl = null;
                     }
                 };
@@ -157,10 +208,10 @@ public static class UIManager
         {
             foreach (var name in possibleNames)
             {
-                string path = Path.Combine(folder, name);
-                if (File.Exists(path))
+                var files = Directory.GetFiles(folder, name, SearchOption.AllDirectories);
+                if (files.Length > 0)
                 {
-                    return path;
+                    return files[0];
                 }
             }
             return null; // Or handle the case where no file is found
@@ -172,7 +223,7 @@ public static class UIManager
         string timerCapRPath = FindTexturePath(movieFolder, new[] { "timer_capR_2x.png", "timer_capR_2x_v2.png", "timer_capR_3x.png" });
         string timerBottomPath = FindTexturePath(movieFolder, new[] { "timer_bottom_2x.png", "timer_bottom_2x_v2.png", "timer_bottom_3x.png" });
         string timerTopPath = FindTexturePath(movieFolder, new[] { "timer_top_2x.png", "timer_top_2x_v2.png", "timer_top_3x.png" });
-        string webPath = FindTexturePath(movieFolder, new[] { "web_2x.png", "web_2x_v2.png", "web_3x.png" });
+        string webPath = FindTexturePath(movieFolder, new[] { "web_2x.png", "web_2x_v2.png", "web_3x.png", "web_icon_2x.png" });
 
         // Handle cases where a texture wasn't found
         if (webPath == null)
@@ -270,10 +321,10 @@ public static class UIManager
 
         System.Windows.Forms.Timer countdownTimer = new System.Windows.Forms.Timer
         {
-            Interval = 750
+            Interval = uiSpeed
         };
 
-        int remainingTime = timeLimitMs / 750;
+        int remainingTime = timeLimitMs / uiSpeed;
 
         countdownTimer.Tick += (sender, e) =>
         {
@@ -281,7 +332,7 @@ public static class UIManager
 
             if (remainingTime >= 0)
             {
-                initialWidth = (int)((double)(1700 * scaleFactor) * remainingTime / (timeLimitMs / 750));
+                initialWidth = (int)((double)(1650 * scaleFactor) * remainingTime / (timeLimitMs / uiSpeed));
                 drawingPanel.Invalidate();
             }
 
@@ -298,8 +349,23 @@ public static class UIManager
         return selectedSegmentId;
     }
 
+    private static Settings LoadSettings()
+    {
+        if (File.Exists(ConfigFilePath))
+        {
+            string json = File.ReadAllText(ConfigFilePath);
+            return JsonConvert.DeserializeObject<Settings>(json);
+        }
+        return new Settings
+        {
+            AudioLanguage = "English",
+            SubtitleLanguage = "Disabled",
+            UISpeed = 750
+        };
+    }
+
     // Align the UI window with the video player
-    private static void AlignWithVideoPlayer(Form choiceForm)
+    private static void AlignWithVideoPlayer(Form choiceForm, string videoId)
     {
         IntPtr videoPlayerHandle = FindWindow(null, "VLC (Direct3D11 output)");
         if (videoPlayerHandle != IntPtr.Zero)
@@ -310,9 +376,18 @@ public static class UIManager
             int playerWidth = rect.Right - rect.Left;
             int playerHeight = rect.Bottom - rect.Top;
 
-            // Set the choiceForm width to the player width and height to 40% of the player height
+            // Set the choiceForm width to the player width
             choiceForm.Width = playerWidth;
-            choiceForm.Height = (int)(playerHeight * 0.40);
+
+            // Set the choiceForm height based on the videoId
+            double heightFactor = 0.40; // Default height factor
+            switch (videoId)
+            {
+                case "81004016":
+                    heightFactor = 0.30;
+                    break;
+            }
+            choiceForm.Height = (int)(playerHeight * heightFactor);
 
             // Center the choice window and align it with the bottom
             int centerX = rect.Left;
@@ -355,6 +430,14 @@ public static class UIManager
 
     private static Bitmap LoadBitmap(string path)
     {
-        return File.Exists(path) ? new Bitmap(path) : null;
+        if (File.Exists(path))
+        {
+            return new Bitmap(path);
+        }
+        else
+        {
+            Console.WriteLine($"Bitmap not found at path: {path}");
+            return null;
+        }
     }
 }
