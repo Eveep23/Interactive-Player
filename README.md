@@ -21,10 +21,6 @@ This is an emulator for Netflix's interactive movies.
 
 * States and Preconditions,
 
-* Subtitle Support
-
-* Switch from VLC to MPV
-
 # How to Use:
 
 Add folders inside the programs directory, each folder is a different movie.
