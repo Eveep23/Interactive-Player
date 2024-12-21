@@ -56,8 +56,8 @@ public static class UIManager
         var libVLC = new LibVLC();
 
         // Load sound files
-        string hoverSoundPath = FindTexturePath(movieFolder, new[] { "CSD_Hover.m4a", "cap_focus.m4a", "sfx_focus.m4a", "sfx_focus_44100.m4a", "toggle.m4a", "sfx_focus.m4a" });
-        string selectSoundPath = FindTexturePath(movieFolder, new[] { "CSD_Select.m4a", "cap_select.m4a", "sfx_select.m4a", "sfx_selected_44100.m4a", "select.m4a", "spirit_select_48.m4a", "sfx_buttonSelect.m4a" });
+        string hoverSoundPath = FindTexturePath(movieFolder, new[] { "CSD_Hover.m4a", "cap_focus.m4a", "sfx_focus.m4a", "sfx_focus_44100.m4a", "toggle.m4a", "sfx_focus.m4a", "IX_choicePointSound_tonal_focus_48k.m4a" });
+        string selectSoundPath = FindTexturePath(movieFolder, new[] { "CSD_Select.m4a", "cap_select.m4a", "sfx_select.m4a", "sfx_selected_44100.m4a", "select.m4a", "spirit_select_48.m4a", "sfx_buttonSelect.m4a", "IX_choicePointSound_tonal_select_48k.m4a" });
 
         for (int i = 0; i < choices.Count; i++)
         {
@@ -73,9 +73,11 @@ public static class UIManager
             }
         }
 
-        int totalButtonsWidth = buttonWidths.Sum() + (choices.Count - 1) * horizontalSpacing;
-        int buttonStartX = (choiceForm.Width - totalButtonsWidth) / 2;
-        int currentX = buttonStartX;
+        int totalButtonsWidth = buttonWidths.Sum();
+        int availableSpace = choiceForm.Width - totalButtonsWidth;
+        int spacing = availableSpace / (choices.Count + 1);
+
+        int currentX = spacing;
 
         for (int i = 0; i < choices.Count; i++)
         {
@@ -91,7 +93,7 @@ public static class UIManager
 
                 var button = new Button
                 {
-                    Text = (new[] { "81019938", "81260654", "80149064", "81287545", "81054415", "80135585", "81054409", "81058723" }.Contains(videoId)) ? string.Empty : choices[i].Text,
+                    Text = (new[] { "80149064", "80135585", "81054409", "81287545", "81019938", "81260654", "81054415", "81058723" }.Contains(videoId)) ? string.Empty : choices[i].Text,
                     Size = new Size(buttonWidth, buttonHeight),
                     Location = new Point(0, 0), // Position within the panel
                     BackgroundImage = new Bitmap(defaultSprite, new Size(buttonWidth, buttonHeight)),
@@ -102,7 +104,9 @@ public static class UIManager
                     UseVisualStyleBackColor = false,
                     TabStop = false,
                     Font = new Font("Arial", (float)(22 * scaleFactor), FontStyle.Bold), // Set font to Arial, bold and scale it
-                    ForeColor = Color.White
+                    ForeColor = Color.White,
+                    TextAlign = ContentAlignment.MiddleLeft,
+                    Padding = (new[] { "81004016", "81205738", "81108751" }.Contains(videoId)) ? new Padding((int)(buttonWidth * 0.45), 0, 0, 0) : new Padding(0)
                 };
 
                 button.FlatAppearance.BorderSize = 0;
@@ -171,9 +175,12 @@ public static class UIManager
                     }
                 };
 
+                // Adjust height to accommodate text only if the video ID matches
+                int panelHeight = (new[] { "81054409", "81287545", "81019938", "81260654", "81054415", "81058723" }.Contains(videoId)) ? buttonHeight + (int)(50 * scaleFactor) : buttonHeight;
+
                 var buttonPanel = new Panel
                 {
-                    Size = new Size(buttonWidth, buttonHeight),
+                    Size = new Size(buttonWidth, panelHeight),
                     Location = new Point(currentX, buttonTopMargin),
                     BackColor = Color.Transparent
                 };
@@ -197,11 +204,40 @@ public static class UIManager
                     button.Controls.Add(iconPictureBox);
                 }
 
+                // Add text label underneath the button for specific video IDs
+                if (new[] { "81054409", "81287545", "81019938", "81260654", "81054415", "81058723" }.Contains(videoId))
+                {
+                    var textLabel = new Label
+                    {
+                        Text = choices[i].Text,
+                        AutoSize = true,
+                        Font = new Font("Arial", (float)(22 * scaleFactor), FontStyle.Bold),
+                        ForeColor = Color.White,
+                        BackColor = Color.Transparent,
+                        TextAlign = ContentAlignment.MiddleCenter
+                    };
+                    buttonPanel.Controls.Add(textLabel);
+
+                    // Center the label horizontally within the buttonPanel
+                    textLabel.Location = new Point((buttonPanel.Width - textLabel.Width) / 2, buttonHeight + 10);
+                }
+
                 buttons.Add(button);
                 choiceForm.Controls.Add(buttonPanel);
 
-                currentX += buttonWidth + horizontalSpacing;
+                currentX += buttonWidth + spacing;
             }
+        }
+
+        // Adjust the timer bar position to avoid overlapping with the buttons and labels
+        int timerBarY;
+        if (new[] { "81054409", "81287545", "81019938", "81260654", "81054415", "81058723" }.Contains(videoId))
+        {
+            timerBarY = buttonTopMargin + buttonHeight + (int)(90 * scaleFactor);
+        }
+        else
+        {
+            timerBarY = buttonTopMargin + buttonHeight + (int)(40 * scaleFactor);
         }
 
         string FindTexturePath(string folder, string[] possibleNames)
@@ -241,7 +277,6 @@ public static class UIManager
         int initialWidth = (int)(1700 * scaleFactor);
         int timerBarHeight = (int)((timerFillSprite?.Height ?? 20) * scaleFactor);
         int formCenterX = choiceForm.Width / 2;
-        int timerBarY = buttonTopMargin + buttonHeight + (int)(40 * scaleFactor);
 
         // Create a Panel
         Panel drawingPanel = new Panel
@@ -385,6 +420,24 @@ public static class UIManager
             {
                 case "81004016":
                     heightFactor = 0.30;
+                    break;
+                case "81054409":
+                    heightFactor = 0.45;
+                    break;
+                case "81287545":
+                    heightFactor = 0.45;
+                    break;
+                case "81019938":
+                    heightFactor = 0.45;
+                    break;
+                case "81260654":
+                    heightFactor = 0.45;
+                    break;
+                case "81054415":
+                    heightFactor = 0.45;
+                    break;
+                case "81058723":
+                    heightFactor = 0.45;
                     break;
             }
             choiceForm.Height = (int)(playerHeight * heightFactor);
