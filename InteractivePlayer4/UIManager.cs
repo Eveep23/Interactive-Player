@@ -107,7 +107,6 @@ public static class UIManager
                     ForeColor = Color.White,
                     TextAlign = (new[] { "81004016", "81205738", "81108751" }.Contains(videoId)) ? ContentAlignment.MiddleLeft : ContentAlignment.MiddleCenter,
                     Padding = (new[] { "81004016", "81205738", "81108751" }.Contains(videoId)) ? new Padding((int)(buttonWidth * 0.4), 0, 0, 0) : new Padding(0)
-
                 };
 
                 button.FlatAppearance.BorderSize = 0;
@@ -279,8 +278,8 @@ public static class UIManager
         int timerBarHeight = (int)((timerFillSprite?.Height ?? 20) * scaleFactor);
         int formCenterX = choiceForm.Width / 2;
 
-        // Create a Panel
-        Panel drawingPanel = new Panel
+        // Create a DoubleBufferedPanel
+        DoubleBufferedPanel drawingPanel = new DoubleBufferedPanel
         {
             Location = new Point(0, 0),
             Size = new Size(choiceForm.Width, choiceForm.Height),

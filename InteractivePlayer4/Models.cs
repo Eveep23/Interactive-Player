@@ -1,4 +1,5 @@
 ﻿using System.Collections.Generic;
+using System.Windows.Forms;
 
 public class SaveData
 {
@@ -6,6 +7,17 @@ public class SaveData
     public Dictionary<string, bool> State { get; set; } = new Dictionary<string, bool>();
 }
 
+public class DoubleBufferedPanel : Panel
+{
+    public DoubleBufferedPanel()
+    {
+        this.DoubleBuffered = true;
+        this.SetStyle(ControlStyles.OptimizedDoubleBuffer, true);
+        this.SetStyle(ControlStyles.AllPaintingInWmPaint, true);
+        this.SetStyle(ControlStyles.UserPaint, true);
+        this.UpdateStyles();
+    }
+}
 public class Settings
 {
     public string AudioLanguage { get; set; }
