@@ -85,31 +85,12 @@ public static class SettingsMenu
         subtitleComboBox.Items.AddRange(new string[] { "Disabled", "Arabic", "Forced - Czech", "Czech", "Danish", "Forced - German", "SDH - German", "German", "SDH - English", "English", "Latin American (SDH) - Spanish", "Latin American (Forced) - Spanish", "Latin American - Spanish", "European (Forced) - Spanish", "European - Spanish", "Finnish", "Filpino", "Forced - French", "French", "Hebrew", "Croatian", "Latin (Forced) - Hindi", "Forced - Hungarian", "Hungarian", "Forced - Indonesian", "Indonesian", "Forced - Italian", "Italian", "Forced - Polish", "Polish", "Brazilian (SDH) - Portuguese", "Brazilian (Forced) - Portuguese", "Brazilian - Portuguese", "European - Portuguese", "Forced - Thai", "Thai", "Forced - Turkish", "Turkish", "Forced - Ukrainian", "Ukrainian", "Japanese", "Korean", "Dutch", "Romanian", "Russian", "Swedish", "Vietnamese", "Simplified - Chinese", "Traditional - Chinese", "Malay" });
         subtitleComboBox.SelectedItem = loadedSettings.SubtitleLanguage;
 
-        // UI Speed Dropdown
-        Label uiSpeedLabel = new Label
-        {
-            Text = "UI Speed:",
-            ForeColor = Color.White,
-            AutoSize = true,
-            Font = new Font("Arial", 14, FontStyle.Bold),
-            TextAlign = ContentAlignment.MiddleCenter
-        };
-        ComboBox uiSpeedComboBox = new ComboBox
-        {
-            Width = 300,
-            DropDownStyle = ComboBoxStyle.DropDownList,
-            Font = new Font("Arial", 14)
-        };
-        uiSpeedComboBox.Items.AddRange(new string[] { "1000", "750", "500", "250" });
-        uiSpeedComboBox.SelectedItem = loadedSettings.UISpeed.ToString();
-
         backPictureBox.Click += (sender, e) =>
         {
             var settings = new Settings
             {
                 AudioLanguage = audioComboBox.SelectedItem.ToString(),
                 SubtitleLanguage = subtitleComboBox.SelectedItem.ToString(),
-                UISpeed = int.Parse(uiSpeedComboBox.SelectedItem.ToString())
             };
             SaveSettings(settings);
             settingsForm.Close();
@@ -136,15 +117,10 @@ public static class SettingsMenu
         subtitleLabel.Location = new Point(centerX - subtitleLabel.Width / 2, 230);
         subtitleComboBox.Location = new Point(centerX, 260);
 
-        uiSpeedLabel.Location = new Point(centerX - uiSpeedLabel.Width / 2, 310);
-        uiSpeedComboBox.Location = new Point(centerX, 340);
-
         settingsForm.Controls.Add(audioLabel);
         settingsForm.Controls.Add(audioComboBox);
         settingsForm.Controls.Add(subtitleLabel);
         settingsForm.Controls.Add(subtitleComboBox);
-        settingsForm.Controls.Add(uiSpeedLabel);
-        settingsForm.Controls.Add(uiSpeedComboBox);
 
         settingsForm.ShowDialog();
     }
@@ -160,7 +136,6 @@ public static class SettingsMenu
         {
             AudioLanguage = "English",
             SubtitleLanguage = "Disabled",
-            UISpeed = 750
         };
     }
 
@@ -168,12 +143,5 @@ public static class SettingsMenu
     {
         string json = JsonConvert.SerializeObject(settings, Formatting.Indented);
         File.WriteAllText(ConfigFilePath, json);
-    }
-
-    private class Settings
-    {
-        public string AudioLanguage { get; set; }
-        public string SubtitleLanguage { get; set; }
-        public int UISpeed { get; set; }
     }
 }

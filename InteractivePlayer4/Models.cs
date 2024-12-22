@@ -22,7 +22,6 @@ public class Settings
 {
     public string AudioLanguage { get; set; }
     public string SubtitleLanguage { get; set; }
-    public int UISpeed { get; set; }
 }
 public class Segment
 {

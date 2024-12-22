@@ -39,7 +39,6 @@ public static class UIManager
 
         // Load settings
         var settings = LoadSettings();
-        int uiSpeed = settings.UISpeed;
 
         // Calculate scaling factor based on the resized form
         double scaleFactor = (double)choiceForm.Width / formWidth;
@@ -385,7 +384,6 @@ public static class UIManager
         {
             AudioLanguage = "English",
             SubtitleLanguage = "Disabled",
-            UISpeed = 750
         };
     }
 
