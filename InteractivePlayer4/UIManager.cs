@@ -8,8 +8,8 @@ using System.Windows.Forms;
 using System.Runtime.InteropServices;
 using Newtonsoft.Json;
 using LibVLCSharp.Shared;
-
-
+using System.Diagnostics;
+using System.Threading.Tasks;
 public static class UIManager
 {
     private static readonly string ConfigFilePath = Path.Combine(Directory.GetCurrentDirectory(), "config.json");
@@ -105,8 +105,9 @@ public static class UIManager
                     TabStop = false,
                     Font = new Font("Arial", (float)(22 * scaleFactor), FontStyle.Bold), // Set font to Arial, bold and scale it
                     ForeColor = Color.White,
-                    TextAlign = ContentAlignment.MiddleLeft,
-                    Padding = (new[] { "81004016", "81205738", "81108751" }.Contains(videoId)) ? new Padding((int)(buttonWidth * 0.45), 0, 0, 0) : new Padding(0)
+                    TextAlign = (new[] { "81004016", "81205738", "81108751" }.Contains(videoId)) ? ContentAlignment.MiddleLeft : ContentAlignment.MiddleCenter,
+                    Padding = (new[] { "81004016", "81205738", "81108751" }.Contains(videoId)) ? new Padding((int)(buttonWidth * 0.4), 0, 0, 0) : new Padding(0)
+
                 };
 
                 button.FlatAppearance.BorderSize = 0;
@@ -354,31 +355,21 @@ public static class UIManager
 
         choiceForm.Controls.Add(drawingPanel);
 
-        System.Windows.Forms.Timer countdownTimer = new System.Windows.Forms.Timer
+        Stopwatch stopwatch = new Stopwatch();
+        stopwatch.Start();
+
+        Task.Run(async () =>
         {
-            Interval = uiSpeed
-        };
-
-        int remainingTime = timeLimitMs / uiSpeed;
-
-        countdownTimer.Tick += (sender, e) =>
-        {
-            remainingTime--;
-
-            if (remainingTime >= 0)
+            while (stopwatch.ElapsedMilliseconds < timeLimitMs)
             {
-                initialWidth = (int)((double)(1650 * scaleFactor) * remainingTime / (timeLimitMs / uiSpeed));
+                initialWidth = (int)((double)(1650 * scaleFactor) * (timeLimitMs - stopwatch.ElapsedMilliseconds) / timeLimitMs);
                 drawingPanel.Invalidate();
+                await Task.Delay(16); // Update approximately every 16ms (~60 FPS)
             }
 
-            if (remainingTime <= 0)
-            {
-                countdownTimer.Stop();
-                choiceForm.Close();
-            }
-        };
+            choiceForm.Invoke(new Action(() => choiceForm.Close()));
+        });
 
-        countdownTimer.Start();
         choiceForm.ShowDialog();
 
         return selectedSegmentId;
