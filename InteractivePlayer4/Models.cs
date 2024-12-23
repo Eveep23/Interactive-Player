@@ -4,9 +4,9 @@ using System.Windows.Forms;
 public class SaveData
 {
     public string CurrentSegment { get; set; }
-    public Dictionary<string, bool> State { get; set; } = new Dictionary<string, bool>();
+    public Dictionary<string, object> GlobalState { get; set; }
+    public Dictionary<string, object> PersistentState { get; set; }
 }
-
 public class DoubleBufferedPanel : Panel
 {
     public DoubleBufferedPanel()
@@ -49,6 +49,18 @@ public class Choice
     public Background Background { get; set; }
     public Background Icon { get; set; }
     public string Id { get; set; }
+    public ImpressionData ImpressionData { get; set; }
+}
+
+public class ImpressionData
+{
+    public ImpressionDataDetails Data { get; set; }
+}
+
+public class ImpressionDataDetails
+{
+    public Dictionary<string, object> Global { get; set; }
+    public Dictionary<string, object> Persistent { get; set; }
 }
 
 public class Background

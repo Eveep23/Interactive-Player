@@ -3,6 +3,7 @@ using System.Collections.Generic;
 using System.IO;
 using System.Drawing;
 using Newtonsoft.Json.Linq;
+using System.Linq;
 using LibVLCSharp.Shared;
 using System.Threading;
 using System.Net;
@@ -50,7 +51,7 @@ public static class JsonParser
         }
     }
 
-    public static (Dictionary<string, List<Moment>>, string) ParseMoments(string jsonFile)
+    public static (Dictionary<string, List<Moment>>, string, Dictionary<string, object>, Dictionary<string, object>) ParseMoments(string jsonFile)
     {
         try
         {
@@ -82,13 +83,18 @@ public static class JsonParser
                 momentsBySegment[segmentId] = moments;
             }
 
+            // Extract global and persistent states
+            var stateHistory = video["interactiveVideoMoments"]?["value"]?["stateHistory"];
+            var globalState = stateHistory?["global"]?.ToObject<Dictionary<string, object>>() ?? new Dictionary<string, object>();
+            var persistentState = stateHistory?["persistent"]?.ToObject<Dictionary<string, object>>() ?? new Dictionary<string, object>();
+
             Console.WriteLine($"Loaded moments for {momentsBySegment.Count} segments.");
-            return (momentsBySegment, videoId);
+            return (momentsBySegment, videoId, globalState, persistentState);
         }
         catch (Exception ex)
         {
             Console.WriteLine($"Error parsing info JSON: {ex.Message}");
-            return (null, null);
+            return (null, null, null, null);
         }
     }
 
@@ -140,7 +146,7 @@ public static class JsonParser
         return segmentId;
     }
 
-    public static string HandleSegment(MediaPlayer mediaPlayer, Segment segment, Dictionary<string, Segment> segments, string movieFolder, string videoId)
+    public static string HandleSegment(MediaPlayer mediaPlayer, Segment segment, Dictionary<string, Segment> segments, string movieFolder, string videoId, ref Dictionary<string, object> globalState, ref Dictionary<string, object> persistentState)
     {
         mediaPlayer.Time = segment.StartTimeMs;
         string nextSegment = segment.DefaultNext;
@@ -238,6 +244,33 @@ public static class JsonParser
                 if (!string.IsNullOrEmpty(selectedSegment))
                 {
                     nextSegment = selectedSegment;
+
+                    // Update states based on the chosen option
+                    var chosenOption = segment.Choices.FirstOrDefault(c => c.SegmentId == selectedSegment);
+                    if (chosenOption != null && chosenOption.ImpressionData != null)
+                    {
+                        var impressionData = chosenOption.ImpressionData.Data;
+                        if (impressionData != null)
+                        {
+                            if (impressionData.Global != null)
+                            {
+                                foreach (var kvp in impressionData.Global)
+                                {
+                                    globalState[kvp.Key] = kvp.Value;
+                                    Console.WriteLine($"Global state changed: {kvp.Key} = {kvp.Value}");
+                                }
+                            }
+
+                            if (impressionData.Persistent != null)
+                            {
+                                foreach (var kvp in impressionData.Persistent)
+                                {
+                                    persistentState[kvp.Key] = kvp.Value;
+                                    Console.WriteLine($"Persistent state changed: {kvp.Key} = {kvp.Value}");
+                                }
+                            }
+                        }
+                    }
                 }
                 else
                 {

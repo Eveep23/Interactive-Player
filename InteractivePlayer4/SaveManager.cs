@@ -1,4 +1,5 @@
 ﻿using System;
+using System.Collections.Generic;
 using System.Drawing;
 using System.IO;
 using System.Windows.Forms;
@@ -120,9 +121,14 @@ public static class SaveManager
         return null;
     }
 
-    public static void SaveProgress(string saveFilePath, string currentSegment)
+    public static void SaveProgress(string saveFilePath, string currentSegment, Dictionary<string, object> globalState, Dictionary<string, object> persistentState)
     {
-        var saveData = new SaveData { CurrentSegment = currentSegment };
+        var saveData = new SaveData
+        {
+            CurrentSegment = currentSegment,
+            GlobalState = globalState,
+            PersistentState = persistentState
+        };
         File.WriteAllText(saveFilePath, JsonConvert.SerializeObject(saveData, Formatting.Indented));
     }
 }
