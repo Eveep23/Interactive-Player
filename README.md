@@ -29,6 +29,6 @@ It should look something like this:
 
 * LibVLCSharp
 
-* VideoLAN.LibVLC.Windows
+* SharpDX.XInput
 
 * Newtonsoft.Json
