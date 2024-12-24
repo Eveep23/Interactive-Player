@@ -111,6 +111,10 @@ public static class PreconditionChecker
                 return EvaluateLessThan(logic[1], logic[2], persistentState, globalState, preconditionResults);
             case "gt":
                 return EvaluateGreaterThan(logic[1], logic[2], persistentState, globalState, preconditionResults);
+            case "lte":
+                return EvaluateLessThanOrEqual(logic[1], logic[2], persistentState, globalState, preconditionResults);
+            case "gte":
+                return EvaluateGreaterThanOrEqual(logic[1], logic[2], persistentState, globalState, preconditionResults);
             case "sum":
                 int sum = EvaluateSum(logic.Skip(1), persistentState, globalState);
                 return sum > 0; // Adjust this condition as needed
@@ -231,6 +235,82 @@ public static class PreconditionChecker
         }
 
         return actualValue != null && actualValue.Type == JTokenType.Integer && expectedValue.Type == JTokenType.Integer && (int)actualValue > (int)expectedValue;
+    }
+
+    static bool EvaluateLessThanOrEqual(JToken path, JToken expectedValue, JObject persistentState, JObject globalState, Dictionary<string, int> preconditionResults)
+    {
+        string stateType = path[0].ToString();
+        string key = path[1].ToString();
+
+        JToken actualValue = null;
+        if (stateType == "persistentState")
+        {
+            actualValue = persistentState?[key];
+        }
+        else if (stateType == "globalState")
+        {
+            actualValue = globalState?[key];
+        }
+        else if (stateType == "precondition")
+        {
+            if (preconditionResults.TryGetValue(key, out int preconditionValue))
+            {
+                return preconditionValue <= expectedValue.ToObject<int>();
+            }
+            else
+            {
+                throw new ArgumentException($"Unknown precondition: {key}");
+            }
+        }
+        else if (stateType == "sum")
+        {
+            int sum = EvaluateSum(path.Skip(1), persistentState, globalState);
+            return sum <= expectedValue.ToObject<int>();
+        }
+        else
+        {
+            throw new ArgumentException($"Unknown state type: {stateType}");
+        }
+
+        return actualValue != null && actualValue.Type == JTokenType.Integer && expectedValue.Type == JTokenType.Integer && (int)actualValue <= (int)expectedValue;
+    }
+
+    static bool EvaluateGreaterThanOrEqual(JToken path, JToken expectedValue, JObject persistentState, JObject globalState, Dictionary<string, int> preconditionResults)
+    {
+        string stateType = path[0].ToString();
+        string key = path[1].ToString();
+
+        JToken actualValue = null;
+        if (stateType == "persistentState")
+        {
+            actualValue = persistentState?[key];
+        }
+        else if (stateType == "globalState")
+        {
+            actualValue = globalState?[key];
+        }
+        else if (stateType == "precondition")
+        {
+            if (preconditionResults.TryGetValue(key, out int preconditionValue))
+            {
+                return preconditionValue >= expectedValue.ToObject<int>();
+            }
+            else
+            {
+                throw new ArgumentException($"Unknown precondition: {key}");
+            }
+        }
+        else if (stateType == "sum")
+        {
+            int sum = EvaluateSum(path.Skip(1), persistentState, globalState);
+            return sum >= expectedValue.ToObject<int>();
+        }
+        else
+        {
+            throw new ArgumentException($"Unknown state type: {stateType}");
+        }
+
+        return actualValue != null && actualValue.Type == JTokenType.Integer && expectedValue.Type == JTokenType.Integer && (int)actualValue >= (int)expectedValue;
     }
 
     static int EvaluateSum(IEnumerable<JToken> paths, JObject persistentState, JObject globalState)
