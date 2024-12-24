@@ -1,26 +1,6 @@
 # Interactive Player
 This is an emulator for Netflix's interactive movies.
 
-# Supports:
-
-* Multiple language support! You can switch the audio track when watching an interactive with the "L" key!
-
-* Initial Segment Support, which decides which segment to play first!
-
-* Support for the Default Choice Index!
-
-* Saving and loading!
-
-* Pause feature! With the spacebar!
-
-* Interactive Selection Menu!
-
-* UI Support!
-
-# Things to Add:
-
-* States and Preconditions,
-
 # How to Use:
 
 Add folders inside the programs directory, each folder is a different movie.
@@ -38,6 +18,12 @@ Each movie will need:
 It should look something like this:
 
 ![image](https://github.com/user-attachments/assets/660da037-9a18-4781-84c3-a4745a1afbe1)
+
+* You can switch the audio track in settings or when watching an interactive with the "L" key!
+
+* You can switch the subtitle track in settings or when watching an interactive with the "S" key!
+
+* You can pause the spacebar in the console!
 
 # Dependencies:
 
