@@ -51,7 +51,7 @@ public static class JsonParser
         }
     }
 
-    public static (Dictionary<string, List<Moment>>, string, Dictionary<string, object>, Dictionary<string, object>) ParseMoments(string jsonFile)
+    public static (Dictionary<string, List<Moment>>, string, Dictionary<string, object>, Dictionary<string, object>, Dictionary<string, List<SegmentGroup>>) ParseMoments(string jsonFile)
     {
         try
         {
@@ -88,13 +88,27 @@ public static class JsonParser
             var globalState = stateHistory?["global"]?.ToObject<Dictionary<string, object>>() ?? new Dictionary<string, object>();
             var persistentState = stateHistory?["persistent"]?.ToObject<Dictionary<string, object>>() ?? new Dictionary<string, object>();
 
+            // Extract segment groups
+            var segmentGroupsToken = video["interactiveVideoMoments"]?["value"]?["segmentGroups"];
+            var segmentGroups = new Dictionary<string, List<SegmentGroup>>();
+
+            if (segmentGroupsToken != null)
+            {
+                foreach (var property in segmentGroupsToken.Children<JProperty>())
+                {
+                    var segmentId = property.Name;
+                    var group = property.Value.ToObject<List<SegmentGroup>>(new JsonSerializer { Converters = { new SegmentGroupConverter() } });
+                    segmentGroups[segmentId] = group;
+                }
+            }
+
             Console.WriteLine($"Loaded moments for {momentsBySegment.Count} segments.");
-            return (momentsBySegment, videoId, globalState, persistentState);
+            return (momentsBySegment, videoId, globalState, persistentState, segmentGroups);
         }
         catch (Exception ex)
         {
             Console.WriteLine($"Error parsing info JSON: {ex.Message}");
-            return (null, null, null, null);
+            return (null, null, null, null, null);
         }
     }
 
@@ -146,7 +160,7 @@ public static class JsonParser
         return segmentId;
     }
 
-    public static string HandleSegment(MediaPlayer mediaPlayer, Segment segment, Dictionary<string, Segment> segments, string movieFolder, string videoId, ref Dictionary<string, object> globalState, ref Dictionary<string, object> persistentState)
+    public static string HandleSegment(MediaPlayer mediaPlayer, Segment segment, Dictionary<string, Segment> segments, string movieFolder, string videoId, ref Dictionary<string, object> globalState, ref Dictionary<string, object> persistentState, string infoJsonFile, string saveFilePath, Dictionary<string, List<SegmentGroup>> segmentGroups)
     {
         mediaPlayer.Time = segment.StartTimeMs;
         string nextSegment = segment.DefaultNext;
@@ -282,7 +296,20 @@ public static class JsonParser
             }
 
             Thread.Sleep(100);
-            HandleKeyPress(mediaPlayer);
+            HandleKeyPress(mediaPlayer, infoJsonFile, saveFilePath);
+        }
+
+        // Check segment groups for the next segment
+        if (segmentGroups.TryGetValue(segment.Id, out List<SegmentGroup> group))
+        {
+            foreach (var item in group)
+            {
+                if (item.Precondition == null || PreconditionChecker.CheckPrecondition(item.Precondition, globalState, persistentState, infoJsonFile))
+                {
+                    nextSegment = item.Segment;
+                    break;
+                }
+            }
         }
 
         return nextSegment;
@@ -400,7 +427,7 @@ public static class JsonParser
         }
     }
 
-    private static void HandleKeyPress(MediaPlayer mediaPlayer)
+    private static void HandleKeyPress(MediaPlayer mediaPlayer, string infoJsonFile, string saveFilePath)
     {
         if (!Console.KeyAvailable) return;
 
@@ -429,6 +456,11 @@ public static class JsonParser
             case ConsoleKey.S:
                 Console.WriteLine("Switching subtitles...");
                 SubtitleManager.ListAndSelectSubtitleTrack(mediaPlayer, mediaPlayer.Media);
+                break;
+
+            case ConsoleKey.C:
+                Console.WriteLine("Checking preconditions...");
+                PreconditionChecker.CheckPreconditions(infoJsonFile, saveFilePath);
                 break;
 
             default:

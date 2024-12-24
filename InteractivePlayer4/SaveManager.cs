@@ -123,12 +123,40 @@ public static class SaveManager
 
     public static void SaveProgress(string saveFilePath, string currentSegment, Dictionary<string, object> globalState, Dictionary<string, object> persistentState)
     {
-        var saveData = new SaveData
+        SaveData saveData;
+
+        if (File.Exists(saveFilePath))
         {
-            CurrentSegment = currentSegment,
-            GlobalState = globalState,
-            PersistentState = persistentState
-        };
+            // Load existing save data
+            saveData = JsonConvert.DeserializeObject<SaveData>(File.ReadAllText(saveFilePath));
+
+            // Update the current segment
+            saveData.CurrentSegment = currentSegment;
+
+            // Merge global state
+            foreach (var kvp in globalState)
+            {
+                saveData.GlobalState[kvp.Key] = kvp.Value;
+            }
+
+            // Merge persistent state
+            foreach (var kvp in persistentState)
+            {
+                saveData.PersistentState[kvp.Key] = kvp.Value;
+            }
+        }
+        else
+        {
+            // Create new save data
+            saveData = new SaveData
+            {
+                CurrentSegment = currentSegment,
+                GlobalState = globalState,
+                PersistentState = persistentState
+            };
+        }
+
+        // Save the updated or new save data to the file
         File.WriteAllText(saveFilePath, JsonConvert.SerializeObject(saveData, Formatting.Indented));
     }
 }
