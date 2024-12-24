@@ -533,6 +533,7 @@ public static class UIManager
         var gamepad = state.Gamepad;
 
         int previousIndex = selectedIndex;
+        bool moved = false;
 
         // Handle D-Pad and joystick input
         if (!inputCaptured)
@@ -540,14 +541,16 @@ public static class UIManager
             if (gamepad.Buttons.HasFlag(GamepadButtonFlags.DPadLeft) || gamepad.LeftThumbX < -5000)
             {
                 selectedIndex = Math.Max(0, selectedIndex - 1);
+                moved = true;
             }
             else if (gamepad.Buttons.HasFlag(GamepadButtonFlags.DPadRight) || gamepad.LeftThumbX > 5000)
             {
                 selectedIndex = Math.Min(buttons.Count - 1, selectedIndex + 1);
+                moved = true;
             }
 
             // Play hover sound and rumble if the selected button changes
-            if (selectedIndex != previousIndex)
+            if (moved && selectedIndex != previousIndex)
             {
                 if (File.Exists(hoverSoundPath))
                 {
@@ -558,6 +561,9 @@ public static class UIManager
                 // Small rumble for moving to a choice
                 controller.SetVibration(new Vibration { LeftMotorSpeed = 2000, RightMotorSpeed = 2000 });
                 Task.Delay(100).ContinueWith(_ => controller.SetVibration(new Vibration())); // Stop rumble after 100ms
+
+                // Add delay to slow down the movement
+                Task.Delay(200).Wait();
             }
 
             // Highlight the selected button
