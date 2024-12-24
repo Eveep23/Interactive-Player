@@ -132,13 +132,7 @@ public static class JsonParser
                         {
                             if (string.IsNullOrEmpty(choice.SegmentId))
                             {
-                                choice.SegmentId = choice.Id;
-                            }
-
-                            // Check if the segment exists, if not, trim it
-                            if (!segments.ContainsKey(choice.SegmentId))
-                            {
-                                choice.SegmentId = TrimSegmentId(choice.SegmentId);
+                                choice.SegmentId = choice.sg ?? choice.Id;
                             }
                         }
                     }
@@ -303,6 +297,24 @@ public static class JsonParser
         if (segmentGroups.TryGetValue(segment.Id, out List<SegmentGroup> group))
         {
             foreach (var item in group)
+            {
+                if (item.Precondition == null || PreconditionChecker.CheckPrecondition(item.Precondition, globalState, persistentState, infoJsonFile))
+                {
+                    nextSegment = item.Segment;
+                    break;
+                }
+            }
+        }
+
+        // Handle segment group (sg) if nextSegment is a segment group and no SegmentId is listed
+        if (segments.ContainsKey(nextSegment))
+        {
+            return nextSegment;
+        }
+
+        if (segmentGroups.TryGetValue(nextSegment, out List<SegmentGroup> nextGroup))
+        {
+            foreach (var item in nextGroup)
             {
                 if (item.Precondition == null || PreconditionChecker.CheckPrecondition(item.Precondition, globalState, persistentState, infoJsonFile))
                 {

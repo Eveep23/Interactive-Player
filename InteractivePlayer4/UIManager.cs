@@ -9,6 +9,7 @@ using System.Runtime.InteropServices;
 using Newtonsoft.Json;
 using LibVLCSharp.Shared;
 using System.Diagnostics;
+using SharpDX.XInput;
 using System.Threading.Tasks;
 public static class UIManager
 {
@@ -383,6 +384,30 @@ public static class UIManager
             choiceForm.Invoke(new Action(() => choiceForm.Close()));
         });
 
+        Task.Run(async () =>
+        {
+            int selectedIndex = 0; // Initialize selected index for controller input
+
+            while (stopwatch.ElapsedMilliseconds < timeLimitMs)
+            {
+                initialWidth = (int)((double)(1650 * scaleFactor) * (timeLimitMs - stopwatch.ElapsedMilliseconds) / timeLimitMs);
+                drawingPanel.Invalidate();
+
+                // Handle controller input
+                HandleControllerInput(ref selectedIndex, buttons, buttonSprites, ref inputCaptured, ref selectedSegmentId, choiceForm, selectSoundPath, hoverSoundPath, libVLC);
+
+                await Task.Delay(16); // Update approximately every 16ms (~60 FPS)
+            }
+
+            if (!inputCaptured && File.Exists(timeoutSoundPath))
+            {
+                var timeoutPlayer = new MediaPlayer(new Media(libVLC, timeoutSoundPath, FromType.FromPath));
+                timeoutPlayer.Play();
+            }
+
+            choiceForm.Invoke(new Action(() => choiceForm.Close()));
+        });
+
         choiceForm.ShowDialog();
 
         return selectedSegmentId;
@@ -494,6 +519,82 @@ public static class UIManager
         {
             Console.WriteLine($"Bitmap not found at path: {path}");
             return null;
+        }
+    }
+    private static void HandleControllerInput(ref int selectedIndex, List<Button> buttons, List<Bitmap> buttonSprites, ref bool inputCaptured, ref string selectedSegmentId, Form choiceForm, string selectSoundPath, string hoverSoundPath, LibVLC libVLC)
+    {
+        var controller = new Controller(UserIndex.One);
+        if (!controller.IsConnected)
+        {
+            return;
+        }
+
+        var state = controller.GetState();
+        var gamepad = state.Gamepad;
+
+        int previousIndex = selectedIndex;
+
+        // Handle D-Pad and joystick input
+        if (!inputCaptured)
+        {
+            if (gamepad.Buttons.HasFlag(GamepadButtonFlags.DPadLeft) || gamepad.LeftThumbX < -5000)
+            {
+                selectedIndex = Math.Max(0, selectedIndex - 1);
+            }
+            else if (gamepad.Buttons.HasFlag(GamepadButtonFlags.DPadRight) || gamepad.LeftThumbX > 5000)
+            {
+                selectedIndex = Math.Min(buttons.Count - 1, selectedIndex + 1);
+            }
+
+            // Play hover sound and rumble if the selected button changes
+            if (selectedIndex != previousIndex)
+            {
+                if (File.Exists(hoverSoundPath))
+                {
+                    var hoverPlayer = new MediaPlayer(new Media(libVLC, hoverSoundPath, FromType.FromPath));
+                    hoverPlayer.Play();
+                }
+
+                // Small rumble for moving to a choice
+                controller.SetVibration(new Vibration { LeftMotorSpeed = 2000, RightMotorSpeed = 2000 });
+                Task.Delay(100).ContinueWith(_ => controller.SetVibration(new Vibration())); // Stop rumble after 100ms
+            }
+
+            // Highlight the selected button
+            for (int i = 0; i < buttons.Count; i++)
+            {
+                buttons[i].BackgroundImage = i == selectedIndex ? new Bitmap(ExtractSprite(buttonSprites[i], 1), buttons[i].Size) : new Bitmap(ExtractSprite(buttonSprites[i], 0), buttons[i].Size);
+            }
+        }
+
+        // Handle selection
+        if ((gamepad.Buttons.HasFlag(GamepadButtonFlags.A) || gamepad.RightTrigger > 128) && !inputCaptured)
+        {
+            selectedSegmentId = (string)buttons[selectedIndex].Tag;
+            inputCaptured = true;
+
+            buttons[selectedIndex].BackgroundImage = new Bitmap(ExtractSprite(buttonSprites[selectedIndex], 2), buttons[selectedIndex].Size);
+            buttons[selectedIndex].Enabled = false;
+
+            foreach (var btn in buttons)
+            {
+                if (btn != buttons[selectedIndex])
+                {
+                    btn.Enabled = false;
+                }
+            }
+
+            if (File.Exists(selectSoundPath))
+            {
+                var selectPlayer = new MediaPlayer(new Media(libVLC, selectSoundPath, FromType.FromPath));
+                selectPlayer.Play();
+            }
+
+            // Big rumble for selecting a choice
+            controller.SetVibration(new Vibration { LeftMotorSpeed = 65535, RightMotorSpeed = 65535 });
+            Task.Delay(300).ContinueWith(_ => controller.SetVibration(new Vibration())); // Stop rumble after 300ms
+
+            choiceForm.ActiveControl = null;
         }
     }
 }
