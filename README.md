@@ -31,4 +31,6 @@ It should look something like this:
 
 * SharpDX.XInput
 
+* SharpDX.DirectInput
+
 * Newtonsoft.Json
