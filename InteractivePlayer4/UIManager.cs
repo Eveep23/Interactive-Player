@@ -467,6 +467,9 @@ public static class UIManager
                 case "81058723":
                     heightFactor = 0.45;
                     break;
+                case "80994695":
+                    heightFactor = 0.30;
+                    break;
             }
             choiceForm.Height = (int)(playerHeight * heightFactor);
 

@@ -8,6 +8,8 @@ using LibVLCSharp.Shared;
 using System.Threading;
 using System.Net;
 using Newtonsoft.Json;
+using SharpDX.DirectInput;
+using SharpDX.XInput;
 
 public static class JsonParser
 {
@@ -124,6 +126,9 @@ public static class JsonParser
                     segment.Choices = choiceMoment.Choices;
                     segment.ChoiceDisplayTimeMs = choiceMoment.UIDisplayMS ?? 0;
                     segment.HideChoiceTimeMs = choiceMoment.HideTimeoutUiMS ?? segment.EndTimeMs;
+
+                    // Transfer TimeoutSegment information
+                    segment.TimeoutSegment = choiceMoment.TimeoutSegment;
 
                     // Assign segmentId to each choice
                     if (segment.Choices != null)
@@ -283,7 +288,14 @@ public static class JsonParser
                 else
                 {
                     Console.WriteLine("No choice made. Defaulting to the specified choice.");
-                    nextSegment = GetDefaultChoice(segment);
+                    if (segment.TimeoutSegment != null)
+                    {
+                        nextSegment = IsControllerConnected() ? "Fallback_Tutorial_Controller" : "Fallback_Tutorial_Site";
+                    }
+                    else
+                    {
+                        nextSegment = GetDefaultChoice(segment);
+                    }
                 }
 
                 choiceDisplayed = true;
@@ -325,6 +337,30 @@ public static class JsonParser
         }
 
         return nextSegment;
+    }
+
+    // Check if an Xbox controller is connected
+    private static bool IsControllerConnected()
+    {
+        var directInput = new SharpDX.DirectInput.DirectInput();
+        var joystickGuid = Guid.Empty;
+
+        foreach (var deviceInstance in directInput.GetDevices(SharpDX.DirectInput.DeviceType.Gamepad, SharpDX.DirectInput.DeviceEnumerationFlags.AllDevices))
+        {
+            joystickGuid = deviceInstance.InstanceGuid;
+            break;
+        }
+
+        if (joystickGuid == Guid.Empty)
+        {
+            foreach (var deviceInstance in directInput.GetDevices(SharpDX.DirectInput.DeviceType.Joystick, SharpDX.DirectInput.DeviceEnumerationFlags.AllDevices))
+            {
+                joystickGuid = deviceInstance.InstanceGuid;
+                break;
+            }
+        }
+
+        return joystickGuid != Guid.Empty;
     }
 
     // Find the default button texture

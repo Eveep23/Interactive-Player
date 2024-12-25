@@ -34,6 +34,7 @@ public class Segment
     public int HideChoiceTimeMs { get; set; }
     public List<Choice> Choices { get; set; }
     public int? DefaultChoiceIndex { get; set; }
+    public TimeoutSegment TimeoutSegment { get; set; }
 }
 
 public class SegmentGroup
@@ -90,4 +91,10 @@ public class Moment
     public int? UIDisplayMS { get; set; }
     public int? HideTimeoutUiMS { get; set; }
     public List<Choice> Choices { get; set; }
+    public TimeoutSegment TimeoutSegment { get; set; }
+}
+
+public class TimeoutSegment
+{
+    public string SegmentId { get; set; }
 }
