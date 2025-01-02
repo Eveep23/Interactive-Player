@@ -32,7 +32,8 @@ class Program
 
         // Load save file if it exists
         string currentSegment = SaveManager.LoadSaveFile(saveFilePath);
-        if (currentSegment == null)
+        bool isFirstLoad = currentSegment == null;
+        if (isFirstLoad)
         {
             File.Delete(saveFilePath); // Restart
         }
@@ -68,6 +69,14 @@ class Program
             currentSegment = segments.Values.FirstOrDefault(s => s.IsStartingSegment)?.Id ?? segments.Keys.First();
         }
 
+        // Load states from save file if it exists
+        if (!isFirstLoad)
+        {
+            var saveData = SaveManager.LoadSaveData(saveFilePath);
+            globalState = saveData.GlobalState;
+            persistentState = saveData.PersistentState;
+        }
+
         var libVLC = new LibVLC();
         var mediaPlayer = new MediaPlayer(new Media(libVLC, new Uri(Path.GetFullPath(videoFile))));
 
@@ -85,9 +94,12 @@ class Program
                 }
 
                 Console.WriteLine($"Now playing segment: {segment.Id}");
-                currentSegment = JsonParser.HandleSegment(mediaPlayer, segment, segments, movieFolder, videoId, ref globalState, ref persistentState, infoJsonFile, saveFilePath, segmentGroups);
+                currentSegment = JsonParser.HandleSegment(mediaPlayer, segment, segments, movieFolder, videoId, ref globalState, ref persistentState, infoJsonFile, saveFilePath, segmentGroups, isFirstLoad);
 
                 SaveManager.SaveProgress(saveFilePath, currentSegment, globalState, persistentState);
+
+                // After the first segment, set isFirstLoad to false
+                isFirstLoad = false;
             }
 
             Console.WriteLine("Interactive finished.");

@@ -159,7 +159,7 @@ public static class JsonParser
         return segmentId;
     }
 
-    public static string HandleSegment(MediaPlayer mediaPlayer, Segment segment, Dictionary<string, Segment> segments, string movieFolder, string videoId, ref Dictionary<string, object> globalState, ref Dictionary<string, object> persistentState, string infoJsonFile, string saveFilePath, Dictionary<string, List<SegmentGroup>> segmentGroups)
+    public static string HandleSegment(MediaPlayer mediaPlayer, Segment segment, Dictionary<string, Segment> segments, string movieFolder, string videoId, ref Dictionary<string, object> globalState, ref Dictionary<string, object> persistentState, string infoJsonFile, string saveFilePath, Dictionary<string, List<SegmentGroup>> segmentGroups, bool isFirstLoad)
     {
         mediaPlayer.Time = segment.StartTimeMs;
         string nextSegment = segment.DefaultNext;
@@ -169,6 +169,9 @@ public static class JsonParser
 
         // Load audio and subtitle tracks from config save file after media is parsed
         string configSaveFilePath = Path.Combine(AppDomain.CurrentDomain.BaseDirectory, "config.json");
+        var localGlobalState = globalState;
+        var localPersistentState = persistentState;
+
         mediaPlayer.Media.ParsedChanged += (sender, e) =>
         {
             if (e.ParsedStatus == MediaParsedStatus.Done)
@@ -177,6 +180,16 @@ public static class JsonParser
                 SubtitleManager.LoadSubtitleTrackFromSaveFile(mediaPlayer, mediaPlayer.Media, configSaveFilePath);
             }
         };
+
+        // Only reset states if this is the first time loading the save
+        if (isFirstLoad)
+        {
+            var initialStates = LoadInitialStates(infoJsonFile);
+            globalState = initialStates.globalState;
+            persistentState = initialStates.persistentState;
+            localGlobalState = globalState;
+            localPersistentState = persistentState;
+        }
 
         while (mediaPlayer.Time < segment.EndTimeMs)
         {
@@ -192,9 +205,19 @@ public static class JsonParser
 
                 Console.WriteLine($"Choice point reached for segment {segment.Id}");
 
-                // Load button sprites for each choice
+                // Filter out choices with exceptions
+                var validChoices = segment.Choices.Where(choice =>
+                {
+                    if (!string.IsNullOrEmpty(choice.Exception))
+                    {
+                        return !PreconditionChecker.CheckPrecondition(choice.Exception, localGlobalState, localPersistentState, infoJsonFile);
+                    }
+                    return true;
+                }).ToList();
+
+                // Load button sprites for each valid choice
                 var buttonSprites = new List<Bitmap>();
-                foreach (var choice in segment.Choices)
+                foreach (var choice in validChoices)
                 {
                     string buttonSpritePath = null;
 
@@ -227,7 +250,7 @@ public static class JsonParser
                 }
 
                 var buttonIcons = new List<Bitmap>();
-                foreach (var choice in segment.Choices)
+                foreach (var choice in validChoices)
                 {
                     string iconPath = null;
 
@@ -252,14 +275,14 @@ public static class JsonParser
                     }
                 }
 
-                string selectedSegment = UIManager.ShowChoiceUI(segment.Choices, buttonSprites, buttonIcons, (int)choiceDurationMs, movieFolder, videoId);
+                string selectedSegment = UIManager.ShowChoiceUI(validChoices, buttonSprites, buttonIcons, (int)choiceDurationMs, movieFolder, videoId);
 
                 if (!string.IsNullOrEmpty(selectedSegment))
                 {
                     nextSegment = selectedSegment;
 
                     // Update states based on the chosen option
-                    var chosenOption = segment.Choices.FirstOrDefault(c => c.SegmentId == selectedSegment);
+                    var chosenOption = validChoices.FirstOrDefault(c => c.SegmentId == selectedSegment);
                     if (chosenOption != null && chosenOption.ImpressionData != null)
                     {
                         var impressionData = chosenOption.ImpressionData.Data;
@@ -269,7 +292,7 @@ public static class JsonParser
                             {
                                 foreach (var kvp in impressionData.Global)
                                 {
-                                    globalState[kvp.Key] = kvp.Value;
+                                    localGlobalState[kvp.Key] = kvp.Value;
                                     Console.WriteLine($"Global state changed: {kvp.Key} = {kvp.Value}");
                                 }
                             }
@@ -278,11 +301,15 @@ public static class JsonParser
                             {
                                 foreach (var kvp in impressionData.Persistent)
                                 {
-                                    persistentState[kvp.Key] = kvp.Value;
+                                    localPersistentState[kvp.Key] = kvp.Value;
                                     Console.WriteLine($"Persistent state changed: {kvp.Key} = {kvp.Value}");
                                 }
                             }
                         }
+                    }
+                    if (videoId == "10000001")
+                    {
+                        break; // Break out of the loop and return the selected segment immediately
                     }
                 }
                 else
@@ -310,7 +337,7 @@ public static class JsonParser
         {
             foreach (var item in group)
             {
-                if (item.Precondition == null || PreconditionChecker.CheckPrecondition(item.Precondition, globalState, persistentState, infoJsonFile))
+                if (item.Precondition == null || PreconditionChecker.CheckPrecondition(item.Precondition, localGlobalState, localPersistentState, infoJsonFile))
                 {
                     nextSegment = item.Segment;
                     break;
@@ -328,7 +355,7 @@ public static class JsonParser
         {
             foreach (var item in nextGroup)
             {
-                if (item.Precondition == null || PreconditionChecker.CheckPrecondition(item.Precondition, globalState, persistentState, infoJsonFile))
+                if (item.Precondition == null || PreconditionChecker.CheckPrecondition(item.Precondition, localGlobalState, localPersistentState, infoJsonFile))
                 {
                     nextSegment = item.Segment;
                     break;
@@ -338,6 +365,20 @@ public static class JsonParser
 
         return nextSegment;
     }
+
+    // Method to load initial states from the info JSON
+    private static (Dictionary<string, object> globalState, Dictionary<string, object> persistentState) LoadInitialStates(string infoJsonFile)
+    {
+        var json = JObject.Parse(File.ReadAllText(infoJsonFile));
+        var video = json["jsonGraph"]?["videos"]?.First?.First;
+
+        var stateHistory = video["interactiveVideoMoments"]?["value"]?["stateHistory"];
+        var globalState = stateHistory?["global"]?.ToObject<Dictionary<string, object>>() ?? new Dictionary<string, object>();
+        var persistentState = stateHistory?["persistent"]?.ToObject<Dictionary<string, object>>() ?? new Dictionary<string, object>();
+
+        return (globalState, persistentState);
+    }
+
 
     // Check if an Xbox controller is connected
     private static bool IsControllerConnected()

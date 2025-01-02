@@ -52,6 +52,7 @@ public class Choice
     public string Id { get; set; }
     public ImpressionData ImpressionData { get; set; }
     public string sg { get; set; }
+    public string Exception { get; set; }
 }
 
 public class ImpressionData

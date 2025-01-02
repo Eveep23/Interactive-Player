@@ -27,8 +27,8 @@ public static class UIManager
             Text = "Make a Choice",
             StartPosition = FormStartPosition.Manual,
             FormBorderStyle = FormBorderStyle.None,
-            BackColor = videoId == "81004016" ? Color.Black : Color.Tan,
-            TransparencyKey = Color.Tan,
+            BackColor = videoId == "81004016" ? Color.Black : Color.FromArgb(41, 41, 41),
+            TransparencyKey = Color.FromArgb(41, 41, 41),
             MaximizeBox = false,
             MinimizeBox = false,
             TopMost = true,
@@ -112,7 +112,7 @@ public static class UIManager
                     BackColor = Color.Transparent,
                     UseVisualStyleBackColor = false,
                     TabStop = false,
-                    Font = new Font("Arial", (float)(22 * scaleFactor), FontStyle.Bold), // Set font to Arial, bold and scale it
+                    Font = new Font("Arial", (float)(22 * scaleFactor), videoId == "10000001" ? FontStyle.Regular : FontStyle.Bold), // Set font to Arial, conditionally bold
                     ForeColor = Color.White,
                     TextAlign = (new[] { "81004016", "81205738", "81108751" }.Contains(videoId)) ? ContentAlignment.MiddleLeft : ContentAlignment.MiddleCenter,
                     Padding = (new[] { "81004016", "81205738", "81108751" }.Contains(videoId)) ? new Padding((int)(buttonWidth * 0.4), 0, 0, 0) : new Padding(0)
@@ -180,7 +180,15 @@ public static class UIManager
                             var selectPlayer = new MediaPlayer(new Media(libVLC, selectSoundPath, FromType.FromPath));
                             selectPlayer.Play();
                         }
-                        choiceForm.ActiveControl = null;
+
+                        if (videoId == "10000001")
+                        {
+                            choiceForm.Close(); // Close the form immediately after a choice is made
+                        }
+                        else
+                        {
+                            choiceForm.ActiveControl = null;
+                        }
                     }
                 };
 
@@ -262,18 +270,41 @@ public static class UIManager
             return null; // Or handle the case where no file is found
         }
 
+        // Check if a controller is connected
+        var controller = new Controller(UserIndex.One);
+        bool isControllerConnected = controller.IsConnected;
+
         // Define possible names for each texture
-        string timerFillPath = FindTexturePath(movieFolder, new[] { "timer_fill_2x.png", "timer_fill_2x_v2.png", "timer_fill_3x.png" });
-        string timerCapLPath = FindTexturePath(movieFolder, new[] { "timer_capL_2x.png", "timer_capL_2x_v2.png", "timer_capL_3x.png" });
-        string timerCapRPath = FindTexturePath(movieFolder, new[] { "timer_capR_2x.png", "timer_capR_2x_v2.png", "timer_capR_3x.png" });
-        string timerBottomPath = FindTexturePath(movieFolder, new[] { "timer_bottom_2x.png", "timer_bottom_2x_v2.png", "timer_bottom_3x.png" });
-        string timerTopPath = FindTexturePath(movieFolder, new[] { "timer_top_2x.png", "timer_top_2x_v2.png", "timer_top_3x.png" });
-        string webPath = FindTexturePath(movieFolder, new[] { "web_2x.png", "web_2x_v2.png", "web_3x.png", "web_icon_2x.png" });
+        string timerFillPath, timerCapLPath, timerCapRPath, timerBottomPath, timerTopPath, webPath;
+
+        if (videoId == "10000001")
+        {
+            timerFillPath = FindTexturePath(movieFolder, new[] { "timer.png" });
+            timerCapLPath = null;
+            timerCapRPath = null;
+            timerBottomPath = null;
+            timerTopPath = null;
+            webPath = isControllerConnected ? FindTexturePath(movieFolder, new[] { "controller_2x.png" }) : FindTexturePath(movieFolder, new[] { "web_2x.png", "web_2x_v2.png", "web_3x.png", "web_icon_2x.png" });
+        }
+        else
+        {
+            timerFillPath = FindTexturePath(movieFolder, new[] { "timer_fill_2x.png", "timer_fill_2x_v2.png", "timer_fill_3x.png" });
+            timerCapLPath = FindTexturePath(movieFolder, new[] { "timer_capL_2x.png", "timer_capL_2x_v2.png", "timer_capL_3x.png" });
+            timerCapRPath = FindTexturePath(movieFolder, new[] { "timer_capR_2x.png", "timer_capR_2x_v2.png", "timer_capR_3x.png" });
+            timerBottomPath = FindTexturePath(movieFolder, new[] { "timer_bottom_2x.png", "timer_bottom_2x_v2.png", "timer_bottom_3x.png" });
+            timerTopPath = FindTexturePath(movieFolder, new[] { "timer_top_2x.png", "timer_top_2x_v2.png", "timer_top_3x.png" });
+            webPath = isControllerConnected ? FindTexturePath(movieFolder, new[] { "controller_2x.png" }) : FindTexturePath(movieFolder, new[] { "web_2x.png", "web_2x_v2.png", "web_3x.png", "web_icon_2x.png" });
+        }
 
         // Handle cases where a texture wasn't found
         if (webPath == null)
         {
-            Console.WriteLine("Texture not found.");
+            webPath = FindTexturePath(movieFolder, new[] { "web_2x.png", "web_2x_v2.png", "web_3x.png", "web_icon_2x.png" });
+        }
+
+        if (timerFillPath == null)
+        {
+            Console.WriteLine("Timer texture not found.");
         }
 
         Bitmap timerFillSprite = LoadBitmap(timerFillPath);
@@ -295,76 +326,100 @@ public static class UIManager
             BackColor = Color.Transparent
         };
 
+        Stopwatch stopwatch = new Stopwatch();
+        stopwatch.Start();
+
         drawingPanel.Paint += (sender, e) =>
         {
             Graphics g = e.Graphics;
 
             int alignedY = timerBarY;
 
-            // Draw timer bottom
-            if (timerBottomSprite != null)
+            if (videoId == "10000001")
             {
-                g.DrawImage(timerBottomSprite, new Rectangle((choiceForm.Width - (int)(1800 * scaleFactor)) / 2, alignedY, (int)(1800 * scaleFactor), (int)(50 * scaleFactor)));
+                if (timerFillSprite != null)
+                {
+                    int frameHeight = timerFillSprite.Height / 22;
+                    int currentFrame = (int)((double)stopwatch.ElapsedMilliseconds / timeLimitMs * 22);
+                    currentFrame = Math.Min(currentFrame, 21); // Ensure the frame index does not exceed 21
+
+                    Rectangle sourceRect = new Rectangle(0, currentFrame * frameHeight, timerFillSprite.Width, frameHeight);
+                    Rectangle destRect = new Rectangle((choiceForm.Width - (int)(timerFillSprite.Width * scaleFactor)) / 2, alignedY, (int)(timerFillSprite.Width * scaleFactor), (int)(frameHeight * scaleFactor));
+
+                    g.DrawImage(timerFillSprite, destRect, sourceRect, GraphicsUnit.Pixel);
+
+                    // Draw overlay
+                    if (webSprite != null)
+                    {
+                        int webY = alignedY + ((int)(frameHeight * scaleFactor) / 2) - (int)(webSprite.Height * scaleFactor / 2);
+                        g.DrawImage(webSprite, new Rectangle((choiceForm.Width - (int)(webSprite.Width * scaleFactor)) / 2, webY, (int)(webSprite.Width * scaleFactor), (int)(webSprite.Height * scaleFactor)));
+                    }
+                }
             }
-
-            // Draw timer fill
-            if (timerFillSprite != null)
+            else
             {
-                // All this crap is due to System.Drawings applying a fade effect
-                int leftEdgeWidth = (int)(10 * scaleFactor);
-                int rightEdgeWidth = (int)(10 * scaleFactor);
-                int middleWidth = Math.Max(0, initialWidth - leftEdgeWidth - rightEdgeWidth);
-                int totalWidth = leftEdgeWidth + middleWidth + rightEdgeWidth;
-                int destX = (choiceForm.Width - totalWidth) / 2;
-                int destY = alignedY;
-                int destHeight = timerBarHeight;
+                // Draw timer bottom
+                if (timerBottomSprite != null)
+                {
+                    g.DrawImage(timerBottomSprite, new Rectangle((choiceForm.Width - (int)(1800 * scaleFactor)) / 2, alignedY, (int)(1800 * scaleFactor), (int)(50 * scaleFactor)));
+                }
 
-                // Draw left edge
-                Rectangle leftSourceRect = new Rectangle(0, 0, leftEdgeWidth, timerFillSprite.Height);
-                Rectangle leftDestRect = new Rectangle(destX, destY, leftEdgeWidth, destHeight);
-                g.DrawImage(timerFillSprite, leftDestRect, leftSourceRect, GraphicsUnit.Pixel);
+                // Draw timer fill
+                if (timerFillSprite != null)
+                {
+                    // All this crap is due to System.Drawings applying a fade effect
+                    int leftEdgeWidth = (int)(10 * scaleFactor);
+                    int rightEdgeWidth = (int)(10 * scaleFactor);
+                    int middleWidth = Math.Max(0, initialWidth - leftEdgeWidth - rightEdgeWidth);
+                    int totalWidth = leftEdgeWidth + middleWidth + rightEdgeWidth;
+                    int destX = (choiceForm.Width - totalWidth) / 2;
+                    int destY = alignedY;
+                    int destHeight = timerBarHeight;
 
-                // Draw middle stretched portion
-                Rectangle middleSourceRect = new Rectangle(leftEdgeWidth, 0, timerFillSprite.Width - leftEdgeWidth - rightEdgeWidth, timerFillSprite.Height);
-                Rectangle middleDestRect = new Rectangle(destX + leftEdgeWidth, destY, middleWidth, destHeight);
-                g.DrawImage(timerFillSprite, middleDestRect, middleSourceRect, GraphicsUnit.Pixel);
+                    // Draw left edge
+                    Rectangle leftSourceRect = new Rectangle(0, 0, leftEdgeWidth, timerFillSprite.Height);
+                    Rectangle leftDestRect = new Rectangle(destX, destY, leftEdgeWidth, destHeight);
+                    g.DrawImage(timerFillSprite, leftDestRect, leftSourceRect, GraphicsUnit.Pixel);
 
-                // Draw right edge
-                Rectangle rightSourceRect = new Rectangle(timerFillSprite.Width - rightEdgeWidth, 0, rightEdgeWidth, timerFillSprite.Height);
-                Rectangle rightDestRect = new Rectangle(destX + leftEdgeWidth + middleWidth, destY, rightEdgeWidth, destHeight);
-                g.DrawImage(timerFillSprite, rightDestRect, rightSourceRect, GraphicsUnit.Pixel);
-            }
+                    // Draw middle stretched portion
+                    Rectangle middleSourceRect = new Rectangle(leftEdgeWidth, 0, timerFillSprite.Width - leftEdgeWidth - rightEdgeWidth, timerFillSprite.Height);
+                    Rectangle middleDestRect = new Rectangle(destX + leftEdgeWidth, destY, middleWidth, destHeight);
+                    g.DrawImage(timerFillSprite, middleDestRect, middleSourceRect, GraphicsUnit.Pixel);
 
-            // Draw left cap
-            if (timerCapLSprite != null)
-            {
-                g.DrawImage(timerCapLSprite, new Rectangle((choiceForm.Width - initialWidth) / 2 - (int)(timerCapLSprite.Width * scaleFactor), alignedY, (int)(timerCapLSprite.Width * scaleFactor), timerBarHeight));
-            }
+                    // Draw right edge
+                    Rectangle rightSourceRect = new Rectangle(timerFillSprite.Width - rightEdgeWidth, 0, rightEdgeWidth, timerFillSprite.Height);
+                    Rectangle rightDestRect = new Rectangle(destX + leftEdgeWidth + middleWidth, destY, rightEdgeWidth, destHeight);
+                    g.DrawImage(timerFillSprite, rightDestRect, rightSourceRect, GraphicsUnit.Pixel);
+                }
 
-            // Draw right cap
-            if (timerCapRSprite != null)
-            {
-                g.DrawImage(timerCapRSprite, new Rectangle((choiceForm.Width + initialWidth) / 2, alignedY, (int)(timerCapRSprite.Width * scaleFactor), timerBarHeight));
-            }
+                // Draw left cap
+                if (timerCapLSprite != null)
+                {
+                    g.DrawImage(timerCapLSprite, new Rectangle((choiceForm.Width - initialWidth) / 2 - (int)(timerCapLSprite.Width * scaleFactor), alignedY, (int)(timerCapLSprite.Width * scaleFactor), timerBarHeight));
+                }
 
-            // Draw timer top
-            if (timerTopSprite != null)
-            {
-                g.DrawImage(timerTopSprite, new Rectangle((choiceForm.Width - (int)(1800 * scaleFactor)) / 2, alignedY, (int)(1800 * scaleFactor), (int)(50 * scaleFactor)));
-            }
+                // Draw right cap
+                if (timerCapRSprite != null)
+                {
+                    g.DrawImage(timerCapRSprite, new Rectangle((choiceForm.Width + initialWidth) / 2, alignedY, (int)(timerCapRSprite.Width * scaleFactor), timerBarHeight));
+                }
 
-            // Draw overlay
-            if (webSprite != null)
-            {
-                int webY = alignedY + (timerBarHeight / 2) - (int)(webSprite.Height * scaleFactor / 2);
-                g.DrawImage(webSprite, new Rectangle((choiceForm.Width - (int)(webSprite.Width * scaleFactor)) / 2, webY, (int)(webSprite.Width * scaleFactor), (int)(webSprite.Height * scaleFactor)));
+                // Draw timer top
+                if (timerTopSprite != null)
+                {
+                    g.DrawImage(timerTopSprite, new Rectangle((choiceForm.Width - (int)(1800 * scaleFactor)) / 2, alignedY, (int)(1800 * scaleFactor), (int)(50 * scaleFactor)));
+                }
+
+                // Draw overlay
+                if (webSprite != null)
+                {
+                    int webY = alignedY + (timerBarHeight / 2) - (int)(webSprite.Height * scaleFactor / 2);
+                    g.DrawImage(webSprite, new Rectangle((choiceForm.Width - (int)(webSprite.Width * scaleFactor)) / 2, webY, (int)(webSprite.Width * scaleFactor), (int)(webSprite.Height * scaleFactor)));
+                }
             }
         };
 
         choiceForm.Controls.Add(drawingPanel);
-
-        Stopwatch stopwatch = new Stopwatch();
-        stopwatch.Start();
 
         Task.Run(async () =>
         {
@@ -394,7 +449,7 @@ public static class UIManager
                 drawingPanel.Invalidate();
 
                 // Handle controller input
-                HandleControllerInput(ref selectedIndex, buttons, buttonSprites, ref inputCaptured, ref selectedSegmentId, choiceForm, selectSoundPath, hoverSoundPath, libVLC);
+                HandleControllerInput(ref selectedIndex, buttons, buttonSprites, ref inputCaptured, ref selectedSegmentId, choiceForm, selectSoundPath, hoverSoundPath, libVLC, videoId);
 
                 await Task.Delay(16); // Update approximately every 16ms (~60 FPS)
             }
@@ -470,6 +525,9 @@ public static class UIManager
                 case "80994695":
                     heightFactor = 0.30;
                     break;
+                case "10000001":
+                    heightFactor = 0.27;
+                    break;
             }
             choiceForm.Height = (int)(playerHeight * heightFactor);
 
@@ -524,7 +582,7 @@ public static class UIManager
             return null;
         }
     }
-    private static void HandleControllerInput(ref int selectedIndex, List<Button> buttons, List<Bitmap> buttonSprites, ref bool inputCaptured, ref string selectedSegmentId, Form choiceForm, string selectSoundPath, string hoverSoundPath, LibVLC libVLC)
+    private static void HandleControllerInput(ref int selectedIndex, List<Button> buttons, List<Bitmap> buttonSprites, ref bool inputCaptured, ref string selectedSegmentId, Form choiceForm, string selectSoundPath, string hoverSoundPath, LibVLC libVLC, string videoId)
     {
         var controller = new Controller(UserIndex.One);
         if (!controller.IsConnected)
@@ -555,18 +613,17 @@ public static class UIManager
             // Play hover sound and rumble if the selected button changes
             if (moved && selectedIndex != previousIndex)
             {
-                if (File.Exists(hoverSoundPath))
-                {
-                    var hoverPlayer = new MediaPlayer(new Media(libVLC, hoverSoundPath, FromType.FromPath));
-                    hoverPlayer.Play();
-                }
-
                 // Small rumble for moving to a choice
                 controller.SetVibration(new Vibration { LeftMotorSpeed = 2000, RightMotorSpeed = 2000 });
                 Task.Delay(100).ContinueWith(_ => controller.SetVibration(new Vibration())); // Stop rumble after 100ms
 
                 // Add delay to slow down the movement
                 Task.Delay(200).Wait();
+                if (File.Exists(hoverSoundPath))
+                {
+                    var hoverPlayer = new MediaPlayer(new Media(libVLC, hoverSoundPath, FromType.FromPath));
+                    hoverPlayer.Play();
+                }
             }
 
             // Highlight the selected button
@@ -603,7 +660,14 @@ public static class UIManager
             controller.SetVibration(new Vibration { LeftMotorSpeed = 65535, RightMotorSpeed = 65535 });
             Task.Delay(300).ContinueWith(_ => controller.SetVibration(new Vibration())); // Stop rumble after 300ms
 
-            choiceForm.ActiveControl = null;
+            if (videoId == "10000001")
+            {
+                choiceForm.Close(); // Close the form immediately after a choice is made
+            }
+            else
+            {
+                choiceForm.ActiveControl = null;
+            }
         }
     }
 }

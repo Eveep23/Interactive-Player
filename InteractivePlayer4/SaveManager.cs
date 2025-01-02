@@ -121,6 +121,15 @@ public static class SaveManager
         return null;
     }
 
+    public static SaveData LoadSaveData(string saveFilePath)
+    {
+        if (File.Exists(saveFilePath))
+        {
+            return JsonConvert.DeserializeObject<SaveData>(File.ReadAllText(saveFilePath));
+        }
+        return null;
+    }
+
     public static void SaveProgress(string saveFilePath, string currentSegment, Dictionary<string, object> globalState, Dictionary<string, object> persistentState)
     {
         SaveData saveData;
