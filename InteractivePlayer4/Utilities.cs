@@ -8,13 +8,14 @@ public static class Utilities
 {
     public static string SelectedMovieFolder { get; private set; }
 
-    public static string ShowMovieSelectionMenu()
+    public static string ShowMovieSelectionMenu(string initialDirectory = null)
     {
-        string[] movieFolders = Directory.GetDirectories(Directory.GetCurrentDirectory());
+        string currentDirectory = initialDirectory ?? Directory.GetCurrentDirectory();
+        string[] movieFolders = Directory.GetDirectories(currentDirectory);
         movieFolders = movieFolders.Where(folder =>
             !Path.GetFileName(folder).Equals("libvlc", StringComparison.OrdinalIgnoreCase) &&
-            Directory.GetFiles(folder, "*.mkv").Any() &&
-            Directory.GetFiles(folder, "*.json").Any()).ToArray();
+            (Directory.GetFiles(folder, "*.mkv").Any() && Directory.GetFiles(folder, "*.json").Any() ||
+            Directory.GetFiles(folder, "backdrop.jpg").Any() && Directory.GetFiles(folder, "logo.png").Any())).ToArray();
 
         if (movieFolders.Length == 0)
         {
@@ -22,18 +23,19 @@ public static class Utilities
             return null;
         }
 
-        string defaultBackdropPath = Path.Combine(Directory.GetCurrentDirectory(), "general", "Default_backdrop.png");
-        string topBarPath = Path.Combine(Directory.GetCurrentDirectory(), "general", "Top_bar.png");
-        string logoPath = Path.Combine(Directory.GetCurrentDirectory(), "general", "Interactive_player_logo.png");
-        string settingsWheelPath = Path.Combine(Directory.GetCurrentDirectory(), "general", "Settings_Wheel.png");
+        string defaultBackdropPath = Path.Combine(currentDirectory, "general", "Default_backdrop.png");
+        string topBarPath = Path.Combine(currentDirectory, "general", "Top_bar.png");
+        string logoPath = Path.Combine(currentDirectory, "general", "Interactive_player_logo.png");
+        string settingsWheelPath = Path.Combine(currentDirectory, "general", "Settings_Wheel.png");
 
         Form form = new Form
         {
             Text = "Interactive Player",
-            Size = new Size(1000, 750),
+            Size = new Size(2000, 750),
             StartPosition = FormStartPosition.CenterScreen,
             Icon = Icon.ExtractAssociatedIcon(Application.ExecutablePath),
-            BackColor = Color.Black
+            BackColor = Path.GetFileName(currentDirectory).Equals("MCSM", StringComparison.OrdinalIgnoreCase) ? ColorTranslator.FromHtml("#2a262a") : 
+                        Path.GetFileName(currentDirectory).Equals("BK", StringComparison.OrdinalIgnoreCase) ? ColorTranslator.FromHtml("#3cd8a9") : Color.Black
         };
 
         Panel topBarPanel = new Panel
@@ -80,7 +82,7 @@ public static class Utilities
             AutoScroll = true,
             FlowDirection = FlowDirection.LeftToRight,
             WrapContents = false,
-            Padding = new Padding(0, 50, 0, 0) // Add padding to center the buttons vertically
+            Padding = new Padding(0, 50, 0, 0) // Center the buttons vertically
         };
 
         form.Controls.Add(panel);
@@ -113,16 +115,37 @@ public static class Utilities
                     SizeMode = PictureBoxSizeMode.StretchImage,
                     BackColor = Color.Transparent,
                     Location = new Point((button.Width - 625) / 2, button.Height - 250 - 10), // Position at bottom center with a 10px margin
-                    Enabled = false // Make the PictureBox non-interactive
+                    Enabled = false
                 };
                 button.Controls.Add(movieLogo);
             }
 
             button.Click += (sender, e) =>
             {
-                SelectedMovieFolder = folder;
-                form.DialogResult = DialogResult.OK;
-                form.Close();
+                if (Directory.GetFiles(folder, "*.mkv").Any() && Directory.GetFiles(folder, "*.json").Any())
+                {
+                    // This is an interactive folder
+                    SelectedMovieFolder = folder;
+                    form.DialogResult = DialogResult.OK;
+                    form.Close();
+                }
+                else if (Directory.GetDirectories(folder).Any())
+                {
+                    // Open another Movie Selection Menu with the movies in the selected folder
+                    SelectedMovieFolder = ShowMovieSelectionMenu(folder);
+                    if (SelectedMovieFolder != null)
+                    {
+                        form.DialogResult = DialogResult.OK;
+                        form.Close();
+                    }
+                }
+                else
+                {
+                    // This is a regular movie folder
+                    SelectedMovieFolder = folder;
+                    form.DialogResult = DialogResult.OK;
+                    form.Close();
+                }
             };
 
             panel.Controls.Add(button);

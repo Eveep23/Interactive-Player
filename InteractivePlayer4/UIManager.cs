@@ -15,7 +15,154 @@ public static class UIManager
 {
     private static readonly string ConfigFilePath = Path.Combine(Directory.GetCurrentDirectory(), "config.json");
 
-    public static string ShowChoiceUI(List<Choice> choices, List<Bitmap> buttonSprites, List<Bitmap> buttonIcons, int timeLimitMs, string movieFolder, string videoId)
+    public static void ShowNotificationUI(string notificationText, string movieFolder, string videoId, int displayDurationMs)
+    {
+        int formWidth = 1900;
+
+        Form notificationForm = new Form
+        {
+            Text = "Notification",
+            StartPosition = FormStartPosition.Manual,
+            FormBorderStyle = FormBorderStyle.None,
+            BackColor = Color.FromArgb(41, 41, 41),
+            TransparencyKey = Color.FromArgb(41, 41, 41),
+            MaximizeBox = false,
+            MinimizeBox = false,
+            TopMost = true,
+            Width = formWidth,
+            Height = 200
+        };
+
+        AlignNotificationWithVideoPlayer(notificationForm, videoId);
+
+        // Calculate scaling factor based on the resized form
+        double scaleFactor = (double)notificationForm.Width / formWidth;
+
+        // Load notification background image
+        string notificationImagePath = FindTexturePath(movieFolder, "notification_2x.png");
+        Bitmap notificationImage = LoadBitmap(notificationImagePath);
+
+        if (notificationImage == null)
+        {
+            Console.WriteLine("Notification image not found.");
+            return;
+        }
+
+        int notificationWidth = (int)(notificationImage.Width * scaleFactor);
+        int notificationHeight = (int)(notificationImage.Height * scaleFactor);
+
+        var notificationPanel = new Panel
+        {
+            Size = new Size(notificationWidth, notificationHeight),
+            Location = new Point((notificationForm.Width - notificationWidth) / 2, (notificationForm.Height - notificationHeight) / 2),
+            BackgroundImage = new Bitmap(notificationImage, new Size(notificationWidth, notificationHeight)),
+            BackgroundImageLayout = ImageLayout.Stretch,
+            BackColor = Color.Transparent,
+            Padding = new Padding(10)
+        };
+
+        var textLabel = new Label
+        {
+            Text = notificationText,
+            AutoSize = true,
+            Font = new Font("Arial", (float)(26 * scaleFactor)),
+            ForeColor = Color.White,
+            BackColor = Color.Transparent,
+            TextAlign = ContentAlignment.MiddleCenter
+        };
+
+        notificationPanel.Controls.Add(textLabel);
+        textLabel.Location = new Point((notificationPanel.Width - textLabel.Width) / 2, (notificationPanel.Height - textLabel.Height) / 2);
+
+        notificationForm.Controls.Add(notificationPanel);
+
+        // Load and play notification sound
+        string notificationSoundPath = FindTexturePath(movieFolder, "sfx_notification.wav");
+        if (File.Exists(notificationSoundPath))
+        {
+            Core.Initialize();
+            var libVLC = new LibVLC();
+            var notificationPlayer = new MediaPlayer(new Media(libVLC, notificationSoundPath, FromType.FromPath));
+            notificationPlayer.Play();
+        }
+        else
+        {
+            Console.WriteLine("Notification sound not found.");
+        }
+
+        // Set initial position above the VLC window
+        IntPtr videoPlayerHandle = FindWindow(null, "VLC (Direct3D11 output)");
+        if (videoPlayerHandle != IntPtr.Zero)
+        {
+            GetWindowRect(videoPlayerHandle, out RECT rect);
+            int centerX = rect.Left;
+            int initialY = rect.Top - notificationForm.Height;
+            int targetY = rect.Top + 30;
+
+            notificationForm.Location = new Point(centerX, initialY);
+
+            System.Windows.Forms.Timer animationTimer = new System.Windows.Forms.Timer { Interval = 10 };
+            animationTimer.Tick += (sender, e) =>
+            {
+                if (notificationForm.Location.Y < targetY)
+                {
+                    notificationForm.Location = new Point(notificationForm.Location.X, notificationForm.Location.Y + 10);
+                }
+                else
+                {
+                    animationTimer.Stop();
+                }
+            };
+
+            animationTimer.Start();
+
+            Task.Run(async () =>
+            {
+                await Task.Delay(displayDurationMs);
+                notificationForm.Invoke(new Action(() => notificationForm.Close()));
+            });
+
+            notificationForm.ShowDialog();
+        }
+    }
+    private static string FindTexturePath(string folder, string textureName)
+    {
+        var files = Directory.GetFiles(folder, textureName, SearchOption.AllDirectories);
+        if (files.Length > 0)
+        {
+            return files[0];
+        }
+        return null;
+    }
+
+    private static void AlignNotificationWithVideoPlayer(Form notificationForm, string videoId)
+    {
+        IntPtr videoPlayerHandle = FindWindow(null, "VLC (Direct3D11 output)");
+        if (videoPlayerHandle != IntPtr.Zero)
+        {
+            GetWindowRect(videoPlayerHandle, out RECT rect);
+
+            // Find the width and height of the video player window
+            int playerWidth = rect.Right - rect.Left;
+            int playerHeight = rect.Bottom - rect.Top;
+
+            // Set the notificationForm width to the player width
+            notificationForm.Width = playerWidth;
+
+            // Set the notificationForm height to a fixed value
+            notificationForm.Height = (int)(playerHeight * 0.10); // Adjust height factor as needed
+
+            // Center the notification window and align it with the top, adding a top margin
+            int centerX = rect.Left;
+            int topY = rect.Top + 30; // Add a top margin of 30 pixels
+
+            notificationForm.Location = new Point(centerX, topY);
+            SetWindowLong(notificationForm.Handle, GWL_HWNDPARENT, videoPlayerHandle);
+        }
+    }
+
+
+    public static string ShowChoiceUI(List<Choice> choices, List<Bitmap> buttonSprites, List<Bitmap> buttonIcons, int timeLimitMs, string movieFolder, string videoId, Segment segment)
     {
         string selectedSegmentId = null;
         bool inputCaptured = false;
@@ -36,13 +183,19 @@ public static class UIManager
             Height = 450
         };
 
-        AlignWithVideoPlayer(choiceForm, videoId);
+        AlignWithVideoPlayer(choiceForm, videoId, segment);
 
         // Load settings
         var settings = LoadSettings();
 
         // Calculate scaling factor based on the resized form
         double scaleFactor = (double)choiceForm.Width / formWidth;
+
+        // Apply additional scaling for specific video ID
+        if (videoId == "10000001")
+        {
+            scaleFactor *= 0.75;
+        }
 
         int buttonHeight = (int)(60 * scaleFactor);
         int horizontalSpacing = (int)(10 * scaleFactor);
@@ -86,7 +239,18 @@ public static class UIManager
         int availableSpace = choiceForm.Width - totalButtonsWidth;
         int spacing = availableSpace / (choices.Count + 1);
 
-        int currentX = spacing;
+        int currentX;
+
+        // Adjust spacing and starting position for specific video ID
+        if (videoId == "10000001")
+        {
+            spacing /= 4;
+            currentX = (choiceForm.Width - totalButtonsWidth - spacing * (choices.Count - 1)) / 2;
+        }
+        else
+        {
+            currentX = spacing;
+        }
 
         for (int i = 0; i < choices.Count; i++)
         {
@@ -102,7 +266,7 @@ public static class UIManager
 
                 var button = new Button
                 {
-                    Text = (new[] { "80149064", "80135585", "81054409", "81287545", "81019938", "81260654", "81054415", "81058723" }.Contains(videoId)) ? string.Empty : choices[i].Text,
+                    Text = (segment.LayoutType == "ReubenZone" || segment.LayoutType == "EnderconZone" || segment.LayoutType == "TempleZone" || segment.LayoutType == "Crafting") ? string.Empty : (new[] { "80149064", "80135585", "81054409", "81287545", "81019938", "81260654", "81054415", "81058723" }.Contains(videoId)) ? string.Empty : choices[i].Text,
                     Size = new Size(buttonWidth, buttonHeight),
                     Location = new Point(0, 0), // Position within the panel
                     BackgroundImage = new Bitmap(defaultSprite, new Size(buttonWidth, buttonHeight)),
@@ -112,10 +276,10 @@ public static class UIManager
                     BackColor = Color.Transparent,
                     UseVisualStyleBackColor = false,
                     TabStop = false,
-                    Font = new Font("Arial", (float)(22 * scaleFactor), videoId == "10000001" ? FontStyle.Regular : FontStyle.Bold), // Set font to Arial, conditionally bold
+                    Font = new Font("Arial", (float)(videoId == "10000001" ? 28 : 22 * scaleFactor), videoId == "10000001" ? FontStyle.Regular : FontStyle.Bold),
                     ForeColor = Color.White,
-                    TextAlign = (new[] { "81004016", "81205738", "81108751" }.Contains(videoId)) ? ContentAlignment.MiddleLeft : ContentAlignment.MiddleCenter,
-                    Padding = (new[] { "81004016", "81205738", "81108751" }.Contains(videoId)) ? new Padding((int)(buttonWidth * 0.4), 0, 0, 0) : new Padding(0)
+                    TextAlign = (new[] { "81004016", "81205738", "81108751", "80151644" }.Contains(videoId)) ? ContentAlignment.MiddleLeft : ContentAlignment.MiddleCenter,
+                    Padding = (new[] { "81004016", "81205738", "81108751", "80151644" }.Contains(videoId)) ? new Padding((int)(buttonWidth * 0.4), 0, 0, 0) : new Padding(0)
                 };
 
                 button.FlatAppearance.BorderSize = 0;
@@ -193,7 +357,7 @@ public static class UIManager
                 };
 
                 // Adjust height to accommodate text only if the video ID matches
-                int panelHeight = (new[] { "81054409", "81287545", "81019938", "81260654", "81054415", "81058723" }.Contains(videoId)) ? buttonHeight + (int)(50 * scaleFactor) : buttonHeight;
+                int panelHeight = (new[] { "81054409", "81287545", "81019938", "81260654", "81054415", "81058723" }.Contains(videoId) || segment.LayoutType == "ReubenZone" || segment.LayoutType == "EnderconZone" || segment.LayoutType == "TempleZone" || segment.LayoutType == "Crafting") ? buttonHeight + (int)(50 * scaleFactor) : buttonHeight;
 
                 var buttonPanel = new Panel
                 {
@@ -201,6 +365,173 @@ public static class UIManager
                     Location = new Point(currentX, buttonTopMargin),
                     BackColor = Color.Transparent
                 };
+
+                // Custom positioning for "MCSMTeamName"
+                if (segment.LayoutType == "MCSMTeamName")
+                {
+                    if (choices[i].Text == "We're the Nether Maniacs.")
+                    {
+                        buttonPanel.Location = new Point((int)(choiceForm.Width * 0.15), (int)(choiceForm.Height * 0.71));
+                    }
+                    else if (choices[i].Text == "We're the Dead Enders.")
+                    {
+                        buttonPanel.Location = new Point((int)(choiceForm.Width * 0.335), (int)(choiceForm.Height * 0.78));
+                    }
+                    else if (choices[i].Text == "We're the Order of the Pig.")
+                    {
+                        buttonPanel.Location = new Point((int)(choiceForm.Width * 0.51), (int)(choiceForm.Height * 0.71));
+                    }
+                }
+
+                // Custom positioning for "Crafting"
+                if (segment.LayoutType == "Crafting")
+                {
+                    if (choices[i].Text == "Craft Lever")
+                    {
+                        buttonPanel.Location = new Point((int)(choiceForm.Width * 0.10), (int)(choiceForm.Height * 0.15));
+                    }
+                    else if (choices[i].Text == "Craft Bow")
+                    {
+                        buttonPanel.Location = new Point((int)(choiceForm.Width * 0.10), (int)(choiceForm.Height * 0.15));
+                    }
+                    else if (choices[i].Text == "Craft Sword")
+                    {
+                        buttonPanel.Location = new Point((int)(choiceForm.Width * 0.76), (int)(choiceForm.Height * 0.15));
+                    }
+                    else if (choices[i].Text == "Craft Fishing Pole")
+                    {
+                        buttonPanel.Location = new Point((int)(choiceForm.Width * 0.76), (int)(choiceForm.Height * 0.15));
+                    }
+
+                    var textLabel = new Label
+                    {
+                        Text = choices[i].Text,
+                        AutoSize = true,
+                        Font = new Font("Arial", (float)(26 * scaleFactor)),
+                        ForeColor = Color.White,
+                        BackColor = Color.Transparent,
+                        TextAlign = ContentAlignment.MiddleCenter
+                    };
+                    buttonPanel.Controls.Add(textLabel);
+
+                    textLabel.Location = new Point((buttonPanel.Width - textLabel.Width) / 2, buttonHeight + 10);
+                }
+
+                // Custom positioning for "ReubenZone"
+                if (segment.LayoutType == "ReubenZone")
+                {
+                    if (choices[i].Text == "The Well")
+                    {
+                        buttonPanel.Location = new Point((int)(choiceForm.Width * 0.13), (int)(choiceForm.Height * 0.37));
+                    }
+                    else if (choices[i].Text == "Bush")
+                    {
+                        buttonPanel.Location = new Point((int)(choiceForm.Width * 0.31), (int)(choiceForm.Height * 0.44));
+                    }
+                    else if (choices[i].Text == "Smoke Trail")
+                    {
+                        buttonPanel.Location = new Point((int)(choiceForm.Width * 0.60), (int)(choiceForm.Height * 0.31));
+                    }
+                    else if (choices[i].Text == "Pigs")
+                    {
+                        buttonPanel.Location = new Point((int)(choiceForm.Width * 0.75), (int)(choiceForm.Height * 0.51));
+                    }
+                    else if (choices[i].Text == "Tall Grass")
+                    {
+                        buttonPanel.Location = new Point((int)(choiceForm.Width * 0.45), (int)(choiceForm.Height * 0.25));
+                    }
+
+                    var textLabel = new Label
+                    {
+                        Text = choices[i].Text,
+                        AutoSize = true,
+                        Font = new Font("Arial", (float)(26 * scaleFactor)),
+                        ForeColor = Color.White,
+                        BackColor = Color.Transparent,
+                        TextAlign = ContentAlignment.MiddleCenter
+                    };
+                    buttonPanel.Controls.Add(textLabel);
+
+                    int fixedOffset = 15;
+                    int centerOffset = (buttonPanel.Width / 2) - (textLabel.Width / 2);
+                    textLabel.Location = new Point(centerOffset - fixedOffset, buttonHeight + 10);
+                }
+
+                // Custom positioning for "EnderconZone"
+                if (segment.LayoutType == "EnderconZone")
+                {
+                    if (choices[i].Text == "Slime")
+                    {
+                        buttonPanel.Location = new Point((int)(choiceForm.Width * 0.22), (int)(choiceForm.Height * 0.26));
+                    }
+                    else if (choices[i].Text == "Chicken Machine")
+                    {
+                        buttonPanel.Location = new Point((int)(choiceForm.Width * 0.34), (int)(choiceForm.Height * 0.20));
+                    }
+                    else if (choices[i].Text == "Lukas")
+                    {
+                        buttonPanel.Location = new Point((int)(choiceForm.Width * 0.63), (int)(choiceForm.Height * 0.30));
+                    }
+                    else if (choices[i].Text == "Crafting Table")
+                    {
+                        buttonPanel.Location = new Point((int)(choiceForm.Width * 0.77), (int)(choiceForm.Height * 0.31));
+                    }
+
+                    var textLabel = new Label
+                    {
+                        Text = choices[i].Text,
+                        AutoSize = true,
+                        Font = new Font("Arial", (float)(26 * scaleFactor)),
+                        ForeColor = Color.White,
+                        BackColor = Color.Transparent,
+                        TextAlign = ContentAlignment.MiddleCenter
+                    };
+                    buttonPanel.Controls.Add(textLabel);
+
+                    int fixedOffset = 15;
+                    int centerOffset = (buttonPanel.Width / 2) - (textLabel.Width / 2);
+                    textLabel.Location = new Point(centerOffset - fixedOffset, buttonHeight + 10);
+                }
+
+                // Custom positioning for "TempleZone"
+                if (segment.LayoutType == "TempleZone")
+                {
+                    if (choices[i].Text == "Axel")
+                    {
+                        buttonPanel.Location = new Point((int)(choiceForm.Width * 0.23), (int)(choiceForm.Height * 0.29));
+                    }
+                    else if (choices[i].Text == "Lukas")
+                    {
+                        buttonPanel.Location = new Point((int)(choiceForm.Width * 0.36), (int)(choiceForm.Height * 0.27));
+                    }
+                    else if (choices[i].Text == "Pedestal")
+                    {
+                        buttonPanel.Location = new Point((int)(choiceForm.Width * 0.50), (int)(choiceForm.Height * 0.36));
+                    }
+                    else if (choices[i].Text == "Olivia")
+                    {
+                        buttonPanel.Location = new Point((int)(choiceForm.Width * 0.64), (int)(choiceForm.Height * 0.32));
+                    }
+                    else if (choices[i].Text == "Levers")
+                    {
+                        buttonPanel.Location = new Point((int)(choiceForm.Width * 0.78), (int)(choiceForm.Height * 0.36));
+                    }
+
+                    var textLabel = new Label
+                    {
+                        Text = choices[i].Text,
+                        AutoSize = true,
+                        Font = new Font("Arial", (float)(26 * scaleFactor)),
+                        ForeColor = Color.White,
+                        BackColor = Color.Transparent,
+                        TextAlign = ContentAlignment.MiddleCenter
+                    };
+                    buttonPanel.Controls.Add(textLabel);
+
+                    int fixedOffset = 15;
+                    int centerOffset = (buttonPanel.Width / 2) - (textLabel.Width / 2);
+                    textLabel.Location = new Point(centerOffset - fixedOffset, buttonHeight + 10);
+                }
 
                 buttonPanel.Controls.Add(button);
 
@@ -213,7 +544,7 @@ public static class UIManager
                         Image = buttonIcons[i],
                         SizeMode = PictureBoxSizeMode.Zoom,
                         Size = new Size(iconWidth, iconHeight),
-                        Location = new Point(0, (buttonHeight - iconHeight) / 2), // Left aligned
+                        Location = new Point(0, (buttonHeight - iconHeight) / 2),
                         BackColor = Color.Transparent,
                         Enabled = false
                     };
@@ -221,7 +552,7 @@ public static class UIManager
                     button.Controls.Add(iconPictureBox);
                 }
 
-                // Add text label underneath the button for specific video IDs
+                // Add text label underneath the button
                 if (new[] { "81054409", "81287545", "81019938", "81260654", "81054415", "81058723" }.Contains(videoId))
                 {
                     var textLabel = new Label
@@ -235,7 +566,6 @@ public static class UIManager
                     };
                     buttonPanel.Controls.Add(textLabel);
 
-                    // Center the label horizontally within the buttonPanel
                     textLabel.Location = new Point((buttonPanel.Width - textLabel.Width) / 2, buttonHeight + 10);
                 }
 
@@ -248,7 +578,11 @@ public static class UIManager
 
         // Adjust the timer bar position to avoid overlapping with the buttons and labels
         int timerBarY;
-        if (new[] { "81054409", "81287545", "81019938", "81260654", "81054415", "81058723" }.Contains(videoId))
+        if (segment.LayoutType == "ReubenZone" || segment.LayoutType == "EnderconZone" || segment.LayoutType == "TempleZone" || segment.LayoutType == "MCSMTeamName" || segment.LayoutType == "Crafting")
+        {
+            timerBarY = (int)(choiceForm.Height * 0.88);
+        }
+        else if (new[] { "81054409", "81287545", "81019938", "81260654", "81054415", "81058723" }.Contains(videoId))
         {
             timerBarY = buttonTopMargin + buttonHeight + (int)(90 * scaleFactor);
         }
@@ -341,7 +675,7 @@ public static class UIManager
                 {
                     int frameHeight = timerFillSprite.Height / 22;
                     int currentFrame = (int)((double)stopwatch.ElapsedMilliseconds / timeLimitMs * 22);
-                    currentFrame = Math.Min(currentFrame, 21); // Ensure the frame index does not exceed 21
+                    currentFrame = Math.Min(currentFrame, 21);
 
                     Rectangle sourceRect = new Rectangle(0, currentFrame * frameHeight, timerFillSprite.Width, frameHeight);
                     Rectangle destRect = new Rectangle((choiceForm.Width - (int)(timerFillSprite.Width * scaleFactor)) / 2, alignedY, (int)(timerFillSprite.Width * scaleFactor), (int)(frameHeight * scaleFactor));
@@ -483,7 +817,7 @@ public static class UIManager
     }
 
     // Align the UI window with the video player
-    private static void AlignWithVideoPlayer(Form choiceForm, string videoId)
+    private static void AlignWithVideoPlayer(Form choiceForm, string videoId, Segment segment)
     {
         IntPtr videoPlayerHandle = FindWindow(null, "VLC (Direct3D11 output)");
         if (videoPlayerHandle != IntPtr.Zero)
@@ -497,37 +831,44 @@ public static class UIManager
             // Set the choiceForm width to the player width
             choiceForm.Width = playerWidth;
 
-            // Set the choiceForm height based on the videoId
+            // Set the choiceForm height based on the videoId and layoutType
             double heightFactor = 0.40; // Default height factor
-            switch (videoId)
+            if (segment.LayoutType == "ReubenZone" || segment.LayoutType == "EnderconZone" || segment.LayoutType == "TempleZone" || segment.LayoutType == "MCSMTeamName" || segment.LayoutType == "Crafting")
             {
-                case "81004016":
-                    heightFactor = 0.30;
-                    break;
-                case "81054409":
-                    heightFactor = 0.45;
-                    break;
-                case "81287545":
-                    heightFactor = 0.45;
-                    break;
-                case "81019938":
-                    heightFactor = 0.45;
-                    break;
-                case "81260654":
-                    heightFactor = 0.45;
-                    break;
-                case "81054415":
-                    heightFactor = 0.45;
-                    break;
-                case "81058723":
-                    heightFactor = 0.45;
-                    break;
-                case "80994695":
-                    heightFactor = 0.30;
-                    break;
-                case "10000001":
-                    heightFactor = 0.27;
-                    break;
+                heightFactor = 1;
+            }
+            else
+            {
+                switch (videoId)
+                {
+                    case "81004016":
+                        heightFactor = 0.30;
+                        break;
+                    case "81054409":
+                        heightFactor = 0.45;
+                        break;
+                    case "81287545":
+                        heightFactor = 0.45;
+                        break;
+                    case "81019938":
+                        heightFactor = 0.45;
+                        break;
+                    case "81260654":
+                        heightFactor = 0.45;
+                        break;
+                    case "81054415":
+                        heightFactor = 0.45;
+                        break;
+                    case "81058723":
+                        heightFactor = 0.45;
+                        break;
+                    case "80994695":
+                        heightFactor = 0.30;
+                        break;
+                    case "10000001":
+                        heightFactor = 0.20;
+                        break;
+                }
             }
             choiceForm.Height = (int)(playerHeight * heightFactor);
 

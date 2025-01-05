@@ -130,6 +130,12 @@ public static class JsonParser
                     // Transfer TimeoutSegment information
                     segment.TimeoutSegment = choiceMoment.TimeoutSegment;
 
+                    // Transfer LayoutType information
+                    segment.LayoutType = choiceMoment.LayoutType;
+
+                    // Transfer Notification information
+                    segment.Notification = choiceMoment.Notification;
+
                     // Assign segmentId to each choice
                     if (segment.Choices != null)
                     {
@@ -193,6 +199,18 @@ public static class JsonParser
 
         while (mediaPlayer.Time < segment.EndTimeMs)
         {
+            // Display notification if within the specified time range
+            if (segment.Notification != null)
+            {
+                foreach (var notification in segment.Notification)
+                {
+                    if (mediaPlayer.Time >= notification.StartMs && mediaPlayer.Time <= notification.EndMs)
+                    {
+                        UIManager.ShowNotificationUI(notification.Text, movieFolder, videoId, notification.EndMs - notification.StartMs);
+                    }
+                }
+            }
+
             if (!choiceDisplayed && segment.Choices != null && segment.Choices.Count > 0 &&
                 mediaPlayer.Time >= segment.ChoiceDisplayTimeMs)
             {
@@ -275,7 +293,7 @@ public static class JsonParser
                     }
                 }
 
-                string selectedSegment = UIManager.ShowChoiceUI(validChoices, buttonSprites, buttonIcons, (int)choiceDurationMs, movieFolder, videoId);
+                string selectedSegment = UIManager.ShowChoiceUI(validChoices, buttonSprites, buttonIcons, (int)choiceDurationMs, movieFolder, videoId, segment);
 
                 if (!string.IsNullOrEmpty(selectedSegment))
                 {
@@ -328,7 +346,6 @@ public static class JsonParser
                 choiceDisplayed = true;
             }
 
-            Thread.Sleep(100);
             HandleKeyPress(mediaPlayer, infoJsonFile, saveFilePath);
         }
 

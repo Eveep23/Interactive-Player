@@ -35,6 +35,15 @@ public class Segment
     public List<Choice> Choices { get; set; }
     public int? DefaultChoiceIndex { get; set; }
     public TimeoutSegment TimeoutSegment { get; set; }
+    public string LayoutType { get; set; }
+    public List<Notification> Notification { get; set; }
+}
+
+public class Notification
+{
+    public int StartMs { get; set; }
+    public int EndMs { get; set; }
+    public string Text { get; set; }
 }
 
 public class SegmentGroup
@@ -93,6 +102,8 @@ public class Moment
     public int? HideTimeoutUiMS { get; set; }
     public List<Choice> Choices { get; set; }
     public TimeoutSegment TimeoutSegment { get; set; }
+    public string LayoutType { get; set; }
+    public List<Notification> Notification { get; set; }
 }
 
 public class TimeoutSegment
