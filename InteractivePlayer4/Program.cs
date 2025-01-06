@@ -19,7 +19,7 @@ class Program
         }
 
         // Set paths for JSON files and save file
-        string videoFile = Directory.GetFiles(movieFolder, "*.mkv").FirstOrDefault();
+        string videoFile = Directory.GetFiles(movieFolder, "*.mkv").Concat(Directory.GetFiles(movieFolder, "*.mp4")).FirstOrDefault();
         string mainJsonFile = Directory.GetFiles(movieFolder, "*.json").FirstOrDefault(f => !f.ToLower().Contains("info"));
         string infoJsonFile = Directory.GetFiles(movieFolder, "*.json").FirstOrDefault(f => f.ToLower().Contains("info"));
         string saveFilePath = Path.Combine(movieFolder, "save.json");

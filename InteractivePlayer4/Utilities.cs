@@ -14,7 +14,7 @@ public static class Utilities
         string[] movieFolders = Directory.GetDirectories(currentDirectory);
         movieFolders = movieFolders.Where(folder =>
             !Path.GetFileName(folder).Equals("libvlc", StringComparison.OrdinalIgnoreCase) &&
-            (Directory.GetFiles(folder, "*.mkv").Any() && Directory.GetFiles(folder, "*.json").Any() ||
+            (Directory.GetFiles(folder, "*.mkv").Concat(Directory.GetFiles(folder, "*.mp4")).Any() && Directory.GetFiles(folder, "*.json").Any() ||
             Directory.GetFiles(folder, "backdrop.jpg").Any() && Directory.GetFiles(folder, "logo.png").Any())).ToArray();
 
         if (movieFolders.Length == 0)
@@ -34,7 +34,7 @@ public static class Utilities
             Size = new Size(2000, 750),
             StartPosition = FormStartPosition.CenterScreen,
             Icon = Icon.ExtractAssociatedIcon(Application.ExecutablePath),
-            BackColor = Path.GetFileName(currentDirectory).Equals("MCSM", StringComparison.OrdinalIgnoreCase) ? ColorTranslator.FromHtml("#2a262a") : 
+            BackColor = Path.GetFileName(currentDirectory).Equals("MCSM", StringComparison.OrdinalIgnoreCase) ? ColorTranslator.FromHtml("#2a262a") :
                         Path.GetFileName(currentDirectory).Equals("BK", StringComparison.OrdinalIgnoreCase) ? ColorTranslator.FromHtml("#3cd8a9") : Color.Black
         };
 
@@ -122,7 +122,7 @@ public static class Utilities
 
             button.Click += (sender, e) =>
             {
-                if (Directory.GetFiles(folder, "*.mkv").Any() && Directory.GetFiles(folder, "*.json").Any())
+                if (Directory.GetFiles(folder, "*.mkv").Concat(Directory.GetFiles(folder, "*.mp4")).Any() && Directory.GetFiles(folder, "*.json").Any())
                 {
                     // This is an interactive folder
                     SelectedMovieFolder = folder;
