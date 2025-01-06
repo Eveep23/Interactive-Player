@@ -447,7 +447,8 @@ public static class JsonParser
             "choice_bg_sprite_2x.png",
             "default_button_sprite_2x.png",
             "choice_container_sprite_2x.png",
-            "button_sprite.png"
+            "button_sprite.png",
+            "pib_choices_2x.png"
         };
 
         foreach (string textureName in potentialDefaultTextures)

@@ -38,8 +38,20 @@ public static class UIManager
         // Calculate scaling factor based on the resized form
         double scaleFactor = (double)notificationForm.Width / formWidth;
 
-        // Load notification background image
-        string notificationImagePath = FindTexturePath(movieFolder, "notification_2x.png");
+        // Load settings
+        var settings = LoadSettings();
+
+        // Determine the notification background image based on the notification text and settings
+        string notificationImagePath;
+        if (notificationText == "Your story is changing." && settings.CustomStoryChangingNotification)
+        {
+            notificationImagePath = FindTexturePath(movieFolder, "changing_notification_2x.png");
+        }
+        else
+        {
+            notificationImagePath = FindTexturePath(movieFolder, "notification_2x.png");
+        }
+
         Bitmap notificationImage = LoadBitmap(notificationImagePath);
 
         if (notificationImage == null)
@@ -54,7 +66,7 @@ public static class UIManager
         var notificationPanel = new Panel
         {
             Size = new Size(notificationWidth, notificationHeight),
-            Location = new Point((notificationForm.Width - notificationWidth) / 2, (notificationForm.Height - notificationHeight) / 2),
+            Location = new System.Drawing.Point((notificationForm.Width - notificationWidth) / 2, (notificationForm.Height - notificationHeight) / 2),
             BackgroundImage = new Bitmap(notificationImage, new Size(notificationWidth, notificationHeight)),
             BackgroundImageLayout = ImageLayout.Stretch,
             BackColor = Color.Transparent,
@@ -72,7 +84,9 @@ public static class UIManager
         };
 
         notificationPanel.Controls.Add(textLabel);
-        textLabel.Location = new Point((notificationPanel.Width - textLabel.Width) / 2, (notificationPanel.Height - textLabel.Height) / 2);
+
+        int offsetX = (int)(17 * scaleFactor);
+        textLabel.Location = new System.Drawing.Point((notificationPanel.Width - textLabel.Width) / 2 + offsetX, (notificationPanel.Height - textLabel.Height) / 2);
 
         notificationForm.Controls.Add(notificationPanel);
 
@@ -99,14 +113,14 @@ public static class UIManager
             int initialY = rect.Top - notificationForm.Height;
             int targetY = rect.Top + 30;
 
-            notificationForm.Location = new Point(centerX, initialY);
+            notificationForm.Location = new System.Drawing.Point(centerX, initialY);
 
             System.Windows.Forms.Timer animationTimer = new System.Windows.Forms.Timer { Interval = 10 };
             animationTimer.Tick += (sender, e) =>
             {
                 if (notificationForm.Location.Y < targetY)
                 {
-                    notificationForm.Location = new Point(notificationForm.Location.X, notificationForm.Location.Y + 10);
+                    notificationForm.Location = new System.Drawing.Point(notificationForm.Location.X, notificationForm.Location.Y + 10);
                 }
                 else
                 {
@@ -156,7 +170,7 @@ public static class UIManager
             int centerX = rect.Left;
             int topY = rect.Top + 30; // Add a top margin of 30 pixels
 
-            notificationForm.Location = new Point(centerX, topY);
+            notificationForm.Location = new System.Drawing.Point(centerX, topY);
             SetWindowLong(notificationForm.Handle, GWL_HWNDPARENT, videoPlayerHandle);
         }
     }
@@ -174,8 +188,8 @@ public static class UIManager
             Text = "Make a Choice",
             StartPosition = FormStartPosition.Manual,
             FormBorderStyle = FormBorderStyle.None,
-            BackColor = videoId == "81004016" ? Color.Black : Color.FromArgb(41, 41, 41),
-            TransparencyKey = Color.FromArgb(41, 41, 41),
+            BackColor = videoId == "80151644" ? Color.FromArgb(125, 125, 125) : (videoId == "81004016" ? Color.Black : Color.FromArgb(41, 41, 41)),
+            TransparencyKey = videoId == "80151644" ? Color.FromArgb(125, 125, 125) : Color.FromArgb(41, 41, 41),
             MaximizeBox = false,
             MinimizeBox = false,
             TopMost = true,
@@ -211,8 +225,8 @@ public static class UIManager
         // Load sound files
         string appearSoundPath = FindTexturePath(movieFolder, new[] { "sfx_appears_44100.m4a", "sfx_appears.m4a" });
         string hoverSoundPath = FindTexturePath(movieFolder, new[] { "CSD_Hover.m4a", "cap_focus.m4a", "sfx_focus.m4a", "sfx_focus_44100.m4a", "toggle.m4a", "sfx_focus.m4a", "IX_choicePointSound_tonal_focus_48k.m4a", "toggle.m4a", "sfx_triviaAnswerFocusHover.m4a" });
-        string selectSoundPath = FindTexturePath(movieFolder, new[] { "CSD_Select.m4a", "cap_select.m4a", "sfx_select.m4a", "sfx_selected_44100.m4a", "select.m4a", "spirit_select_48.m4a", "sfx_buttonSelect.m4a", "IX_choicePointSound_tonal_select_48k.m4a", "sfx_select_44100.m4a", "select.m4a" });
-        string timeoutSoundPath = FindTexturePath(movieFolder, new[] { "sfx_timeout_44100.m4a", "sfx_timeout.m4a", "IX_choicePointSound_tonal_timeout_48k.m4a" });
+        string selectSoundPath = FindTexturePath(movieFolder, new[] { "CSD_Select.m4a", "cap_select.m4a", "sfx_select.m4a", "sfx_selected_44100.m4a", "select.m4a", "spirit_select_48.m4a", "sfx_buttonSelect.m4a", "IX_choicePointSound_tonal_select_48k.m4a", "sfx_select_44100.m4a", "select.m4a", "PIB_Choice_Ding.m4a" });
+        string timeoutSoundPath = FindTexturePath(movieFolder, new[] { "sfx_timeout_44100.m4a", "sfx_timeout.m4a", "IX_choicePointSound_tonal_timeout_48k.m4a", "timeout.m4a" });
 
         // Play appear sound
         if (File.Exists(appearSoundPath))
@@ -266,9 +280,9 @@ public static class UIManager
 
                 var button = new Button
                 {
-                    Text = (segment.LayoutType == "ReubenZone" || segment.LayoutType == "EnderconZone" || segment.LayoutType == "TempleZone" || segment.LayoutType == "Crafting") ? string.Empty : (new[] { "80149064", "80135585", "81054409", "81287545", "81019938", "81260654", "81054415", "81058723" }.Contains(videoId)) ? string.Empty : choices[i].Text,
+                    Text = (segment.LayoutType == "ReubenZone" || segment.LayoutType == "EnderconZone" || segment.LayoutType == "TempleZone" || segment.LayoutType == "Crafting" || segment.LayoutType == "EpisodeEnd") ? string.Empty : (new[] { "80149064", "80135585", "81054409", "81287545", "81019938", "81260654", "81054415", "81058723" }.Contains(videoId)) ? string.Empty : choices[i].Text,
                     Size = new Size(buttonWidth, buttonHeight),
-                    Location = new Point(0, 0), // Position within the panel
+                    Location = new System.Drawing.Point(0, 0), // Position within the panel
                     BackgroundImage = new Bitmap(defaultSprite, new Size(buttonWidth, buttonHeight)),
                     BackgroundImageLayout = ImageLayout.Stretch,
                     Tag = choices[i].SegmentId,
@@ -357,12 +371,12 @@ public static class UIManager
                 };
 
                 // Adjust height to accommodate text only if the video ID matches
-                int panelHeight = (new[] { "81054409", "81287545", "81019938", "81260654", "81054415", "81058723" }.Contains(videoId) || segment.LayoutType == "ReubenZone" || segment.LayoutType == "EnderconZone" || segment.LayoutType == "TempleZone" || segment.LayoutType == "Crafting") ? buttonHeight + (int)(50 * scaleFactor) : buttonHeight;
+                int panelHeight = (new[] { "81054409", "81287545", "81019938", "81260654", "81054415", "81058723" }.Contains(videoId) || segment.LayoutType == "ReubenZone" || segment.LayoutType == "EnderconZone" || segment.LayoutType == "TempleZone" || segment.LayoutType == "Crafting" || segment.LayoutType == "EpisodeEnd") ? buttonHeight + (int)(50 * scaleFactor) : buttonHeight;
 
                 var buttonPanel = new Panel
                 {
                     Size = new Size(buttonWidth, panelHeight),
-                    Location = new Point(currentX, buttonTopMargin),
+                    Location = new System.Drawing.Point(currentX, buttonTopMargin),
                     BackColor = Color.Transparent
                 };
 
@@ -371,15 +385,15 @@ public static class UIManager
                 {
                     if (choices[i].Text == "We're the Nether Maniacs.")
                     {
-                        buttonPanel.Location = new Point((int)(choiceForm.Width * 0.15), (int)(choiceForm.Height * 0.71));
+                        buttonPanel.Location = new System.Drawing.  Point((int)(choiceForm.Width * 0.15), (int)(choiceForm.Height * 0.71));
                     }
                     else if (choices[i].Text == "We're the Dead Enders.")
                     {
-                        buttonPanel.Location = new Point((int)(choiceForm.Width * 0.335), (int)(choiceForm.Height * 0.78));
+                        buttonPanel.Location = new System.Drawing.Point((int)(choiceForm.Width * 0.335), (int)(choiceForm.Height * 0.78));
                     }
                     else if (choices[i].Text == "We're the Order of the Pig.")
                     {
-                        buttonPanel.Location = new Point((int)(choiceForm.Width * 0.51), (int)(choiceForm.Height * 0.71));
+                        buttonPanel.Location = new System.Drawing.Point((int)(choiceForm.Width * 0.51), (int)(choiceForm.Height * 0.71));
                     }
                 }
 
@@ -388,19 +402,19 @@ public static class UIManager
                 {
                     if (choices[i].Text == "Craft Lever")
                     {
-                        buttonPanel.Location = new Point((int)(choiceForm.Width * 0.10), (int)(choiceForm.Height * 0.15));
+                        buttonPanel.Location = new System.Drawing.Point((int)(choiceForm.Width * 0.10), (int)(choiceForm.Height * 0.15));
                     }
                     else if (choices[i].Text == "Craft Bow")
                     {
-                        buttonPanel.Location = new Point((int)(choiceForm.Width * 0.10), (int)(choiceForm.Height * 0.15));
+                        buttonPanel.Location = new System.Drawing.Point((int)(choiceForm.Width * 0.10), (int)(choiceForm.Height * 0.15));
                     }
                     else if (choices[i].Text == "Craft Sword")
                     {
-                        buttonPanel.Location = new Point((int)(choiceForm.Width * 0.76), (int)(choiceForm.Height * 0.15));
+                        buttonPanel.Location = new System.Drawing.Point((int)(choiceForm.Width * 0.76), (int)(choiceForm.Height * 0.15));
                     }
                     else if (choices[i].Text == "Craft Fishing Pole")
                     {
-                        buttonPanel.Location = new Point((int)(choiceForm.Width * 0.76), (int)(choiceForm.Height * 0.15));
+                        buttonPanel.Location = new System.Drawing.Point((int)(choiceForm.Width * 0.76), (int)(choiceForm.Height * 0.15));
                     }
 
                     var textLabel = new Label
@@ -414,7 +428,7 @@ public static class UIManager
                     };
                     buttonPanel.Controls.Add(textLabel);
 
-                    textLabel.Location = new Point((buttonPanel.Width - textLabel.Width) / 2, buttonHeight + 10);
+                    textLabel.Location = new System.Drawing.Point((buttonPanel.Width - textLabel.Width) / 2, buttonHeight + 10);
                 }
 
                 // Custom positioning for "ReubenZone"
@@ -422,23 +436,23 @@ public static class UIManager
                 {
                     if (choices[i].Text == "The Well")
                     {
-                        buttonPanel.Location = new Point((int)(choiceForm.Width * 0.13), (int)(choiceForm.Height * 0.37));
+                        buttonPanel.Location = new System.Drawing.Point((int)(choiceForm.Width * 0.13), (int)(choiceForm.Height * 0.37));
                     }
                     else if (choices[i].Text == "Bush")
                     {
-                        buttonPanel.Location = new Point((int)(choiceForm.Width * 0.31), (int)(choiceForm.Height * 0.44));
+                        buttonPanel.Location = new System.Drawing.Point((int)(choiceForm.Width * 0.31), (int)(choiceForm.Height * 0.44));
                     }
                     else if (choices[i].Text == "Smoke Trail")
                     {
-                        buttonPanel.Location = new Point((int)(choiceForm.Width * 0.60), (int)(choiceForm.Height * 0.31));
+                        buttonPanel.Location = new System.Drawing.Point((int)(choiceForm.Width * 0.60), (int)(choiceForm.Height * 0.31));
                     }
                     else if (choices[i].Text == "Pigs")
                     {
-                        buttonPanel.Location = new Point((int)(choiceForm.Width * 0.75), (int)(choiceForm.Height * 0.51));
+                        buttonPanel.Location = new System.Drawing.Point((int)(choiceForm.Width * 0.75), (int)(choiceForm.Height * 0.51));
                     }
                     else if (choices[i].Text == "Tall Grass")
                     {
-                        buttonPanel.Location = new Point((int)(choiceForm.Width * 0.45), (int)(choiceForm.Height * 0.25));
+                        buttonPanel.Location = new System.Drawing.Point((int)(choiceForm.Width * 0.45), (int)(choiceForm.Height * 0.25));
                     }
 
                     var textLabel = new Label
@@ -454,7 +468,7 @@ public static class UIManager
 
                     int fixedOffset = 15;
                     int centerOffset = (buttonPanel.Width / 2) - (textLabel.Width / 2);
-                    textLabel.Location = new Point(centerOffset - fixedOffset, buttonHeight + 10);
+                    textLabel.Location = new System.Drawing.Point(centerOffset - fixedOffset, buttonHeight + 10);
                 }
 
                 // Custom positioning for "EnderconZone"
@@ -462,19 +476,19 @@ public static class UIManager
                 {
                     if (choices[i].Text == "Slime")
                     {
-                        buttonPanel.Location = new Point((int)(choiceForm.Width * 0.22), (int)(choiceForm.Height * 0.26));
+                        buttonPanel.Location = new System.Drawing.Point((int)(choiceForm.Width * 0.22), (int)(choiceForm.Height * 0.26));
                     }
                     else if (choices[i].Text == "Chicken Machine")
                     {
-                        buttonPanel.Location = new Point((int)(choiceForm.Width * 0.34), (int)(choiceForm.Height * 0.20));
+                        buttonPanel.Location = new System.Drawing.Point((int)(choiceForm.Width * 0.34), (int)(choiceForm.Height * 0.20));
                     }
                     else if (choices[i].Text == "Lukas")
                     {
-                        buttonPanel.Location = new Point((int)(choiceForm.Width * 0.63), (int)(choiceForm.Height * 0.30));
+                        buttonPanel.Location = new System.Drawing.Point((int)(choiceForm.Width * 0.63), (int)(choiceForm.Height * 0.30));
                     }
                     else if (choices[i].Text == "Crafting Table")
                     {
-                        buttonPanel.Location = new Point((int)(choiceForm.Width * 0.77), (int)(choiceForm.Height * 0.31));
+                        buttonPanel.Location = new System.Drawing.Point((int)(choiceForm.Width * 0.77), (int)(choiceForm.Height * 0.31));
                     }
 
                     var textLabel = new Label
@@ -490,7 +504,7 @@ public static class UIManager
 
                     int fixedOffset = 15;
                     int centerOffset = (buttonPanel.Width / 2) - (textLabel.Width / 2);
-                    textLabel.Location = new Point(centerOffset - fixedOffset, buttonHeight + 10);
+                    textLabel.Location = new System.Drawing.Point(centerOffset - fixedOffset, buttonHeight + 10);
                 }
 
                 // Custom positioning for "TempleZone"
@@ -498,23 +512,23 @@ public static class UIManager
                 {
                     if (choices[i].Text == "Axel")
                     {
-                        buttonPanel.Location = new Point((int)(choiceForm.Width * 0.23), (int)(choiceForm.Height * 0.29));
+                        buttonPanel.Location = new System.Drawing.Point((int)(choiceForm.Width * 0.23), (int)(choiceForm.Height * 0.29));
                     }
                     else if (choices[i].Text == "Lukas")
                     {
-                        buttonPanel.Location = new Point((int)(choiceForm.Width * 0.36), (int)(choiceForm.Height * 0.27));
+                        buttonPanel.Location = new System.Drawing.Point((int)(choiceForm.Width * 0.36), (int)(choiceForm.Height * 0.27));
                     }
                     else if (choices[i].Text == "Pedestal")
                     {
-                        buttonPanel.Location = new Point((int)(choiceForm.Width * 0.50), (int)(choiceForm.Height * 0.36));
+                        buttonPanel.Location = new System.Drawing.Point((int)(choiceForm.Width * 0.50), (int)(choiceForm.Height * 0.36));
                     }
                     else if (choices[i].Text == "Olivia")
                     {
-                        buttonPanel.Location = new Point((int)(choiceForm.Width * 0.64), (int)(choiceForm.Height * 0.32));
+                        buttonPanel.Location = new System.Drawing.Point((int)(choiceForm.Width * 0.64), (int)(choiceForm.Height * 0.32));
                     }
                     else if (choices[i].Text == "Levers")
                     {
-                        buttonPanel.Location = new Point((int)(choiceForm.Width * 0.78), (int)(choiceForm.Height * 0.36));
+                        buttonPanel.Location = new System.Drawing.Point((int)(choiceForm.Width * 0.78), (int)(choiceForm.Height * 0.36));
                     }
 
                     var textLabel = new Label
@@ -530,7 +544,33 @@ public static class UIManager
 
                     int fixedOffset = 15;
                     int centerOffset = (buttonPanel.Width / 2) - (textLabel.Width / 2);
-                    textLabel.Location = new Point(centerOffset - fixedOffset, buttonHeight + 10);
+                    textLabel.Location = new System.Drawing.Point(centerOffset - fixedOffset, buttonHeight + 10);
+                }
+
+                // Custom positioning for "EpisodeEnd"
+                if (segment.LayoutType == "EpisodeEnd")
+                {
+                    if (choices[i].Text == "Replay Episode")
+                    {
+                        buttonPanel.Location = new System.Drawing.Point((int)(choiceForm.Width * 0.10), (int)(choiceForm.Height * 0.50));
+                    }
+                    else if (choices[i].Text == "Credits")
+                    {
+                        buttonPanel.Location = new System.Drawing.Point((int)(choiceForm.Width * 0.75), (int)(choiceForm.Height * 0.50));
+                    }
+
+                    var textLabel = new Label
+                    {
+                        Text = choices[i].Text,
+                        AutoSize = true,
+                        Font = new Font("Arial", (float)(26 * scaleFactor)),
+                        ForeColor = Color.White,
+                        BackColor = Color.Transparent,
+                        TextAlign = ContentAlignment.MiddleCenter
+                    };
+                    buttonPanel.Controls.Add(textLabel);
+
+                    textLabel.Location = new System.Drawing.Point((buttonPanel.Width - textLabel.Width) / 2, buttonHeight + 10);
                 }
 
                 buttonPanel.Controls.Add(button);
@@ -544,7 +584,7 @@ public static class UIManager
                         Image = buttonIcons[i],
                         SizeMode = PictureBoxSizeMode.Zoom,
                         Size = new Size(iconWidth, iconHeight),
-                        Location = new Point(0, (buttonHeight - iconHeight) / 2),
+                        Location = new System.Drawing.Point(0, (buttonHeight - iconHeight) / 2),
                         BackColor = Color.Transparent,
                         Enabled = false
                     };
@@ -566,7 +606,7 @@ public static class UIManager
                     };
                     buttonPanel.Controls.Add(textLabel);
 
-                    textLabel.Location = new Point((buttonPanel.Width - textLabel.Width) / 2, buttonHeight + 10);
+                    textLabel.Location = new System.Drawing.Point((buttonPanel.Width - textLabel.Width) / 2, buttonHeight + 10);
                 }
 
                 buttons.Add(button);
@@ -578,7 +618,7 @@ public static class UIManager
 
         // Adjust the timer bar position to avoid overlapping with the buttons and labels
         int timerBarY;
-        if (segment.LayoutType == "ReubenZone" || segment.LayoutType == "EnderconZone" || segment.LayoutType == "TempleZone" || segment.LayoutType == "MCSMTeamName" || segment.LayoutType == "Crafting")
+        if (segment.LayoutType == "ReubenZone" || segment.LayoutType == "EnderconZone" || segment.LayoutType == "TempleZone" || segment.LayoutType == "MCSMTeamName" || segment.LayoutType == "Crafting" || segment.LayoutType == "EpisodeEnd")
         {
             timerBarY = (int)(choiceForm.Height * 0.88);
         }
@@ -618,7 +658,7 @@ public static class UIManager
             timerCapRPath = null;
             timerBottomPath = null;
             timerTopPath = null;
-            webPath = isControllerConnected ? FindTexturePath(movieFolder, new[] { "controller_2x.png" }) : FindTexturePath(movieFolder, new[] { "web_2x.png", "web_2x_v2.png", "web_3x.png", "web_icon_2x.png" });
+            webPath = isControllerConnected ? FindTexturePath(movieFolder, new[] { "controller_2x.png" }) : FindTexturePath(movieFolder, new[] { "web_2x.png", "device_web_2x.png", "web_2x_v2.png", "web_3x.png", "web_icon_2x.png" });
         }
         else
         {
@@ -627,7 +667,7 @@ public static class UIManager
             timerCapRPath = FindTexturePath(movieFolder, new[] { "timer_capR_2x.png", "timer_capR_2x_v2.png", "timer_capR_3x.png" });
             timerBottomPath = FindTexturePath(movieFolder, new[] { "timer_bottom_2x.png", "timer_bottom_2x_v2.png", "timer_bottom_3x.png" });
             timerTopPath = FindTexturePath(movieFolder, new[] { "timer_top_2x.png", "timer_top_2x_v2.png", "timer_top_3x.png" });
-            webPath = isControllerConnected ? FindTexturePath(movieFolder, new[] { "controller_2x.png" }) : FindTexturePath(movieFolder, new[] { "web_2x.png", "web_2x_v2.png", "web_3x.png", "web_icon_2x.png" });
+            webPath = isControllerConnected ? FindTexturePath(movieFolder, new[] { "controller_2x.png" }) : FindTexturePath(movieFolder, new[] { "web_2x.png", "device_web_2x.png", "web_2x_v2.png", "web_3x.png", "web_icon_2x.png" });
         }
 
         // Handle cases where a texture wasn't found
@@ -655,7 +695,7 @@ public static class UIManager
         // Create a DoubleBufferedPanel
         DoubleBufferedPanel drawingPanel = new DoubleBufferedPanel
         {
-            Location = new Point(0, 0),
+            Location = new System.Drawing.Point(0, 0),
             Size = new Size(choiceForm.Width, choiceForm.Height),
             BackColor = Color.Transparent
         };
@@ -797,6 +837,7 @@ public static class UIManager
             choiceForm.Invoke(new Action(() => choiceForm.Close()));
         });
 
+
         choiceForm.ShowDialog();
 
         return selectedSegmentId;
@@ -833,7 +874,7 @@ public static class UIManager
 
             // Set the choiceForm height based on the videoId and layoutType
             double heightFactor = 0.40; // Default height factor
-            if (segment.LayoutType == "ReubenZone" || segment.LayoutType == "EnderconZone" || segment.LayoutType == "TempleZone" || segment.LayoutType == "MCSMTeamName" || segment.LayoutType == "Crafting")
+            if (segment.LayoutType == "ReubenZone" || segment.LayoutType == "EnderconZone" || segment.LayoutType == "TempleZone" || segment.LayoutType == "MCSMTeamName" || segment.LayoutType == "Crafting" || segment.LayoutType == "EpisodeEnd")
             {
                 heightFactor = 1;
             }
@@ -842,6 +883,9 @@ public static class UIManager
                 switch (videoId)
                 {
                     case "81004016":
+                        heightFactor = 0.30;
+                        break;
+                    case "80151644":
                         heightFactor = 0.30;
                         break;
                     case "81054409":
@@ -876,7 +920,7 @@ public static class UIManager
             int centerX = rect.Left;
             int bottomY = rect.Bottom - choiceForm.Height;
 
-            choiceForm.Location = new Point(centerX, bottomY);
+            choiceForm.Location = new System.Drawing.Point(centerX, bottomY);
             SetWindowLong(choiceForm.Handle, GWL_HWNDPARENT, videoPlayerHandle);
         }
     }
@@ -919,7 +963,6 @@ public static class UIManager
         }
         else
         {
-            Console.WriteLine($"Bitmap not found at path: {path}");
             return null;
         }
     }

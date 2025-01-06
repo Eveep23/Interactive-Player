@@ -85,12 +85,25 @@ public static class SettingsMenu
         subtitleComboBox.Items.AddRange(new string[] { "Disabled", "Arabic", "Forced - Czech", "Czech", "Danish", "Forced - German", "SDH - German", "German", "SDH - English", "English", "Latin American (SDH) - Spanish", "Latin American (Forced) - Spanish", "Latin American - Spanish", "European (Forced) - Spanish", "European - Spanish", "Finnish", "Filpino", "Forced - French", "French", "Hebrew", "Croatian", "Latin (Forced) - Hindi", "Forced - Hungarian", "Hungarian", "Forced - Indonesian", "Indonesian", "Forced - Italian", "Italian", "Forced - Polish", "Polish", "Brazilian (SDH) - Portuguese", "Brazilian (Forced) - Portuguese", "Brazilian - Portuguese", "European - Portuguese", "Forced - Thai", "Thai", "Forced - Turkish", "Turkish", "Forced - Ukrainian", "Ukrainian", "Japanese", "Korean", "Dutch", "Romanian", "Russian", "Swedish", "Vietnamese", "Simplified - Chinese", "Traditional - Chinese", "Malay" });
         subtitleComboBox.SelectedItem = loadedSettings.SubtitleLanguage;
 
+        // Custom Story Changing Notification Checkbox
+        CheckBox customStoryChangingNotificationCheckBox = new CheckBox
+        {
+            Text = "Custom Story Changing Notification",
+            ForeColor = Color.White,
+            AutoSize = true,
+            Font = new Font("Arial", 14, FontStyle.Bold),
+            Checked = loadedSettings.CustomStoryChangingNotification,
+            TextAlign = ContentAlignment.MiddleRight,
+            RightToLeft = RightToLeft.Yes
+        };
+
         backPictureBox.Click += (sender, e) =>
         {
             var settings = new Settings
             {
                 AudioLanguage = audioComboBox.SelectedItem.ToString(),
                 SubtitleLanguage = subtitleComboBox.SelectedItem.ToString(),
+                CustomStoryChangingNotification = customStoryChangingNotificationCheckBox.Checked
             };
             SaveSettings(settings);
             settingsForm.Close();
@@ -117,10 +130,13 @@ public static class SettingsMenu
         subtitleLabel.Location = new Point(centerX - subtitleLabel.Width / 2, 230);
         subtitleComboBox.Location = new Point(centerX, 260);
 
+        customStoryChangingNotificationCheckBox.Location = new Point(centerX - customStoryChangingNotificationCheckBox.Width / 2, 310);
+
         settingsForm.Controls.Add(audioLabel);
         settingsForm.Controls.Add(audioComboBox);
         settingsForm.Controls.Add(subtitleLabel);
         settingsForm.Controls.Add(subtitleComboBox);
+        settingsForm.Controls.Add(customStoryChangingNotificationCheckBox);
 
         settingsForm.ShowDialog();
     }
@@ -136,6 +152,7 @@ public static class SettingsMenu
         {
             AudioLanguage = "English",
             SubtitleLanguage = "Disabled",
+            CustomStoryChangingNotification = false
         };
     }
 
