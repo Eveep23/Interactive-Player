@@ -116,26 +116,47 @@ public static class UIManager
             notificationForm.Location = new System.Drawing.Point(centerX, initialY);
 
             System.Windows.Forms.Timer animationTimer = new System.Windows.Forms.Timer { Interval = 10 };
+            bool movingDown = true;
+            bool delayCompleted = false;
+            int delayCounter = 0;
+
             animationTimer.Tick += (sender, e) =>
             {
-                if (notificationForm.Location.Y < targetY)
+                if (movingDown)
                 {
-                    notificationForm.Location = new System.Drawing.Point(notificationForm.Location.X, notificationForm.Location.Y + 10);
+                    if (notificationForm.Location.Y < targetY)
+                    {
+                        notificationForm.Location = new System.Drawing.Point(notificationForm.Location.X, notificationForm.Location.Y + 10);
+                    }
+                    else
+                    {
+                        movingDown = false;
+                        delayCounter = 0;
+                    }
+                }
+                else if (!delayCompleted)
+                {
+                    delayCounter += animationTimer.Interval;
+                    if (delayCounter >= displayDurationMs)
+                    {
+                        delayCompleted = true;
+                    }
                 }
                 else
                 {
-                    animationTimer.Stop();
+                    if (notificationForm.Location.Y > initialY)
+                    {
+                        notificationForm.Location = new System.Drawing.Point(notificationForm.Location.X, notificationForm.Location.Y - 10);
+                    }
+                    else
+                    {
+                        animationTimer.Stop();
+                        notificationForm.Close();
+                    }
                 }
             };
 
             animationTimer.Start();
-
-            Task.Run(async () =>
-            {
-                await Task.Delay(displayDurationMs);
-                notificationForm.Invoke(new Action(() => notificationForm.Close()));
-            });
-
             notificationForm.ShowDialog();
         }
     }

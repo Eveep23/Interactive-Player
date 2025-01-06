@@ -148,6 +148,15 @@ public static class JsonParser
                         }
                     }
                 }
+                else
+                {
+                    // Handle moments with only notifications
+                    var notificationMoment = moments.Find(m => m.Notification != null && m.Notification.Count > 0);
+                    if (notificationMoment != null)
+                    {
+                        segment.Notification = notificationMoment.Notification;
+                    }
+                }
             }
         }
     }
@@ -206,7 +215,8 @@ public static class JsonParser
                 {
                     if (mediaPlayer.Time >= notification.StartMs && mediaPlayer.Time <= notification.EndMs)
                     {
-                        UIManager.ShowNotificationUI(notification.Text, movieFolder, videoId, notification.EndMs - notification.StartMs);
+                        int displayDurationMs = notification.EndMs - notification.StartMs;
+                        UIManager.ShowNotificationUI(notification.Text, movieFolder, videoId, displayDurationMs);
                     }
                 }
             }
