@@ -226,11 +226,6 @@ public static class JsonParser
             {
                 long choiceDurationMs = segment.HideChoiceTimeMs - segment.ChoiceDisplayTimeMs;
 
-                if (choiceDurationMs <= 0 || choiceDurationMs > 30000)
-                {
-                    choiceDurationMs = 30000;
-                }
-
                 Console.WriteLine($"Choice point reached for segment {segment.Id}");
 
                 // Filter out choices with exceptions

@@ -311,7 +311,7 @@ public static class UIManager
                     BackColor = Color.Transparent,
                     UseVisualStyleBackColor = false,
                     TabStop = false,
-                    Font = new Font("Arial", (float)(videoId == "10000001" ? 28 : 22 * scaleFactor), videoId == "10000001" ? FontStyle.Regular : FontStyle.Bold),
+                    Font = new Font("Arial", (float)(videoId == "10000001" ? 28 * scaleFactor : 22 * scaleFactor), videoId == "10000001" ? FontStyle.Regular : FontStyle.Bold),
                     ForeColor = Color.White,
                     TextAlign = (new[] { "81004016", "81205738", "81108751", "80151644" }.Contains(videoId)) ? ContentAlignment.MiddleLeft : ContentAlignment.MiddleCenter,
                     Padding = (new[] { "81004016", "81205738", "81108751", "80151644" }.Contains(videoId)) ? new Padding((int)(buttonWidth * 0.4), 0, 0, 0) : new Padding(0)

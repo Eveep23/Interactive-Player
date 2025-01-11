@@ -156,6 +156,28 @@ public static class SaveManager
         }
         else
         {
+            // Check if the movie folder is "Minecraft Story Mode Ep2"
+            string movieFolder = Path.GetDirectoryName(saveFilePath);
+            if (movieFolder.EndsWith("Minecraft Story Mode Ep2"))
+            {
+                // Look for the save file in "Minecraft Story Mode Ep1"
+                string previousEpisodeFolder = Path.Combine(Directory.GetParent(movieFolder).FullName, "Minecraft Story Mode Ep1");
+                string previousSaveFilePath = Path.Combine(previousEpisodeFolder, "save.json");
+
+                if (File.Exists(previousSaveFilePath))
+                {
+                    // Load the persistent state from the previous episode's save file
+                    var previousSaveData = JsonConvert.DeserializeObject<SaveData>(File.ReadAllText(previousSaveFilePath));
+                    foreach (var kvp in previousSaveData.PersistentState)
+                    {
+                        if (persistentState.ContainsKey(kvp.Key))
+                        {
+                            persistentState[kvp.Key] = kvp.Value;
+                        }
+                    }
+                }
+            }
+
             // Create new save data
             saveData = new SaveData
             {
