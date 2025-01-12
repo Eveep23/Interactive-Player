@@ -206,7 +206,7 @@ public static class JsonParser
             localPersistentState = persistentState;
         }
 
-        while (mediaPlayer.Time < segment.EndTimeMs)
+        while (mediaPlayer.Time < segment.EndTimeMs - 300)
         {
             // Display notification if within the specified time range
             if (segment.Notification != null)
