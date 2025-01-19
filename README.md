@@ -1,5 +1,5 @@
 # Interactive Player
-This is an emulator for Netflix's interactive movies.
+This is an emulator for Netflix's interactive movies and shows!
 
 # How to Use:
 
