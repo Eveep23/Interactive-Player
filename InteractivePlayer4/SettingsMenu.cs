@@ -17,7 +17,7 @@ public static class SettingsMenu
         Form settingsForm = new Form
         {
             Text = "Settings",
-            Size = new Size(1000, 750),
+            Size = new Size(1400, 750),
             StartPosition = FormStartPosition.CenterScreen,
             Icon = Icon.ExtractAssociatedIcon(Application.ExecutablePath),
             BackColor = Color.Black

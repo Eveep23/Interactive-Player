@@ -3,6 +3,8 @@ using System.Collections.Generic;
 using System.IO;
 using System.Linq;
 using LibVLCSharp.Shared;
+using Newtonsoft.Json;
+using Newtonsoft.Json.Linq;
 
 class Program
 {
@@ -19,8 +21,8 @@ class Program
         }
 
         // Set paths for JSON files and save file
-        string videoFile = Directory.GetFiles(movieFolder, "*.mkv").Concat(Directory.GetFiles(movieFolder, "*.mp4")).FirstOrDefault();
-        string mainJsonFile = Directory.GetFiles(movieFolder, "*.json").FirstOrDefault(f => !f.ToLower().Contains("info"));
+        string videoFile = GetVideoFilePath(movieFolder);
+        string mainJsonFile = Directory.GetFiles(movieFolder, "*.json").FirstOrDefault(f => !f.ToLower().Contains("info") && !f.ToLower().Contains("direct"));
         string infoJsonFile = Directory.GetFiles(movieFolder, "*.json").FirstOrDefault(f => f.ToLower().Contains("info"));
         string saveFilePath = Path.Combine(movieFolder, "save.json");
 
@@ -109,6 +111,27 @@ class Program
             mediaPlayer.Dispose();
             libVLC.Dispose();
         }
+    }
+
+    private static string GetVideoFilePath(string movieFolder)
+    {
+        // Check for video files directly
+        string videoFile = Directory.GetFiles(movieFolder, "*.mkv")
+            .Concat(Directory.GetFiles(movieFolder, "*.mp4"))
+            .FirstOrDefault();
+
+        // If no video file is found, check for direct.json
+        if (videoFile == null)
+        {
+            string directJsonFile = Directory.GetFiles(movieFolder, "direct.json").FirstOrDefault();
+            if (directJsonFile != null)
+            {
+                var json = JObject.Parse(File.ReadAllText(directJsonFile));
+                videoFile = json["Directory"]?.ToString();
+            }
+        }
+
+        return videoFile;
     }
 
     private static long GetVideoDuration(string videoFile)
