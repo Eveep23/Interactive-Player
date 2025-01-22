@@ -1,6 +1,7 @@
 ﻿using System;
 using System.Collections.Generic;
 using System.Drawing;
+using System.Drawing.Imaging;
 using System.IO;
 using System.Linq;
 using System.Threading;
@@ -330,7 +331,7 @@ public static class UIManager
                 {
                     if (button.Enabled)
                     {
-                        button.BackgroundImage = new Bitmap(focusedSprite, new Size(buttonWidth, buttonHeight));
+                        EaseIntoFocusedSprite(button, defaultSprite, focusedSprite, 100); // 100ms duration for faster easing
                         if (File.Exists(hoverSoundPath))
                         {
                             var hoverPlayer = new MediaPlayer(new Media(libVLC, hoverSoundPath, FromType.FromPath));
@@ -342,7 +343,7 @@ public static class UIManager
                 {
                     if (button.Enabled)
                     {
-                        button.BackgroundImage = new Bitmap(defaultSprite, new Size(buttonWidth, buttonHeight));
+                        EaseOutToDefaultSprite(button, defaultSprite, focusedSprite, 100); // 100ms duration for faster easing out
                     }
                 };
                 button.MouseDown += (sender, e) =>
@@ -1351,4 +1352,80 @@ public static class UIManager
             }
         }
     }
+    private static void EaseIntoFocusedSprite(Button button, Bitmap defaultSprite, Bitmap focusedSprite, int durationMs)
+    {
+        System.Windows.Forms.Timer easingTimer = new System.Windows.Forms.Timer { Interval = 10 };
+        int elapsed = 0;
+
+        easingTimer.Tick += (sender, e) =>
+        {
+            elapsed += easingTimer.Interval;
+            double progress = Math.Min(1.0, (double)elapsed / durationMs);
+
+            // Apply ease-out effect
+            double easedProgress = EaseOutQuad(progress);
+
+            // Interpolate between the default and focused sprites
+            Bitmap blendedSprite = BlendSprites(defaultSprite, focusedSprite, easedProgress);
+            button.BackgroundImage = new Bitmap(blendedSprite, button.Size);
+
+            if (progress >= 1.0)
+            {
+                easingTimer.Stop();
+            }
+        };
+
+        easingTimer.Start();
+    }
+
+    private static void EaseOutToDefaultSprite(Button button, Bitmap defaultSprite, Bitmap focusedSprite, int durationMs)
+    {
+        System.Windows.Forms.Timer easingTimer = new System.Windows.Forms.Timer { Interval = 10 };
+        int elapsed = 0;
+
+        easingTimer.Tick += (sender, e) =>
+        {
+            elapsed += easingTimer.Interval;
+            double progress = Math.Min(1.0, (double)elapsed / durationMs);
+
+            // Apply ease-out effect
+            double easedProgress = EaseOutQuad(progress);
+
+            // Interpolate between the focused and default sprites
+            Bitmap blendedSprite = BlendSprites(focusedSprite, defaultSprite, easedProgress);
+            button.BackgroundImage = new Bitmap(blendedSprite, button.Size);
+
+            if (progress >= 1.0)
+            {
+                easingTimer.Stop();
+            }
+        };
+
+        easingTimer.Start();
+    }
+
+    private static double EaseOutQuad(double t)
+    {
+        return t * (2 - t);
+    }
+
+    private static Bitmap BlendSprites(Bitmap sprite1, Bitmap sprite2, double progress)
+    {
+        Bitmap blended = new Bitmap(sprite1.Width, sprite1.Height);
+        using (Graphics g = Graphics.FromImage(blended))
+        {
+            ColorMatrix colorMatrix = new ColorMatrix
+            {
+                Matrix33 = (float)progress // Set the alpha value based on progress
+            };
+
+            ImageAttributes attributes = new ImageAttributes();
+            attributes.SetColorMatrix(colorMatrix, ColorMatrixFlag.Default, ColorAdjustType.Bitmap);
+
+            g.DrawImage(sprite1, new Rectangle(0, 0, sprite1.Width, sprite1.Height));
+            g.DrawImage(sprite2, new Rectangle(0, 0, sprite2.Width, sprite2.Height), 0, 0, sprite2.Width, sprite2.Height, GraphicsUnit.Pixel, attributes);
+        }
+        return blended;
+    }
+
 }
