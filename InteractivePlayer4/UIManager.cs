@@ -220,7 +220,8 @@ public static class UIManager
             MinimizeBox = false,
             TopMost = true,
             Width = formWidth,
-            Height = 450
+            Height = 450,
+            Opacity = 0
         };
 
         AlignWithVideoPlayer(choiceForm, videoId, segment);
@@ -1170,6 +1171,13 @@ public static class UIManager
             choiceForm.Invoke(new Action(() => choiceForm.Close()));
         });
 
+        System.Windows.Forms.Timer visibilityTimer = new System.Windows.Forms.Timer { Interval = 15 };
+        visibilityTimer.Tick += (sender, e) =>
+        {
+            choiceForm.Opacity = 1; // Make the form visible
+            visibilityTimer.Stop(); // Stop the timer
+        };
+        visibilityTimer.Start();
 
         choiceForm.ShowDialog();
 
@@ -1276,7 +1284,19 @@ public static class UIManager
     [DllImport("user32.dll", SetLastError = true)]
     private static extern IntPtr SetWindowLong(IntPtr hWnd, int nIndex, IntPtr dwNewLong);
 
+    [DllImport("user32.dll", SetLastError = true)]
+    private static extern int GetWindowLong(IntPtr hWnd, int nIndex);
+
+    [DllImport("user32.dll", SetLastError = true)]
+    private static extern int SetWindowLong(IntPtr hWnd, int nIndex, int dwNewLong);
+
+    private const int GWL_EXSTYLE = -20;
+    private const int WS_EX_LAYERED = 0x00080000;
+
     private const int GWL_HWNDPARENT = -8;
+
+    private const int LWA_COLORKEY = 0x00000001;
+    private const int LWA_ALPHA = 0x00000002;
 
     private static Bitmap ExtractSprite(Bitmap spriteSheet, int rowIndex)
     {
@@ -1462,4 +1482,7 @@ public static class UIManager
         }
         return blended;
     }
+    [DllImport("user32.dll", SetLastError = true)]
+    [return: MarshalAs(UnmanagedType.Bool)]
+    private static extern bool SetLayeredWindowAttributes(IntPtr hwnd, uint crKey, byte bAlpha, uint dwFlags);
 }
