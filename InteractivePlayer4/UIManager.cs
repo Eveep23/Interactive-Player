@@ -331,7 +331,14 @@ public static class UIManager
                 {
                     if (button.Enabled)
                     {
-                        EaseIntoFocusedSprite(button, defaultSprite, focusedSprite, 100); // 100ms duration for faster easing
+                        if (videoId == "10000001")
+                        {
+                            EaseIntoFocusedSprite(button, defaultSprite, focusedSprite, 70);
+                        }
+                        else
+                        {
+                            button.BackgroundImage = new Bitmap(focusedSprite, new Size(buttonWidth, buttonHeight));
+                        }
                         if (File.Exists(hoverSoundPath))
                         {
                             var hoverPlayer = new MediaPlayer(new Media(libVLC, hoverSoundPath, FromType.FromPath));
@@ -343,7 +350,14 @@ public static class UIManager
                 {
                     if (button.Enabled)
                     {
-                        EaseOutToDefaultSprite(button, defaultSprite, focusedSprite, 100); // 100ms duration for faster easing out
+                        if (videoId == "10000001")
+                        {
+                            EaseOutToDefaultSprite(button, defaultSprite, focusedSprite, 70);
+                        }
+                        else
+                        {
+                            button.BackgroundImage = new Bitmap(defaultSprite, new Size(buttonWidth, buttonHeight));
+                        }
                     }
                 };
                 button.MouseDown += (sender, e) =>
@@ -1005,7 +1019,15 @@ public static class UIManager
         {
             Graphics g = e.Graphics;
 
-            int alignedY = timerBarY;
+            int currentY = timerBarY;
+
+            if (videoId == "10000001")
+            {
+                // Calculate the eased Y position
+                double progress = Math.Min(1.0, (double)stopwatch.ElapsedMilliseconds / 370);
+                double easedProgress = EaseOutQuad(progress);
+                currentY = (int)(timerBarY + (choiceForm.Height - timerBarY) * (1 - easedProgress));
+            }
 
             if (videoId == "10000001")
             {
@@ -1016,14 +1038,14 @@ public static class UIManager
                     currentFrame = Math.Min(currentFrame, 21);
 
                     Rectangle sourceRect = new Rectangle(0, currentFrame * frameHeight, timerFillSprite.Width, frameHeight);
-                    Rectangle destRect = new Rectangle((choiceForm.Width - (int)(timerFillSprite.Width * scaleFactor)) / 2, alignedY, (int)(timerFillSprite.Width * scaleFactor), (int)(frameHeight * scaleFactor));
+                    Rectangle destRect = new Rectangle((choiceForm.Width - (int)(timerFillSprite.Width * scaleFactor)) / 2, currentY, (int)(timerFillSprite.Width * scaleFactor), (int)(frameHeight * scaleFactor));
 
                     g.DrawImage(timerFillSprite, destRect, sourceRect, GraphicsUnit.Pixel);
 
                     // Draw overlay
                     if (webSprite != null)
                     {
-                        int webY = alignedY + ((int)(frameHeight * scaleFactor) / 2) - (int)(webSprite.Height * scaleFactor / 2);
+                        int webY = currentY + ((int)(frameHeight * scaleFactor) / 2) - (int)(webSprite.Height * scaleFactor / 2);
                         g.DrawImage(webSprite, new Rectangle((choiceForm.Width - (int)(webSprite.Width * scaleFactor)) / 2, webY, (int)(webSprite.Width * scaleFactor), (int)(webSprite.Height * scaleFactor)));
                     }
                 }
@@ -1033,7 +1055,7 @@ public static class UIManager
                 // Draw timer bottom
                 if (timerBottomSprite != null)
                 {
-                    g.DrawImage(timerBottomSprite, new Rectangle((choiceForm.Width - (int)(1800 * scaleFactor)) / 2, alignedY, (int)(1800 * scaleFactor), (int)(50 * scaleFactor)));
+                    g.DrawImage(timerBottomSprite, new Rectangle((choiceForm.Width - (int)(1800 * scaleFactor)) / 2, currentY, (int)(1800 * scaleFactor), (int)(50 * scaleFactor)));
                 }
 
                 // Draw timer fill
@@ -1045,7 +1067,7 @@ public static class UIManager
                     int middleWidth = Math.Max(0, initialWidth - leftEdgeWidth - rightEdgeWidth);
                     int totalWidth = leftEdgeWidth + middleWidth + rightEdgeWidth;
                     int destX = (choiceForm.Width - totalWidth) / 2;
-                    int destY = alignedY;
+                    int destY = currentY;
                     int destHeight = timerBarHeight;
 
                     // Draw left edge
@@ -1067,25 +1089,25 @@ public static class UIManager
                 // Draw left cap
                 if (timerCapLSprite != null)
                 {
-                    g.DrawImage(timerCapLSprite, new Rectangle((choiceForm.Width - initialWidth) / 2 - (int)(timerCapLSprite.Width * scaleFactor), alignedY, (int)(timerCapLSprite.Width * scaleFactor), timerBarHeight));
+                    g.DrawImage(timerCapLSprite, new Rectangle((choiceForm.Width - initialWidth) / 2 - (int)(timerCapLSprite.Width * scaleFactor), currentY, (int)(timerCapLSprite.Width * scaleFactor), timerBarHeight));
                 }
 
                 // Draw right cap
                 if (timerCapRSprite != null)
                 {
-                    g.DrawImage(timerCapRSprite, new Rectangle((choiceForm.Width + initialWidth) / 2, alignedY, (int)(timerCapRSprite.Width * scaleFactor), timerBarHeight));
+                    g.DrawImage(timerCapRSprite, new Rectangle((choiceForm.Width + initialWidth) / 2, currentY, (int)(timerCapRSprite.Width * scaleFactor), timerBarHeight));
                 }
 
                 // Draw timer top
                 if (timerTopSprite != null)
                 {
-                    g.DrawImage(timerTopSprite, new Rectangle((choiceForm.Width - (int)(1800 * scaleFactor)) / 2, alignedY, (int)(1800 * scaleFactor), (int)(50 * scaleFactor)));
+                    g.DrawImage(timerTopSprite, new Rectangle((choiceForm.Width - (int)(1800 * scaleFactor)) / 2, currentY, (int)(1800 * scaleFactor), (int)(50 * scaleFactor)));
                 }
 
                 // Draw overlay
                 if (webSprite != null)
                 {
-                    int webY = alignedY + (timerBarHeight / 2) - (int)(webSprite.Height * scaleFactor / 2);
+                    int webY = currentY + (timerBarHeight / 2) - (int)(webSprite.Height * scaleFactor / 2);
                     g.DrawImage(webSprite, new Rectangle((choiceForm.Width - (int)(webSprite.Width * scaleFactor)) / 2, webY, (int)(webSprite.Width * scaleFactor), (int)(webSprite.Height * scaleFactor)));
                 }
             }
@@ -1110,6 +1132,19 @@ public static class UIManager
 
             choiceForm.Invoke(new Action(() => choiceForm.Close()));
         });
+
+        if (videoId == "10000001")
+        {
+            Task.Run(async () =>
+            {
+                while (stopwatch.ElapsedMilliseconds < 370)
+                {
+                    drawingPanel.Invalidate();
+                    await Task.Delay(16); // Update approximately every 16ms (~60 FPS)
+                }
+            });
+        }
+
 
         Task.Run(async () =>
         {
