@@ -6,6 +6,7 @@ using System.Windows.Forms;
 using Newtonsoft.Json.Linq;
 using System.IO.Compression;
 using System.Threading;
+using System.ComponentModel;
 
 public static class InstallInteractives
 {
@@ -231,6 +232,9 @@ public static class InstallInteractives
                         actionButton.Image = Image.FromFile(bigButtonImagePath);
                         actionButton.Location = new Point((rightPanel.Width - actionButton.Width) / 2, rightPanel.Height - actionButton.Height - 10);
 
+                        // Remove previous event handlers
+                        ClearClickEventHandlers(actionButton);
+
                         actionButton.Click += (s, ev) =>
                         {
                             if (isInstalled)
@@ -293,4 +297,12 @@ public static class InstallInteractives
 
         form.ShowDialog();
     }
+    private static void ClearClickEventHandlers(Control control)
+    {
+        var fieldInfo = typeof(Control).GetField("EventClick", System.Reflection.BindingFlags.Static | System.Reflection.BindingFlags.NonPublic);
+        var eventHandlerList = (EventHandlerList)typeof(Control).GetProperty("Events", System.Reflection.BindingFlags.NonPublic | System.Reflection.BindingFlags.Instance).GetValue(control, null);
+        var eventKey = fieldInfo.GetValue(null);
+        eventHandlerList.RemoveHandler(eventKey, eventHandlerList[eventKey]);
+    }
 }
+

@@ -91,12 +91,13 @@ public static class UIManager
         notificationForm.Controls.Add(notificationPanel);
 
         // Load and play notification sound
-        string notificationSoundPath = FindTexturePath(movieFolder, "sfx_notification.wav");
+        string notificationSoundPath = FindTexturePath(movieFolder, "sfx_notification.m4a");
+        MediaPlayer notificationPlayer = null;
         if (File.Exists(notificationSoundPath))
         {
             Core.Initialize();
             var libVLC = new LibVLC();
-            var notificationPlayer = new MediaPlayer(new Media(libVLC, notificationSoundPath, FromType.FromPath));
+            notificationPlayer = new MediaPlayer(new Media(libVLC, notificationSoundPath, FromType.FromPath));
             notificationPlayer.Play();
         }
         else
@@ -159,6 +160,9 @@ public static class UIManager
             animationTimer.Start();
             notificationForm.ShowDialog();
         }
+
+        // Dispose of the MediaPlayer after the notification is closed
+        notificationPlayer?.Dispose();
     }
     private static string FindTexturePath(string folder, string textureName)
     {
@@ -301,7 +305,7 @@ public static class UIManager
 
                 var button = new Button
                 {
-                    Text = (segment.LayoutType == "ReubenZone" || segment.LayoutType == "EnderconZone" || segment.LayoutType == "TempleZone" || segment.LayoutType == "Crafting" || segment.LayoutType == "EpisodeEnd" || segment.LayoutType == "RedstoniaZone" || segment.LayoutType == "MCSMThroneZone" || segment.LayoutType == "MCSMTownZone") ? string.Empty : (new[] { "80149064", "80135585", "81054409", "81287545", "81019938", "81260654", "81054415", "81058723" }.Contains(videoId)) ? string.Empty : choices[i].Text,
+                    Text = (segment.LayoutType == "ReubenZone" || segment.LayoutType == "EnderconZone" || segment.LayoutType == "TempleZone" || segment.LayoutType == "Crafting" || segment.LayoutType == "EpisodeEnd" || segment.LayoutType == "RedstoniaZone" || segment.LayoutType == "MCSMThroneZone" || segment.LayoutType == "MCSMTownZone" || segment.LayoutType == "MCSMWoolLand" || segment.LayoutType == "MCSMLabZone" || segment.LayoutType == "MCSMGunZone") ? string.Empty : (new[] { "80149064", "80135585", "81054409", "81287545", "81019938", "81260654", "81054415", "81058723" }.Contains(videoId)) ? string.Empty : choices[i].Text,
                     Size = new Size(buttonWidth, buttonHeight),
                     Location = new System.Drawing.Point(0, 0), // Position within the panel
                     BackgroundImage = new Bitmap(defaultSprite, new Size(buttonWidth, buttonHeight)),
@@ -392,7 +396,7 @@ public static class UIManager
                 };
 
                 // Adjust height to accommodate text only if the video ID matches
-                int panelHeight = (new[] { "81054409", "81287545", "81019938", "81260654", "81054415", "81058723" }.Contains(videoId) || segment.LayoutType == "ReubenZone" || segment.LayoutType == "EnderconZone" || segment.LayoutType == "TempleZone" || segment.LayoutType == "Crafting" || segment.LayoutType == "EpisodeEnd" || segment.LayoutType == "RedstoniaZone" || segment.LayoutType == "MCSMThroneZone" || segment.LayoutType == "MCSMTownZone") ? buttonHeight + (int)(50 * scaleFactor) : buttonHeight;
+                int panelHeight = (new[] { "81054409", "81287545", "81019938", "81260654", "81054415", "81058723" }.Contains(videoId) || segment.LayoutType == "ReubenZone" || segment.LayoutType == "EnderconZone" || segment.LayoutType == "TempleZone" || segment.LayoutType == "Crafting" || segment.LayoutType == "EpisodeEnd" || segment.LayoutType == "RedstoniaZone" || segment.LayoutType == "MCSMThroneZone" || segment.LayoutType == "MCSMTownZone" || segment.LayoutType == "MCSMWoolLand" || segment.LayoutType == "MCSMLabZone" || segment.LayoutType == "MCSMGunZone") ? buttonHeight + (int)(50 * scaleFactor) : buttonHeight;
 
                 var buttonPanel = new Panel
                 {
@@ -708,6 +712,138 @@ public static class UIManager
                     textLabel.Location = new System.Drawing.Point(centerOffset - fixedOffset, buttonHeight + 10);
                 }
 
+                // Custom positioning for "MCSMWoolLand"
+                if (segment.LayoutType == "MCSMWoolLand")
+                {
+                    if (choices[i].Text == "Lukas")
+                    {
+                        buttonPanel.Location = new System.Drawing.Point((int)(choiceForm.Width * 0.23), (int)(choiceForm.Height * 0.38));
+                    }
+                    else if (choices[i].Text == "Fountain")
+                    {
+                        buttonPanel.Location = new System.Drawing.Point((int)(choiceForm.Width * 0.36), (int)(choiceForm.Height * 0.22));
+                    }
+                    else if (choices[i].Text == "Reuben")
+                    {
+                        buttonPanel.Location = new System.Drawing.Point((int)(choiceForm.Width * 0.59), (int)(choiceForm.Height * 0.305));
+                    }
+                    else if (choices[i].Text == "Lever")
+                    {
+                        buttonPanel.Location = new System.Drawing.Point((int)(choiceForm.Width * 0.55), (int)(choiceForm.Height * 0.31));
+                    }
+                    else if (choices[i].Text == "Petra")
+                    {
+                        buttonPanel.Location = new System.Drawing.Point((int)(choiceForm.Width * 0.766), (int)(choiceForm.Height * 0.57));
+                    }
+                    else if (choices[i].Text == "Gabriel")
+                    {
+                        buttonPanel.Location = new System.Drawing.Point((int)(choiceForm.Width * 0.80), (int)(choiceForm.Height * 0.31));
+                    }
+                    else if (choices[i].Text == " Lever ")
+                    {
+                        buttonPanel.Location = new System.Drawing.Point((int)(choiceForm.Width * 0.725), (int)(choiceForm.Height * 0.59));
+                    }
+
+                    var textLabel = new Label
+                    {
+                        Text = choices[i].Text,
+                        AutoSize = true,
+                        Font = new Font("Arial", (float)(26 * scaleFactor)),
+                        ForeColor = Color.White,
+                        BackColor = Color.Transparent,
+                        TextAlign = ContentAlignment.MiddleCenter
+                    };
+                    buttonPanel.Controls.Add(textLabel);
+
+                    int fixedOffset = 15;
+                    int centerOffset = (buttonPanel.Width / 2) - (textLabel.Width / 2);
+                    textLabel.Location = new System.Drawing.Point(centerOffset - fixedOffset, buttonHeight + 10);
+                }
+
+                // Custom positioning for "MCSMLabZone"
+                if (segment.LayoutType == "MCSMLabZone")
+                {
+                    if (choices[i].Text == "Olivia")
+                    {
+                        buttonPanel.Location = new System.Drawing.Point((int)(choiceForm.Width * 0.13), (int)(choiceForm.Height * 0.43));
+                    }
+                    else if (choices[i].Text == "Search Area 1")
+                    {
+                        buttonPanel.Location = new System.Drawing.Point((int)(choiceForm.Width * 0.21), (int)(choiceForm.Height * 0.435));
+                    }
+                    else if (choices[i].Text == "Chest")
+                    {
+                        buttonPanel.Location = new System.Drawing.Point((int)(choiceForm.Width * 0.335), (int)(choiceForm.Height * 0.37));
+                    }
+                    else if (choices[i].Text == "Search Area 2")
+                    {
+                        buttonPanel.Location = new System.Drawing.Point((int)(choiceForm.Width * 0.57), (int)(choiceForm.Height * 0.44));
+                    }
+                    else if (choices[i].Text == "Search Upstairs")
+                    {
+                        buttonPanel.Location = new System.Drawing.Point((int)(choiceForm.Width * 0.67), (int)(choiceForm.Height * 0.185));
+                    }
+                    else if (choices[i].Text == "Exit")
+                    {
+                        buttonPanel.Location = new System.Drawing.Point((int)(choiceForm.Width * 0.865), (int)(choiceForm.Height * 0.51));
+                    }
+
+                    var textLabel = new Label
+                    {
+                        Text = choices[i].Text,
+                        AutoSize = true,
+                        Font = new Font("Arial", (float)(26 * scaleFactor)),
+                        ForeColor = Color.White,
+                        BackColor = Color.Transparent,
+                        TextAlign = ContentAlignment.MiddleCenter
+                    };
+                    buttonPanel.Controls.Add(textLabel);
+
+                    int fixedOffset = 15;
+                    int centerOffset = (buttonPanel.Width / 2) - (textLabel.Width / 2);
+                    textLabel.Location = new System.Drawing.Point(centerOffset - fixedOffset, buttonHeight + 10);
+                }
+
+                // Custom positioning for "MCSMGunZone"
+                if (segment.LayoutType == "MCSMGunZone")
+                {
+                    if (choices[i].Text == "Olivia")
+                    {
+                        buttonPanel.Location = new System.Drawing.Point((int)(choiceForm.Width * 0.30), (int)(choiceForm.Height * 0.18));
+                    }
+                    else if (choices[i].Text == "Button")
+                    {
+                        buttonPanel.Location = new System.Drawing.Point((int)(choiceForm.Width * 0.435), (int)(choiceForm.Height * 0.255));
+                    }
+                    else if (choices[i].Text == "Lukas")
+                    {
+                        buttonPanel.Location = new System.Drawing.Point((int)(choiceForm.Width * 0.60), (int)(choiceForm.Height * 0.15));
+                    }
+                    else if (choices[i].Text == "Chest")
+                    {
+                        buttonPanel.Location = new System.Drawing.Point((int)(choiceForm.Width * 0.725), (int)(choiceForm.Height * 0.255));
+                    }
+                    else if (choices[i].Text == "Axel")
+                    {
+                        buttonPanel.Location = new System.Drawing.Point((int)(choiceForm.Width * 0.79), (int)(choiceForm.Height * 0.49));
+                    }
+
+                    var textLabel = new Label
+                    {
+                        Text = choices[i].Text,
+                        AutoSize = true,
+                        Font = new Font("Arial", (float)(26 * scaleFactor)),
+                        ForeColor = Color.White,
+                        BackColor = Color.Transparent,
+                        TextAlign = ContentAlignment.MiddleCenter
+                    };
+                    buttonPanel.Controls.Add(textLabel);
+
+                    int fixedOffset = 15;
+                    int centerOffset = (buttonPanel.Width / 2) - (textLabel.Width / 2);
+                    textLabel.Location = new System.Drawing.Point(centerOffset - fixedOffset, buttonHeight + 10);
+                }
+
                 // Custom positioning for "EpisodeEnd"
                 if (segment.LayoutType == "EpisodeEnd")
                 {
@@ -779,7 +915,7 @@ public static class UIManager
 
         // Adjust the timer bar position to avoid overlapping with the buttons and labels
         int timerBarY;
-        if (segment.LayoutType == "ReubenZone" || segment.LayoutType == "EnderconZone" || segment.LayoutType == "TempleZone" || segment.LayoutType == "MCSMTeamName" || segment.LayoutType == "Crafting" || segment.LayoutType == "EpisodeEnd" || segment.LayoutType == "RedstoniaZone" || segment.LayoutType == "MCSMThroneZone" || segment.LayoutType == "MCSMTownZone")
+        if (segment.LayoutType == "ReubenZone" || segment.LayoutType == "EnderconZone" || segment.LayoutType == "TempleZone" || segment.LayoutType == "MCSMTeamName" || segment.LayoutType == "Crafting" || segment.LayoutType == "EpisodeEnd" || segment.LayoutType == "RedstoniaZone" || segment.LayoutType == "MCSMThroneZone" || segment.LayoutType == "MCSMTownZone" || segment.LayoutType == "MCSMWoolLand" || segment.LayoutType == "MCSMLabZone" || segment.LayoutType == "MCSMGunZone")
         {
             timerBarY = (int)(choiceForm.Height * 0.88);
         }
@@ -1035,7 +1171,7 @@ public static class UIManager
 
             // Set the choiceForm height based on the videoId and layoutType
             double heightFactor = 0.40; // Default height factor
-            if (segment.LayoutType == "ReubenZone" || segment.LayoutType == "EnderconZone" || segment.LayoutType == "TempleZone" || segment.LayoutType == "MCSMTeamName" || segment.LayoutType == "Crafting" || segment.LayoutType == "EpisodeEnd" || segment.LayoutType == "RedstoniaZone" || segment.LayoutType == "MCSMThroneZone" || segment.LayoutType == "MCSMTownZone")
+            if (segment.LayoutType == "ReubenZone" || segment.LayoutType == "EnderconZone" || segment.LayoutType == "TempleZone" || segment.LayoutType == "MCSMTeamName" || segment.LayoutType == "Crafting" || segment.LayoutType == "EpisodeEnd" || segment.LayoutType == "RedstoniaZone" || segment.LayoutType == "MCSMThroneZone" || segment.LayoutType == "MCSMTownZone" || segment.LayoutType == "MCSMWoolLand" || segment.LayoutType == "MCSMLabZone" || segment.LayoutType == "MCSMGunZone")
             {
                 heightFactor = 1;
             }

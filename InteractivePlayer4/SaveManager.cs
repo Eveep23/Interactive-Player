@@ -158,7 +158,7 @@ public static class SaveManager
         {
             // Check if the movie folder is "Minecraft Story Mode Ep2"
             string movieFolder = Path.GetDirectoryName(saveFilePath);
-            if (movieFolder.EndsWith("Minecraft Story Mode Ep2") || movieFolder.EndsWith("Minecraft Story Mode Ep5"))
+            if (movieFolder.EndsWith("Minecraft Story Mode Ep2") || movieFolder.EndsWith("Minecraft Story Mode Ep3") || movieFolder.EndsWith("Minecraft Story Mode Ep5"))
             {
                 // Look for the save file in "Minecraft Story Mode Ep1"
                 string previousEpisodeFolder = Path.Combine(Directory.GetParent(movieFolder).FullName, "Minecraft Story Mode Ep1");
