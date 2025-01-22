@@ -752,7 +752,7 @@ public static class UIManager
                     }
                     else if (choices[i].Text == "Gabriel")
                     {
-                        buttonPanel.Location = new System.Drawing.Point((int)(choiceForm.Width * 0.80), (int)(choiceForm.Height * 0.31));
+                        buttonPanel.Location = new System.Drawing.Point((int)(choiceForm.Width * 0.765), (int)(choiceForm.Height * 0.59));
                     }
                     else if (choices[i].Text == " Lever ")
                     {
@@ -1462,5 +1462,4 @@ public static class UIManager
         }
         return blended;
     }
-
 }
