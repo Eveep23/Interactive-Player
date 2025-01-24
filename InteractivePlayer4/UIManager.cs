@@ -334,7 +334,7 @@ public static class UIManager
                     {
                         if (videoId == "10000001")
                         {
-                            EaseIntoFocusedSprite(button, defaultSprite, focusedSprite, 70);
+                            EaseIntoFocusedSprite(button, defaultSprite, focusedSprite, 65);
                         }
                         else
                         {
@@ -353,7 +353,7 @@ public static class UIManager
                     {
                         if (videoId == "10000001")
                         {
-                            EaseOutToDefaultSprite(button, defaultSprite, focusedSprite, 70);
+                            EaseOutToDefaultSprite(button, defaultSprite, focusedSprite, 65);
                         }
                         else
                         {
