@@ -187,7 +187,7 @@ public static class InstallInteractives
 
                 if (isInstalled)
                 {
-                    string buildJsonPath = Path.Combine(correspondingFolder, "build.json");
+                    string buildJsonPath = Path.Combine(correspondingFolder, "build.txt");
                     int currentBuild = 0;
                     int newBuild = 0;
 
@@ -327,9 +327,9 @@ public static class InstallInteractives
                                 // Delete the temporary directory
                                 Directory.Delete(tempDirectory, true);
 
-                                // Create the build.json file
+                                // Create the build.txt file
                                 string buildJsonContent = $"{{\n  \"build\": {newBuild}\n}}";
-                                File.WriteAllText(Path.Combine(correspondingFolder, "build.json"), buildJsonContent);
+                                File.WriteAllText(Path.Combine(correspondingFolder, "build.txt"), buildJsonContent);
 
                                 // Restart
                                 Application.Restart();
@@ -362,9 +362,9 @@ public static class InstallInteractives
                                             string directJsonContent = $"{{\n  \"Directory\": \"{selectedVideoFile.Replace("\\", "\\\\")}\"\n}}";
                                             File.WriteAllText(Path.Combine(correspondingFolder, "direct.json"), directJsonContent);
 
-                                            // Create the build.json file
+                                            // Create the build.txt file
                                             string buildJsonContent = $"{{\n  \"build\": {newBuild}\n}}";
-                                            File.WriteAllText(Path.Combine(correspondingFolder, "build.json"), buildJsonContent);
+                                            File.WriteAllText(Path.Combine(correspondingFolder, "build.txt"), buildJsonContent);
 
                                             // Restart
                                             Application.Restart();
