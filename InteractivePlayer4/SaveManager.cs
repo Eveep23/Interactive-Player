@@ -156,9 +156,9 @@ public static class SaveManager
         }
         else
         {
-            // Check if the movie folder is "Minecraft Story Mode Ep2"
+            // Check if the movie folder is "Minecraft Story Mode Ep2", "Minecraft Story Mode Ep3", "Minecraft Story Mode Ep4", or "Minecraft Story Mode Ep5"
             string movieFolder = Path.GetDirectoryName(saveFilePath);
-            if (movieFolder.EndsWith("Minecraft Story Mode Ep2") || movieFolder.EndsWith("Minecraft Story Mode Ep3") || movieFolder.EndsWith("Minecraft Story Mode Ep5"))
+            if (movieFolder.EndsWith("Minecraft Story Mode Ep2") || movieFolder.EndsWith("Minecraft Story Mode Ep3") || movieFolder.EndsWith("Minecraft Story Mode Ep4") || movieFolder.EndsWith("Minecraft Story Mode Ep5"))
             {
                 // Look for the save file in "Minecraft Story Mode Ep1"
                 string previousEpisodeFolder = Path.Combine(Directory.GetParent(movieFolder).FullName, "Minecraft Story Mode Ep1");
@@ -173,6 +173,22 @@ public static class SaveManager
                         if (persistentState.ContainsKey(kvp.Key))
                         {
                             persistentState[kvp.Key] = kvp.Value;
+                        }
+                    }
+                }
+
+                // Additional check for "Minecraft Story Mode Ep4" to retrieve "Armor" state from "Minecraft Story Mode Ep3"
+                if (movieFolder.EndsWith("Minecraft Story Mode Ep4"))
+                {
+                    string ep3Folder = Path.Combine(Directory.GetParent(movieFolder).FullName, "Minecraft Story Mode Ep3");
+                    string ep3SaveFilePath = Path.Combine(ep3Folder, "save.json");
+
+                    if (File.Exists(ep3SaveFilePath))
+                    {
+                        var ep3SaveData = JsonConvert.DeserializeObject<SaveData>(File.ReadAllText(ep3SaveFilePath));
+                        if (ep3SaveData.PersistentState.ContainsKey("Armor"))
+                        {
+                            persistentState["Armor"] = ep3SaveData.PersistentState["Armor"];
                         }
                     }
                 }

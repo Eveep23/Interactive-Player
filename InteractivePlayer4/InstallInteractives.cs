@@ -19,8 +19,10 @@ public static class InstallInteractives
         string packsDirectory = Path.Combine(currentDirectory, "Packs");
         string installButtonPath = Path.Combine(currentDirectory, "general", "Install_Button.png");
         string uninstallButtonPath = Path.Combine(currentDirectory, "general", "Uninstall_Button.png");
+        string updateButtonPath = Path.Combine(currentDirectory, "general", "Update_Button.png");
         string bigInstallButtonPath = Path.Combine(currentDirectory, "general", "Big_Install_Button.png");
         string bigUninstallButtonPath = Path.Combine(currentDirectory, "general", "Big_Uninstall_Button.png");
+        string bigUpdateButtonPath = Path.Combine(currentDirectory, "general", "Big_Update_Button.png");
 
         Form form = new Form
         {
@@ -180,7 +182,39 @@ public static class InstallInteractives
                     isInstalled = Directory.Exists(correspondingFolder);
                 }
 
-                string buttonImagePath = isInstalled ? uninstallButtonPath : installButtonPath;
+                string buttonImagePath = installButtonPath;
+                string bigButtonImagePath = bigInstallButtonPath;
+
+                if (isInstalled)
+                {
+                    string buildJsonPath = Path.Combine(correspondingFolder, "build.json");
+                    int currentBuild = 0;
+                    int newBuild = 0;
+
+                    if (File.Exists(buildJsonPath))
+                    {
+                        var buildJsonData = JObject.Parse(File.ReadAllText(buildJsonPath));
+                        currentBuild = buildJsonData["build"]?.ToObject<int>() ?? 0;
+                    }
+
+                    string installJsonPath = Path.Combine(packsDirectory, fileNameWithoutExtension + ".json");
+                    if (File.Exists(installJsonPath))
+                    {
+                        var installJsonData = JObject.Parse(File.ReadAllText(installJsonPath));
+                        newBuild = installJsonData["build"]?.ToObject<int>() ?? 0;
+                    }
+
+                    if (newBuild > currentBuild)
+                    {
+                        buttonImagePath = updateButtonPath;
+                        bigButtonImagePath = bigUpdateButtonPath;
+                    }
+                    else
+                    {
+                        buttonImagePath = uninstallButtonPath;
+                        bigButtonImagePath = bigUninstallButtonPath;
+                    }
+                }
 
                 Panel filePanel = new Panel
                 {
@@ -223,12 +257,12 @@ public static class InstallInteractives
                         var jsonData = JObject.Parse(File.ReadAllText(jsonFilePath));
                         string title = jsonData["title"]?.ToString();
                         string description = jsonData["description"]?.ToString();
+                        int newBuild = jsonData["build"]?.ToObject<int>() ?? 0;
 
                         displayPictureBox.Image = Image.FromFile(pngFilePath);
                         titleLabel.Text = title;
                         descriptionLabel.Text = description;
 
-                        string bigButtonImagePath = isInstalled ? bigUninstallButtonPath : bigInstallButtonPath;
                         actionButton.Image = Image.FromFile(bigButtonImagePath);
                         actionButton.Location = new Point((rightPanel.Width - actionButton.Width) / 2, rightPanel.Height - actionButton.Height - 10);
 
@@ -237,10 +271,67 @@ public static class InstallInteractives
 
                         actionButton.Click += (s, ev) =>
                         {
-                            if (isInstalled)
+                            if (buttonImagePath == uninstallButtonPath)
                             {
                                 // Uninstall action: delete the folder and restart
                                 Directory.Delete(correspondingFolder, true);
+                                Application.Restart();
+                                Environment.Exit(0);
+                            }
+                            else if (buttonImagePath == updateButtonPath)
+                            {
+                                // Update action: delete all files except direct.json, save.json, and video files
+                                var filesToKeep = new[] { "direct.json", "save.json" };
+                                var videoExtensions = new[] { ".mkv", ".mp4" };
+
+                                foreach (var filePath in Directory.GetFiles(correspondingFolder))
+                                {
+                                    string fileName = Path.GetFileName(filePath);
+                                    string fileExtension = Path.GetExtension(filePath);
+
+                                    if (!filesToKeep.Contains(fileName) && !videoExtensions.Contains(fileExtension))
+                                    {
+                                        File.Delete(filePath);
+                                    }
+                                }
+
+                                // Extract the .intpak file to a temporary directory
+                                string tempDirectory = Path.Combine(currentDirectory, "temp");
+                                if (Directory.Exists(tempDirectory))
+                                {
+                                    Directory.Delete(tempDirectory, true);
+                                }
+                                Directory.CreateDirectory(tempDirectory);
+                                System.IO.Compression.ZipFile.ExtractToDirectory(file, tempDirectory);
+
+                                // Move the extracted files to the corresponding folder
+                                foreach (var tempFilePath in Directory.GetFiles(tempDirectory, "*", SearchOption.AllDirectories))
+                                {
+                                    string relativePath = tempFilePath.Substring(tempDirectory.Length + 1);
+                                    string destFilePath = Path.Combine(correspondingFolder, relativePath);
+                                    string destDirectory = Path.GetDirectoryName(destFilePath);
+
+                                    if (!Directory.Exists(destDirectory))
+                                    {
+                                        Directory.CreateDirectory(destDirectory);
+                                    }
+
+                                    if (File.Exists(destFilePath))
+                                    {
+                                        File.Delete(destFilePath);
+                                    }
+
+                                    File.Move(tempFilePath, destFilePath);
+                                }
+
+                                // Delete the temporary directory
+                                Directory.Delete(tempDirectory, true);
+
+                                // Create the build.json file
+                                string buildJsonContent = $"{{\n  \"build\": {newBuild}\n}}";
+                                File.WriteAllText(Path.Combine(correspondingFolder, "build.json"), buildJsonContent);
+
+                                // Restart
                                 Application.Restart();
                                 Environment.Exit(0);
                             }
@@ -271,6 +362,10 @@ public static class InstallInteractives
                                             string directJsonContent = $"{{\n  \"Directory\": \"{selectedVideoFile.Replace("\\", "\\\\")}\"\n}}";
                                             File.WriteAllText(Path.Combine(correspondingFolder, "direct.json"), directJsonContent);
 
+                                            // Create the build.json file
+                                            string buildJsonContent = $"{{\n  \"build\": {newBuild}\n}}";
+                                            File.WriteAllText(Path.Combine(correspondingFolder, "build.json"), buildJsonContent);
+
                                             // Restart
                                             Application.Restart();
                                             Environment.Exit(0);
@@ -297,6 +392,7 @@ public static class InstallInteractives
 
         form.ShowDialog();
     }
+
     private static void ClearClickEventHandlers(Control control)
     {
         var fieldInfo = typeof(Control).GetField("EventClick", System.Reflection.BindingFlags.Static | System.Reflection.BindingFlags.NonPublic);

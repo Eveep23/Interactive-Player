@@ -11,6 +11,7 @@ Project("{2150E333-8FDC-42A3-9474-1A3956D46DE8}") = "general", "general", "{02EA
 		InteractivePlayer4\bin\Debug\general\Back_arrow.png = InteractivePlayer4\bin\Debug\general\Back_arrow.png
 		InteractivePlayer4\bin\Debug\general\Big_Install_Button.png = InteractivePlayer4\bin\Debug\general\Big_Install_Button.png
 		InteractivePlayer4\bin\Debug\general\Big_Uninstall_Button.png = InteractivePlayer4\bin\Debug\general\Big_Uninstall_Button.png
+		InteractivePlayer4\bin\Debug\general\Big_Update_Button.png = InteractivePlayer4\bin\Debug\general\Big_Update_Button.png
 		InteractivePlayer4\bin\Debug\general\Controller_icon.png = InteractivePlayer4\bin\Debug\general\Controller_icon.png
 		InteractivePlayer4\bin\Debug\general\Cursor_icon.png = InteractivePlayer4\bin\Debug\general\Cursor_icon.png
 		InteractivePlayer4\bin\Debug\general\Default_backdrop.png = InteractivePlayer4\bin\Debug\general\Default_backdrop.png
@@ -28,6 +29,7 @@ Project("{2150E333-8FDC-42A3-9474-1A3956D46DE8}") = "general", "general", "{02EA
 		InteractivePlayer4\bin\Debug\general\Top_bar.png = InteractivePlayer4\bin\Debug\general\Top_bar.png
 		InteractivePlayer4\bin\Debug\general\Touch_icon.png = InteractivePlayer4\bin\Debug\general\Touch_icon.png
 		InteractivePlayer4\bin\Debug\general\Uninstall_Button.png = InteractivePlayer4\bin\Debug\general\Uninstall_Button.png
+		InteractivePlayer4\bin\Debug\general\Update_Button.png = InteractivePlayer4\bin\Debug\general\Update_Button.png
 		InteractivePlayer4\bin\Debug\general\web_2x.png = InteractivePlayer4\bin\Debug\general\web_2x.png
 	EndProjectSection
 EndProject

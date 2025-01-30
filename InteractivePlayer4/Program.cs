@@ -79,8 +79,14 @@ class Program
             persistentState = saveData.PersistentState;
         }
 
-        var libVLC = new LibVLC();
-        var mediaPlayer = new MediaPlayer(new Media(libVLC, new Uri(Path.GetFullPath(videoFile))));
+        // Initialize LibVLC with subtitle options
+        var libVLC = new LibVLC(
+            "--freetype-font=Consolas",
+            "--freetype-bold",
+            "--freetype-outline-thickness=3"
+        );
+        var media = new Media(libVLC, new Uri(Path.GetFullPath(videoFile)));
+        var mediaPlayer = new MediaPlayer(media);
 
         try
         {
