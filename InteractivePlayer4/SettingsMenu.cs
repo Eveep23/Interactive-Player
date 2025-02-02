@@ -3,6 +3,7 @@ using System.Drawing;
 using System.IO;
 using System.Windows.Forms;
 using Newtonsoft.Json;
+using System.Diagnostics;
 
 public static class SettingsMenu
 {
@@ -13,6 +14,9 @@ public static class SettingsMenu
         string backArrowPath = Path.Combine(Directory.GetCurrentDirectory(), "general", "Back_arrow.png");
         string topBarPath = Path.Combine(Directory.GetCurrentDirectory(), "general", "Top_bar.png");
         string logoPath = Path.Combine(Directory.GetCurrentDirectory(), "general", "Interactive_player_logo.png");
+        string youtubeLogoPath = Path.Combine(Directory.GetCurrentDirectory(), "general", "Youtube_Logo.png");
+        string discordLogoPath = Path.Combine(Directory.GetCurrentDirectory(), "general", "Discord_Logo.png");
+        string githubLogoPath = Path.Combine(Directory.GetCurrentDirectory(), "general", "Github_Logo.png");
 
         Form settingsForm = new Form
         {
@@ -97,6 +101,34 @@ public static class SettingsMenu
             RightToLeft = RightToLeft.Yes
         };
 
+        // Social Media Logos
+        PictureBox youtubePictureBox = new PictureBox
+        {
+            Image = Image.FromFile(youtubeLogoPath),
+            SizeMode = PictureBoxSizeMode.AutoSize,
+            BackColor = Color.Transparent,
+            Cursor = Cursors.Hand
+        };
+        youtubePictureBox.Click += (sender, e) => Process.Start("https://www.youtube.com/@eveep23");
+
+        PictureBox discordPictureBox = new PictureBox
+        {
+            Image = Image.FromFile(discordLogoPath),
+            SizeMode = PictureBoxSizeMode.AutoSize,
+            BackColor = Color.Transparent,
+            Cursor = Cursors.Hand
+        };
+        discordPictureBox.Click += (sender, e) => Process.Start("https://discord.gg/E4CbrXETsW");
+
+        PictureBox githubPictureBox = new PictureBox
+        {
+            Image = Image.FromFile(githubLogoPath),
+            SizeMode = PictureBoxSizeMode.AutoSize,
+            BackColor = Color.Transparent,
+            Cursor = Cursors.Hand
+        };
+        githubPictureBox.Click += (sender, e) => Process.Start("https://github.com/Eveep23/Interactive-Player");
+
         backPictureBox.Click += (sender, e) =>
         {
             var settings = new Settings
@@ -132,11 +164,20 @@ public static class SettingsMenu
 
         customStoryChangingNotificationCheckBox.Location = new Point(centerX - customStoryChangingNotificationCheckBox.Width / 2, 310);
 
+        // Position social media logos
+        int logoStartX = centerX - youtubePictureBox.Width / 2;
+        youtubePictureBox.Location = new Point(logoStartX, 360);
+        discordPictureBox.Location = new Point(logoStartX + youtubePictureBox.Width + 20, 360);
+        githubPictureBox.Location = new Point(logoStartX + youtubePictureBox.Width + discordPictureBox.Width + 40, 360);
+
         settingsForm.Controls.Add(audioLabel);
         settingsForm.Controls.Add(audioComboBox);
         settingsForm.Controls.Add(subtitleLabel);
         settingsForm.Controls.Add(subtitleComboBox);
         settingsForm.Controls.Add(customStoryChangingNotificationCheckBox);
+        settingsForm.Controls.Add(youtubePictureBox);
+        settingsForm.Controls.Add(discordPictureBox);
+        settingsForm.Controls.Add(githubPictureBox);
 
         settingsForm.ShowDialog();
     }

@@ -15,6 +15,8 @@ Project("{2150E333-8FDC-42A3-9474-1A3956D46DE8}") = "general", "general", "{02EA
 		InteractivePlayer4\bin\Debug\general\Controller_icon.png = InteractivePlayer4\bin\Debug\general\Controller_icon.png
 		InteractivePlayer4\bin\Debug\general\Cursor_icon.png = InteractivePlayer4\bin\Debug\general\Cursor_icon.png
 		InteractivePlayer4\bin\Debug\general\Default_backdrop.png = InteractivePlayer4\bin\Debug\general\Default_backdrop.png
+		InteractivePlayer4\bin\Debug\general\Discord_Logo.png = InteractivePlayer4\bin\Debug\general\Discord_Logo.png
+		InteractivePlayer4\bin\Debug\general\Github_Logo.png = InteractivePlayer4\bin\Debug\general\Github_Logo.png
 		InteractivePlayer4\bin\Debug\general\Install_Button.png = InteractivePlayer4\bin\Debug\general\Install_Button.png
 		InteractivePlayer4\bin\Debug\general\Interactive_player_logo.png = InteractivePlayer4\bin\Debug\general\Interactive_player_logo.png
 		InteractivePlayer4\bin\Debug\general\Remote_icon.png = InteractivePlayer4\bin\Debug\general\Remote_icon.png
@@ -31,6 +33,7 @@ Project("{2150E333-8FDC-42A3-9474-1A3956D46DE8}") = "general", "general", "{02EA
 		InteractivePlayer4\bin\Debug\general\Uninstall_Button.png = InteractivePlayer4\bin\Debug\general\Uninstall_Button.png
 		InteractivePlayer4\bin\Debug\general\Update_Button.png = InteractivePlayer4\bin\Debug\general\Update_Button.png
 		InteractivePlayer4\bin\Debug\general\web_2x.png = InteractivePlayer4\bin\Debug\general\web_2x.png
+		InteractivePlayer4\bin\Debug\general\Youtube_Logo.png = InteractivePlayer4\bin\Debug\general\Youtube_Logo.png
 	EndProjectSection
 EndProject
 Global

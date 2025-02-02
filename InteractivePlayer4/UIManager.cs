@@ -214,8 +214,8 @@ public static class UIManager
             Text = "Make a Choice",
             StartPosition = FormStartPosition.Manual,
             FormBorderStyle = FormBorderStyle.None,
-            BackColor = videoId == "80151644" ? Color.FromArgb(125, 125, 125) : (videoId == "81004016" ? Color.Black : Color.FromArgb(41, 41, 41)),
-            TransparencyKey = videoId == "80151644" ? Color.FromArgb(125, 125, 125) : Color.FromArgb(41, 41, 41),
+            BackColor = videoId == "80149064" ? Color.FromArgb(15, 15, 15) : (videoId == "80151644" ? Color.FromArgb(125, 125, 125) : (videoId == "81004016" ? Color.Black : Color.FromArgb(41, 41, 41))),
+            TransparencyKey = videoId == "80149064" ? Color.FromArgb(15, 15, 15) : (videoId == "80151644" ? Color.FromArgb(125, 125, 125) : Color.FromArgb(41, 41, 41)),
             MaximizeBox = false,
             MinimizeBox = false,
             TopMost = true,
@@ -233,7 +233,7 @@ public static class UIManager
         double scaleFactor = (double)choiceForm.Width / formWidth;
 
         // Apply additional scaling for specific video ID
-        if (videoId == "10000001")
+        if (videoId == "10000001" || videoId == "81251335" || videoId == "81287545" || videoId == "80149064" || videoId == "81260654" || videoId == "80994695" || videoId == "81328829" || videoId == "81058723" || videoId == "81054409" || videoId == "81108751" || videoId == "81004016" || videoId == "81205738" || videoId == "81205737")
         {
             scaleFactor *= 0.75;
         }
@@ -251,8 +251,8 @@ public static class UIManager
 
         // Load sound files
         string appearSoundPath = FindTexturePath(movieFolder, new[] { "sfx_appears_44100.m4a", "sfx_appears.m4a" });
-        string hoverSoundPath = FindTexturePath(movieFolder, new[] { "CSD_Hover.m4a", "cap_focus.m4a", "sfx_focus.m4a", "sfx_focus_44100.m4a", "toggle.m4a", "sfx_focus.m4a", "IX_choicePointSound_tonal_focus_48k.m4a", "toggle.m4a", "sfx_triviaAnswerFocusHover.m4a" });
-        string selectSoundPath = FindTexturePath(movieFolder, new[] { "CSD_Select.m4a", "cap_select.m4a", "sfx_select.m4a", "sfx_selected_44100.m4a", "select.m4a", "spirit_select_48.m4a", "sfx_buttonSelect.m4a", "IX_choicePointSound_tonal_select_48k.m4a", "sfx_select_44100.m4a", "select.m4a", "PIB_Choice_Ding.m4a" });
+        string hoverSoundPath = FindTexturePath(movieFolder, new[] { "CSD_Hover.m4a", "cap_focus.m4a", "focus_64.m4a", "sfx_focus.m4a", "sfx_focus_44100.m4a", "toggle.m4a", "sfx_focus.m4a", "IX_choicePointSound_tonal_focus_48k.m4a", "toggle.m4a", "sfx_triviaAnswerFocusHover.m4a" });
+        string selectSoundPath = FindTexturePath(movieFolder, new[] { "CSD_Select.m4a", "cap_select.m4a", "selected_64.m4a", "sfx_select.m4a", "sfx_selected_44100.m4a", "select.m4a", "spirit_select_48.m4a", "sfx_buttonSelect.m4a", "IX_choicePointSound_tonal_select_48k.m4a", "sfx_select_44100.m4a", "select.m4a", "PIB_Choice_Ding.m4a" });
         string timeoutSoundPath = FindTexturePath(movieFolder, new[] { "sfx_timeout_44100.m4a", "sfx_timeout.m4a", "IX_choicePointSound_tonal_timeout_48k.m4a", "timeout.m4a" });
 
         // Play appear sound
@@ -400,7 +400,7 @@ public static class UIManager
                             selectPlayer.Play();
                         }
 
-                        if (videoId == "10000001")
+                        if (videoId == "10000001" || videoId == "81251335" || videoId == "80994695" || videoId == "80135585" || videoId == "81328829" || videoId == "81205738" || videoId == "81205737")
                         {
                             choiceForm.Close(); // Close the form immediately after a choice is made
                         }
@@ -1290,7 +1290,7 @@ public static class UIManager
             choiceForm.Width = playerWidth;
 
             // Set the choiceForm height based on the videoId and layoutType
-            double heightFactor = 0.40; // Default height factor
+            double heightFactor = 0.30; // Default height factor
             if (segment.LayoutType == "ReubenZone" || segment.LayoutType == "EnderconZone" || segment.LayoutType == "TempleZone" || segment.LayoutType == "MCSMTeamName" || segment.LayoutType == "Crafting" || segment.LayoutType == "EpisodeEnd" || segment.LayoutType == "RedstoniaZone" || segment.LayoutType == "MCSMThroneZone" || segment.LayoutType == "MCSMTownZone" || segment.LayoutType == "MCSMWoolLand" || segment.LayoutType == "MCSMLabZone" || segment.LayoutType == "MCSMGunZone" || segment.LayoutType == "IvorZone")
             {
                 heightFactor = 1;
@@ -1300,34 +1300,52 @@ public static class UIManager
                 switch (videoId)
                 {
                     case "81004016":
-                        heightFactor = 0.30;
+                        heightFactor = 0.24;
                         break;
                     case "80151644":
-                        heightFactor = 0.30;
+                        heightFactor = 0.3;
                         break;
                     case "81054409":
-                        heightFactor = 0.45;
+                        heightFactor = 0.35;
                         break;
                     case "81287545":
-                        heightFactor = 0.45;
+                        heightFactor = 0.35;
                         break;
                     case "81019938":
                         heightFactor = 0.45;
                         break;
                     case "81260654":
-                        heightFactor = 0.45;
+                        heightFactor = 0.35;
                         break;
                     case "81054415":
                         heightFactor = 0.45;
                         break;
                     case "81058723":
-                        heightFactor = 0.45;
+                        heightFactor = 0.35;
                         break;
                     case "80994695":
-                        heightFactor = 0.30;
+                        heightFactor = 0.22;
                         break;
                     case "10000001":
-                        heightFactor = 0.20;
+                        heightFactor = 0.2;
+                        break;
+                    case "81251335":
+                        heightFactor = 0.217;
+                        break;
+                    case "80149064":
+                        heightFactor = 0.305;
+                        break;
+                    case "80135585":
+                        heightFactor = 0.40;
+                        break;
+                    case "81108751":
+                        heightFactor = 0.23;
+                        break;
+                    case "81205738":
+                        heightFactor = 0.23;
+                        break;
+                    case "81205737":
+                        heightFactor = 0.23;
                         break;
                 }
             }

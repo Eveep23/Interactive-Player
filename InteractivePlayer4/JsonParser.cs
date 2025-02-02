@@ -206,7 +206,7 @@ public static class JsonParser
             localPersistentState = persistentState;
         }
 
-        while (mediaPlayer.Time < segment.EndTimeMs - 300)
+        while (mediaPlayer.Time < segment.EndTimeMs - 320)
         {
             // Display notification if within the specified time range
             if (segment.Notification != null)
@@ -330,7 +330,7 @@ public static class JsonParser
                             }
                         }
                     }
-                    if (videoId == "10000001")
+                    if (videoId == "10000001" || videoId == "81251335" || videoId == "80994695" || videoId == "80135585" || videoId == "81328829" || videoId == "81205738" || videoId == "81205737")
                     {
                         break; // Break out of the loop and return the selected segment immediately
                     }
