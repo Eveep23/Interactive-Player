@@ -63,6 +63,30 @@ public class Choice
     public ImpressionData ImpressionData { get; set; }
     public string sg { get; set; }
     public string Exception { get; set; }
+    public List<Override> Overrides { get; set; }
+    public DefaultChoice Default { get; set; } // Add this line
+}
+
+public class DefaultChoice
+{
+    public Background Background { get; set; }
+    public string Text { get; set; }
+    public string AccessibilityDescription { get; set; }
+    public string SegmentId { get; set; }
+    public Background Icon { get; set; }
+}
+
+public class Override
+{
+    public OverrideData Data { get; set; }
+    public string PreconditionId { get; set; }
+}
+
+public class OverrideData
+{
+    public Background Background { get; set; }
+    public string AccessibilityDescription { get; set; }
+    public string SegmentId { get; set; }
 }
 
 public class ImpressionData
@@ -110,4 +134,14 @@ public class Moment
 public class TimeoutSegment
 {
     public string SegmentId { get; set; }
+}
+public class SegmentState
+{
+    public SegmentStateData Data { get; set; }
+    public string PreconditionId { get; set; }
+}
+
+public class SegmentStateData
+{
+    public Dictionary<string, object> Persistent { get; set; }
 }

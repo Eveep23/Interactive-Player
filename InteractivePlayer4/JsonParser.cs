@@ -53,7 +53,7 @@ public static class JsonParser
         }
     }
 
-    public static (Dictionary<string, List<Moment>>, string, Dictionary<string, object>, Dictionary<string, object>, Dictionary<string, List<SegmentGroup>>) ParseMoments(string jsonFile)
+    public static (Dictionary<string, List<Moment>>, string, Dictionary<string, object>, Dictionary<string, object>, Dictionary<string, List<SegmentGroup>>, Dictionary<string, List<SegmentState>>) ParseMoments(string jsonFile)
     {
         try
         {
@@ -104,13 +104,27 @@ public static class JsonParser
                 }
             }
 
+            // Extract segment states
+            var segmentStateToken = video["interactiveVideoMoments"]?["value"]?["segmentState"];
+            var segmentStates = new Dictionary<string, List<SegmentState>>();
+
+            if (segmentStateToken != null)
+            {
+                foreach (var property in segmentStateToken.Children<JProperty>())
+                {
+                    var segmentId = property.Name;
+                    var states = property.Value.ToObject<List<SegmentState>>();
+                    segmentStates[segmentId] = states;
+                }
+            }
+
             Console.WriteLine($"Loaded moments for {momentsBySegment.Count} segments.");
-            return (momentsBySegment, videoId, globalState, persistentState, segmentGroups);
+            return (momentsBySegment, videoId, globalState, persistentState, segmentGroups, segmentStates);
         }
         catch (Exception ex)
         {
             Console.WriteLine($"Error parsing info JSON: {ex.Message}");
-            return (null, null, null, null, null);
+            return (null, null, null, null, null, null);
         }
     }
 
@@ -174,7 +188,7 @@ public static class JsonParser
         return segmentId;
     }
 
-    public static string HandleSegment(MediaPlayer mediaPlayer, Segment segment, Dictionary<string, Segment> segments, string movieFolder, string videoId, ref Dictionary<string, object> globalState, ref Dictionary<string, object> persistentState, string infoJsonFile, string saveFilePath, Dictionary<string, List<SegmentGroup>> segmentGroups, bool isFirstLoad)
+    public static string HandleSegment(MediaPlayer mediaPlayer, Segment segment, Dictionary<string, Segment> segments, string movieFolder, string videoId, ref Dictionary<string, object> globalState, ref Dictionary<string, object> persistentState, string infoJsonFile, string saveFilePath, Dictionary<string, List<SegmentGroup>> segmentGroups, Dictionary<string, List<SegmentState>> segmentStates, bool isFirstLoad)
     {
         mediaPlayer.Time = segment.StartTimeMs;
         string nextSegment = segment.DefaultNext;
@@ -206,7 +220,26 @@ public static class JsonParser
             localPersistentState = persistentState;
         }
 
-        while (mediaPlayer.Time < segment.EndTimeMs - 320)
+        // Apply segment state changes
+        if (segmentStates.TryGetValue(segment.Id, out List<SegmentState> states))
+        {
+            foreach (var state in states)
+            {
+                if (string.IsNullOrEmpty(state.PreconditionId) || PreconditionChecker.CheckPrecondition(state.PreconditionId, localGlobalState, localPersistentState, infoJsonFile))
+                {
+                    if (state.Data.Persistent != null)
+                    {
+                        foreach (var kvp in state.Data.Persistent)
+                        {
+                            localPersistentState[kvp.Key] = kvp.Value;
+                            Console.WriteLine($"Persistent state changed: {kvp.Key} = {kvp.Value}");
+                        }
+                    }
+                }
+            }
+        }
+
+        while (mediaPlayer.Time < segment.EndTimeMs - 360)
         {
             // Display notification if within the specified time range
             if (segment.Notification != null)
@@ -228,15 +261,82 @@ public static class JsonParser
 
                 Console.WriteLine($"Choice point reached for segment {segment.Id}");
 
-                // Filter out choices with exceptions
+                // Filter out choices with exceptions and those with text "blank"
                 var validChoices = segment.Choices.Where(choice =>
                 {
                     if (!string.IsNullOrEmpty(choice.Exception))
                     {
                         return !PreconditionChecker.CheckPrecondition(choice.Exception, localGlobalState, localPersistentState, infoJsonFile);
                     }
-                    return true;
+                    return choice.Text != "blank";
                 }).ToList();
+
+                // Apply overrides if preconditions are met
+                foreach (var choice in validChoices)
+                {
+                    bool preconditionMet = false;
+
+                    // Extract data from the "default" property if it exists
+                    if (choice.Default != null)
+                    {
+                        if (choice.Default.Background != null)
+                        {
+                            choice.Background = choice.Default.Background;
+                        }
+                        if (!string.IsNullOrEmpty(choice.Default.Text))
+                        {
+                            choice.Text = choice.Default.Text;
+                        }
+                        if (!string.IsNullOrEmpty(choice.Default.SegmentId))
+                        {
+                            choice.SegmentId = choice.Default.SegmentId;
+                        }
+                        if (choice.Default.Icon != null)
+                        {
+                            choice.Icon = choice.Default.Icon;
+                        }
+                    }
+
+                    if (choice.Overrides != null)
+                    {
+                        foreach (var overrideItem in choice.Overrides)
+                        {
+                            if (PreconditionChecker.CheckPrecondition(overrideItem.PreconditionId, localGlobalState, localPersistentState, infoJsonFile))
+                            {
+                                if (overrideItem.Data != null)
+                                {
+                                    if (overrideItem.Data.Background != null)
+                                    {
+                                        choice.Background = overrideItem.Data.Background;
+                                    }
+                                    if (!string.IsNullOrEmpty(overrideItem.Data.SegmentId))
+                                    {
+                                        choice.SegmentId = overrideItem.Data.SegmentId;
+                                    }
+                                }
+                                preconditionMet = true;
+                                break;
+                            }
+                        }
+
+                        // If no preconditions are met, apply the last override
+                        if (!preconditionMet && choice.Overrides.Count > 0)
+                        {
+                            var lastOverride = choice.Overrides.Last();
+                            if (lastOverride.Data != null)
+                            {
+                                if (lastOverride.Data.Background != null)
+                                {
+                                    choice.Background = lastOverride.Data.Background;
+                                }
+                                if (!string.IsNullOrEmpty(lastOverride.Data.SegmentId))
+                                {
+                                    choice.SegmentId = lastOverride.Data.SegmentId;
+                                }
+                            }
+                        }
+                    }
+                }
 
                 // Load button sprites for each valid choice
                 var buttonSprites = new List<Bitmap>();
@@ -330,7 +430,7 @@ public static class JsonParser
                             }
                         }
                     }
-                    if (videoId == "10000001" || videoId == "81251335" || videoId == "80994695" || videoId == "80135585" || videoId == "81328829" || videoId == "81205738" || videoId == "81205737")
+                    if (videoId == "10000001" || videoId == "81251335" || videoId == "80994695" || videoId == "80135585" || videoId == "81328829" || videoId == "81205738" || videoId == "81205737" || videoId == "80227815" || videoId == "81250260" || videoId == "81250261" || videoId == "81250262" || videoId == "81250263" || videoId == "81250264" || videoId == "81250265" || videoId == "81250266" || videoId == "81250267")
                     {
                         break; // Break out of the loop and return the selected segment immediately
                     }

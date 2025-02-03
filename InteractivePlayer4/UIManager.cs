@@ -233,7 +233,7 @@ public static class UIManager
         double scaleFactor = (double)choiceForm.Width / formWidth;
 
         // Apply additional scaling for specific video ID
-        if (videoId == "10000001" || videoId == "81251335" || videoId == "81287545" || videoId == "80149064" || videoId == "81260654" || videoId == "80994695" || videoId == "81328829" || videoId == "81058723" || videoId == "81054409" || videoId == "81108751" || videoId == "81004016" || videoId == "81205738" || videoId == "81205737")
+        if (videoId == "10000001" || videoId == "81251335" || videoId == "81287545" || videoId == "80149064" || videoId == "81260654" || videoId == "80994695" || videoId == "81328829" || videoId == "81058723" || videoId == "81054409" || videoId == "81108751" || videoId == "81004016" || videoId == "81205738" || videoId == "81205737" || videoId == "81054415" || videoId == "81175265" || videoId == "81019938" || videoId == "80227815" || videoId == "81250260" || videoId == "81250261" || videoId == "81250262" || videoId == "81250263" || videoId == "81250264" || videoId == "81250265" || videoId == "81250266" || videoId == "81250267")
         {
             scaleFactor *= 0.75;
         }
@@ -307,7 +307,7 @@ public static class UIManager
 
                 var button = new Button
                 {
-                    Text = (segment.LayoutType == "ReubenZone" || segment.LayoutType == "EnderconZone" || segment.LayoutType == "TempleZone" || segment.LayoutType == "Crafting" || segment.LayoutType == "EpisodeEnd" || segment.LayoutType == "RedstoniaZone" || segment.LayoutType == "MCSMThroneZone" || segment.LayoutType == "MCSMTownZone" || segment.LayoutType == "MCSMWoolLand" || segment.LayoutType == "MCSMLabZone" || segment.LayoutType == "MCSMGunZone" || segment.LayoutType == "IvorZone") ? string.Empty : (new[] { "80149064", "80135585", "81054409", "81287545", "81019938", "81260654", "81054415", "81058723" }.Contains(videoId)) ? string.Empty : choices[i].Text,
+                    Text = (segment.LayoutType == "ReubenZone" || segment.LayoutType == "EnderconZone" || segment.LayoutType == "TempleZone" || segment.LayoutType == "Crafting" || segment.LayoutType == "EpisodeEnd" || segment.LayoutType == "RedstoniaZone" || segment.LayoutType == "MCSMThroneZone" || segment.LayoutType == "MCSMTownZone" || segment.LayoutType == "MCSMWoolLand" || segment.LayoutType == "MCSMLabZone" || segment.LayoutType == "MCSMGunZone" || segment.LayoutType == "IvorZone") ? string.Empty : (new[] { "80149064", "80135585", "81054409", "81287545", "81019938", "81260654", "81054415", "81058723", "80227815", "81250260", "81250261", "81250262", "81250263", "81250264", "81250265", "81250266", "81250267" }.Contains(videoId)) ? string.Empty : choices[i].Text,
                     Size = new Size(buttonWidth, buttonHeight),
                     Location = new System.Drawing.Point(0, 0), // Position within the panel
                     BackgroundImage = new Bitmap(defaultSprite, new Size(buttonWidth, buttonHeight)),
@@ -400,7 +400,7 @@ public static class UIManager
                             selectPlayer.Play();
                         }
 
-                        if (videoId == "10000001" || videoId == "81251335" || videoId == "80994695" || videoId == "80135585" || videoId == "81328829" || videoId == "81205738" || videoId == "81205737")
+                        if (videoId == "10000001" || videoId == "81251335" || videoId == "80994695" || videoId == "80135585" || videoId == "81328829" || videoId == "81205738" || videoId == "81205737" || videoId == "80227815" || videoId == "81250260" || videoId == "81250261" || videoId == "81250262" || videoId == "81250263" || videoId == "81250264" || videoId == "81250265" || videoId == "81250266" || videoId == "81250267")
                         {
                             choiceForm.Close(); // Close the form immediately after a choice is made
                         }
@@ -1054,7 +1054,7 @@ public static class UIManager
             timerFillPath = FindTexturePath(movieFolder, new[] { "timer_fill_2x.png", "timer_fill_2x_v2.png", "timer_fill_3x.png" });
             timerCapLPath = FindTexturePath(movieFolder, new[] { "timer_capL_2x.png", "timer_capL_2x_v2.png", "timer_capL_3x.png" });
             timerCapRPath = FindTexturePath(movieFolder, new[] { "timer_capR_2x.png", "timer_capR_2x_v2.png", "timer_capR_3x.png" });
-            timerBottomPath = FindTexturePath(movieFolder, new[] { "timer_bottom_2x.png", "timer_bottom_2x_v2.png", "timer_bottom_3x.png" });
+            timerBottomPath = FindTexturePath(movieFolder, new[] { "timer_bottom_2x.png", "timer_bottom_2x_v2.png", "timer_bottom_3x.png", "bottombar_2x.png" });
             timerTopPath = FindTexturePath(movieFolder, new[] { "timer_top_2x.png", "timer_top_2x_v2.png", "timer_top_3x.png" });
             webPath = isControllerConnected ? FindTexturePath(movieFolder, new[] { "controller_2x.png" }) : FindTexturePath(movieFolder, new[] { "web_2x.png", "device_web_2x.png", "web_2x_v2.png", "web_3x.png", "web_icon_2x.png" });
         }
@@ -1312,13 +1312,13 @@ public static class UIManager
                         heightFactor = 0.35;
                         break;
                     case "81019938":
-                        heightFactor = 0.45;
+                        heightFactor = 0.35;
                         break;
                     case "81260654":
                         heightFactor = 0.35;
                         break;
                     case "81054415":
-                        heightFactor = 0.45;
+                        heightFactor = 0.35;
                         break;
                     case "81058723":
                         heightFactor = 0.35;
@@ -1346,6 +1346,36 @@ public static class UIManager
                         break;
                     case "81205737":
                         heightFactor = 0.23;
+                        break;
+                    case "81175265":
+                        heightFactor = 0.25;
+                        break;
+                    case "80227815":
+                        heightFactor = 0.33;
+                        break;
+                    case "81250260":
+                        heightFactor = 0.33;
+                        break;
+                    case "81250261":
+                        heightFactor = 0.33;
+                        break;
+                    case "81250262":
+                        heightFactor = 0.33;
+                        break;
+                    case "81250263":
+                        heightFactor = 0.33;
+                        break;
+                    case "81250264":
+                        heightFactor = 0.33;
+                        break;
+                    case "81250265":
+                        heightFactor = 0.33;
+                        break;
+                    case "81250266":
+                        heightFactor = 0.33;
+                        break;
+                    case "81250267":
+                        heightFactor = 0.33;
                         break;
                 }
             }
@@ -1491,7 +1521,7 @@ public static class UIManager
             controller.SetVibration(new Vibration { LeftMotorSpeed = 65535, RightMotorSpeed = 65535 });
             Task.Delay(300).ContinueWith(_ => controller.SetVibration(new Vibration())); // Stop rumble after 300ms
 
-            if (videoId == "10000001")
+            if (videoId == "10000001"|| videoId == "81251335" || videoId == "80994695" || videoId == "80135585" || videoId == "81328829" || videoId == "81205738" || videoId == "81205737" || videoId == "80227815" || videoId == "81250260" || videoId == "81250261" || videoId == "81250262" || videoId == "81250263" || videoId == "81250264" || videoId == "81250265" || videoId == "81250266" || videoId == "81250267")
             {
                 choiceForm.Close(); // Close the form immediately after a choice is made
             }

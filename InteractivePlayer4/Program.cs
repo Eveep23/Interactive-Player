@@ -47,7 +47,7 @@ class Program
 
         // Parse JSON files
         Dictionary<string, Segment> segments = JsonParser.ParseSegments(mainJsonFile, ref initialSegment, videoDuration);
-        var (momentsBySegment, videoId, globalState, persistentState, segmentGroups) = JsonParser.ParseMoments(infoJsonFile);
+        var (momentsBySegment, videoId, globalState, persistentState, segmentGroups, segmentStates) = JsonParser.ParseMoments(infoJsonFile);
 
         // Handle missing segments or moments
         if (segments == null || momentsBySegment == null)
@@ -102,7 +102,7 @@ class Program
                 }
 
                 Console.WriteLine($"Now playing segment: {segment.Id}");
-                currentSegment = JsonParser.HandleSegment(mediaPlayer, segment, segments, movieFolder, videoId, ref globalState, ref persistentState, infoJsonFile, saveFilePath, segmentGroups, isFirstLoad);
+                currentSegment = JsonParser.HandleSegment(mediaPlayer, segment, segments, movieFolder, videoId, ref globalState, ref persistentState, infoJsonFile, saveFilePath, segmentGroups, segmentStates, isFirstLoad);
 
                 SaveManager.SaveProgress(saveFilePath, currentSegment, globalState, persistentState);
 
