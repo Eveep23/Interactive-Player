@@ -114,11 +114,11 @@ public static class PreconditionChecker
             case "not":
                 return !EvaluatePrecondition(logic[1], persistentState, globalState, preconditionResults, infoJsonFile);
             case "lt":
-                return EvaluateLessThan(logic[1], logic[2], persistentState, globalState, preconditionResults);
+                return EvaluateLessThan(logic[1], logic[2], persistentState, globalState, preconditionResults, infoJsonFile);
             case "gt":
-                return EvaluateGreaterThan(logic[1], logic[2], persistentState, globalState, preconditionResults);
+                return EvaluateGreaterThan(logic[1], logic[2], persistentState, globalState, preconditionResults, infoJsonFile);
             case "lte":
-                return EvaluateLessThanOrEqual(logic[1], logic[2], persistentState, globalState, preconditionResults);
+                return EvaluateLessThanOrEqual(logic[1], logic[2], persistentState, globalState, preconditionResults, infoJsonFile);
             case "gte":
                 return EvaluateGreaterThanOrEqual(logic[1], logic[2], persistentState, globalState, preconditionResults, infoJsonFile);
             case "sum":
@@ -145,25 +145,22 @@ public static class PreconditionChecker
         }
         else if (stateType == "precondition")
         {
-            if (preconditionResults.TryGetValue(key, out int preconditionValue))
-            {
-                return preconditionValue == expectedValue.ToObject<int>();
-            }
-            else
+            if (!preconditionResults.TryGetValue(key, out int preconditionValue))
             {
                 // Evaluate the precondition if it hasn't been evaluated yet
                 var preconditions = LoadPreconditionsFromInfoJson(infoJsonFile);
                 if (preconditions != null && preconditions.TryGetValue(key, out var preconditionLogic))
                 {
-                    preconditionValue = EvaluateSum(preconditionLogic.Skip(1), persistentState, globalState);
+                    bool result = EvaluatePrecondition(preconditionLogic, persistentState, globalState, preconditionResults, infoJsonFile);
+                    preconditionValue = result ? 1 : 0; // Assuming precondition result is boolean
                     preconditionResults[key] = preconditionValue;
-                    return preconditionValue == expectedValue.ToObject<int>();
                 }
                 else
                 {
                     throw new ArgumentException($"Unknown precondition: {key}");
                 }
             }
+            return preconditionValue == expectedValue.ToObject<int>();
         }
         else if (stateType == "sum")
         {
@@ -178,7 +175,7 @@ public static class PreconditionChecker
         return JToken.DeepEquals(actualValue, expectedValue);
     }
 
-    static bool EvaluateLessThan(JToken path, JToken expectedValue, JObject persistentState, JObject globalState, Dictionary<string, int> preconditionResults)
+    static bool EvaluateLessThan(JToken path, JToken expectedValue, JObject persistentState, JObject globalState, Dictionary<string, int> preconditionResults, string infoJsonFile)
     {
         string stateType = path[0].ToString();
         string key = path[1].ToString();
@@ -194,14 +191,22 @@ public static class PreconditionChecker
         }
         else if (stateType == "precondition")
         {
-            if (preconditionResults.TryGetValue(key, out int preconditionValue))
+            if (!preconditionResults.TryGetValue(key, out int preconditionValue))
             {
-                return preconditionValue < expectedValue.ToObject<int>();
+                // Evaluate the precondition if it hasn't been evaluated yet
+                var preconditions = LoadPreconditionsFromInfoJson(infoJsonFile);
+                if (preconditions != null && preconditions.TryGetValue(key, out var preconditionLogic))
+                {
+                    bool result = EvaluatePrecondition(preconditionLogic, persistentState, globalState, preconditionResults, infoJsonFile);
+                    preconditionValue = result ? 1 : 0; // Assuming precondition result is boolean
+                    preconditionResults[key] = preconditionValue;
+                }
+                else
+                {
+                    throw new ArgumentException($"Unknown precondition: {key}");
+                }
             }
-            else
-            {
-                throw new ArgumentException($"Unknown precondition: {key}");
-            }
+            return preconditionValue < expectedValue.ToObject<int>();
         }
         else if (stateType == "sum")
         {
@@ -216,7 +221,7 @@ public static class PreconditionChecker
         return actualValue != null && actualValue.Type == JTokenType.Integer && expectedValue.Type == JTokenType.Integer && (int)actualValue < (int)expectedValue;
     }
 
-    static bool EvaluateGreaterThan(JToken path, JToken expectedValue, JObject persistentState, JObject globalState, Dictionary<string, int> preconditionResults)
+    static bool EvaluateGreaterThan(JToken path, JToken expectedValue, JObject persistentState, JObject globalState, Dictionary<string, int> preconditionResults, string infoJsonFile)
     {
         string stateType = path[0].ToString();
         string key = path[1].ToString();
@@ -232,14 +237,22 @@ public static class PreconditionChecker
         }
         else if (stateType == "precondition")
         {
-            if (preconditionResults.TryGetValue(key, out int preconditionValue))
+            if (!preconditionResults.TryGetValue(key, out int preconditionValue))
             {
-                return preconditionValue > expectedValue.ToObject<int>();
+                // Evaluate the precondition if it hasn't been evaluated yet
+                var preconditions = LoadPreconditionsFromInfoJson(infoJsonFile);
+                if (preconditions != null && preconditions.TryGetValue(key, out var preconditionLogic))
+                {
+                    bool result = EvaluatePrecondition(preconditionLogic, persistentState, globalState, preconditionResults, infoJsonFile);
+                    preconditionValue = result ? 1 : 0; // Assuming precondition result is boolean
+                    preconditionResults[key] = preconditionValue;
+                }
+                else
+                {
+                    throw new ArgumentException($"Unknown precondition: {key}");
+                }
             }
-            else
-            {
-                throw new ArgumentException($"Unknown precondition: {key}");
-            }
+            return preconditionValue > expectedValue.ToObject<int>();
         }
         else if (stateType == "sum")
         {
@@ -254,7 +267,7 @@ public static class PreconditionChecker
         return actualValue != null && actualValue.Type == JTokenType.Integer && expectedValue.Type == JTokenType.Integer && (int)actualValue > (int)expectedValue;
     }
 
-    static bool EvaluateLessThanOrEqual(JToken path, JToken expectedValue, JObject persistentState, JObject globalState, Dictionary<string, int> preconditionResults)
+    static bool EvaluateLessThanOrEqual(JToken path, JToken expectedValue, JObject persistentState, JObject globalState, Dictionary<string, int> preconditionResults, string infoJsonFile)
     {
         string stateType = path[0].ToString();
         string key = path[1].ToString();
@@ -270,14 +283,22 @@ public static class PreconditionChecker
         }
         else if (stateType == "precondition")
         {
-            if (preconditionResults.TryGetValue(key, out int preconditionValue))
+            if (!preconditionResults.TryGetValue(key, out int preconditionValue))
             {
-                return preconditionValue <= expectedValue.ToObject<int>();
+                // Evaluate the precondition if it hasn't been evaluated yet
+                var preconditions = LoadPreconditionsFromInfoJson(infoJsonFile);
+                if (preconditions != null && preconditions.TryGetValue(key, out var preconditionLogic))
+                {
+                    bool result = EvaluatePrecondition(preconditionLogic, persistentState, globalState, preconditionResults, infoJsonFile);
+                    preconditionValue = result ? 1 : 0; // Assuming precondition result is boolean
+                    preconditionResults[key] = preconditionValue;
+                }
+                else
+                {
+                    throw new ArgumentException($"Unknown precondition: {key}");
+                }
             }
-            else
-            {
-                throw new ArgumentException($"Unknown precondition: {key}");
-            }
+            return preconditionValue <= expectedValue.ToObject<int>();
         }
         else if (stateType == "sum")
         {
@@ -314,7 +335,8 @@ public static class PreconditionChecker
                 var preconditions = LoadPreconditionsFromInfoJson(infoJsonFile);
                 if (preconditions != null && preconditions.TryGetValue(key, out var preconditionLogic))
                 {
-                    preconditionValue = EvaluateSum(preconditionLogic.Skip(1), persistentState, globalState);
+                    bool result = EvaluatePrecondition(preconditionLogic, persistentState, globalState, preconditionResults, infoJsonFile);
+                    preconditionValue = result ? 1 : 0; // Assuming precondition result is boolean
                     preconditionResults[key] = preconditionValue;
                 }
                 else

@@ -275,6 +275,7 @@ public static class JsonParser
                 foreach (var choice in validChoices)
                 {
                     bool preconditionMet = false;
+                    Override lastOverrideWithoutPrecondition = null;
 
                     // Extract data from the "default" property if it exists
                     if (choice.Default != null)
@@ -295,13 +296,25 @@ public static class JsonParser
                         {
                             choice.Icon = choice.Default.Icon;
                         }
+                        if (choice.Default.ImpressionData != null)
+                        {
+                            choice.ImpressionData = choice.Default.ImpressionData;
+                        }
+                        if (!string.IsNullOrEmpty(choice.Default.sg))
+                        {
+                            choice.sg = choice.Default.sg;
+                        }
                     }
 
                     if (choice.Overrides != null)
                     {
                         foreach (var overrideItem in choice.Overrides)
                         {
-                            if (PreconditionChecker.CheckPrecondition(overrideItem.PreconditionId, localGlobalState, localPersistentState, infoJsonFile))
+                            if (string.IsNullOrEmpty(overrideItem.PreconditionId))
+                            {
+                                lastOverrideWithoutPrecondition = overrideItem;
+                            }
+                            else if (PreconditionChecker.CheckPrecondition(overrideItem.PreconditionId, localGlobalState, localPersistentState, infoJsonFile))
                             {
                                 if (overrideItem.Data != null)
                                 {
@@ -319,19 +332,18 @@ public static class JsonParser
                             }
                         }
 
-                        // If no preconditions are met, apply the last override
-                        if (!preconditionMet && choice.Overrides.Count > 0)
+                        // If no preconditions are met, apply the last override without a precondition
+                        if (!preconditionMet && lastOverrideWithoutPrecondition != null)
                         {
-                            var lastOverride = choice.Overrides.Last();
-                            if (lastOverride.Data != null)
+                            if (lastOverrideWithoutPrecondition.Data != null)
                             {
-                                if (lastOverride.Data.Background != null)
+                                if (lastOverrideWithoutPrecondition.Data.Background != null)
                                 {
-                                    choice.Background = lastOverride.Data.Background;
+                                    choice.Background = lastOverrideWithoutPrecondition.Data.Background;
                                 }
-                                if (!string.IsNullOrEmpty(lastOverride.Data.SegmentId))
+                                if (!string.IsNullOrEmpty(lastOverrideWithoutPrecondition.Data.SegmentId))
                                 {
-                                    choice.SegmentId = lastOverride.Data.SegmentId;
+                                    choice.SegmentId = lastOverrideWithoutPrecondition.Data.SegmentId;
                                 }
                             }
                         }
