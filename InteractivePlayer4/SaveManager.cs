@@ -2,6 +2,7 @@
 using System.Collections.Generic;
 using System.Drawing;
 using System.IO;
+using System.Linq;
 using System.Windows.Forms;
 using Newtonsoft.Json;
 
@@ -116,6 +117,32 @@ public static class SaveManager
                 }
             };
 
+            // Check if the folder name contains "Battle Kitty"
+            if (Path.GetDirectoryName(saveFilePath).Contains("Battle Kitty"))
+            {
+                string bkFolder = Path.Combine(Directory.GetCurrentDirectory(), "BK");
+                var saveFiles = Directory.GetFiles(bkFolder, "save.json", SearchOption.AllDirectories);
+                if (saveFiles.Length > 0)
+                {
+                    var mostRecentSaveFile = saveFiles.OrderByDescending(f => File.GetLastWriteTime(f)).First();
+                    var mostRecentSaveData = JsonConvert.DeserializeObject<SaveData>(File.ReadAllText(mostRecentSaveFile));
+                    var currentSaveData = JsonConvert.DeserializeObject<SaveData>(File.ReadAllText(saveFilePath));
+
+                    // Merge states
+                    foreach (var kvp in mostRecentSaveData.GlobalState)
+                    {
+                        currentSaveData.GlobalState[kvp.Key] = kvp.Value;
+                    }
+                    foreach (var kvp in mostRecentSaveData.PersistentState)
+                    {
+                        currentSaveData.PersistentState[kvp.Key] = kvp.Value;
+                    }
+
+                    // Save the merged data back to the current save file
+                    File.WriteAllText(saveFilePath, JsonConvert.SerializeObject(currentSaveData, Formatting.Indented));
+                }
+            }
+
             return form.ShowDialog() == DialogResult.OK ? SelectedMovieFolder : null;
         }
         return null;
@@ -190,6 +217,28 @@ public static class SaveManager
                         {
                             persistentState["Armor"] = ep3SaveData.PersistentState["Armor"];
                         }
+                    }
+                }
+            }
+
+            // Check if the folder name contains "Battle Kitty"
+            if (movieFolder.Contains("Battle Kitty"))
+            {
+                string bkFolder = Path.Combine(Directory.GetCurrentDirectory(), "BK");
+                var saveFiles = Directory.GetFiles(bkFolder, "save.json", SearchOption.AllDirectories);
+                if (saveFiles.Length > 0)
+                {
+                    var mostRecentSaveFile = saveFiles.OrderByDescending(f => File.GetLastWriteTime(f)).First();
+                    var mostRecentSaveData = JsonConvert.DeserializeObject<SaveData>(File.ReadAllText(mostRecentSaveFile));
+
+                    // Merge states
+                    foreach (var kvp in mostRecentSaveData.GlobalState)
+                    {
+                        globalState[kvp.Key] = kvp.Value;
+                    }
+                    foreach (var kvp in mostRecentSaveData.PersistentState)
+                    {
+                        persistentState[kvp.Key] = kvp.Value;
                     }
                 }
             }

@@ -56,6 +56,7 @@ public class SegmentGroup
 public class Choice
 {
     public string Text { get; set; }
+    public string SubText { get; set; }
     public string SegmentId { get; set; }
     public Background Background { get; set; }
     public Background Icon { get; set; }
@@ -71,6 +72,7 @@ public class DefaultChoice
 {
     public Background Background { get; set; }
     public string Text { get; set; }
+    public string SubText { get; set; }
     public string SegmentId { get; set; }
     public Background Icon { get; set; }
     public string Id { get; set; }

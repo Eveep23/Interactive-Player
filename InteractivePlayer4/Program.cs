@@ -156,4 +156,87 @@ class Program
 
         return duration;
     }
+    public static void StartNewEpisode(string episodeFolder)
+    {
+        string currentDirectory = Directory.GetCurrentDirectory();
+        string newEpisodeFolder = Path.Combine(currentDirectory, episodeFolder);
+
+        if (Directory.Exists(newEpisodeFolder))
+        {
+            // Set paths for JSON files and save file
+            string videoFile = GetVideoFilePath(newEpisodeFolder);
+            string mainJsonFile = Directory.GetFiles(newEpisodeFolder, "*.json").FirstOrDefault(f => !f.ToLower().Contains("info") && !f.ToLower().Contains("direct"));
+            string infoJsonFile = Directory.GetFiles(newEpisodeFolder, "*.json").FirstOrDefault(f => f.ToLower().Contains("info"));
+            string saveFilePath = Path.Combine(newEpisodeFolder, "save.json");
+
+            if (videoFile == null || mainJsonFile == null || infoJsonFile == null)
+            {
+                Console.WriteLine("Error: Required files not found in the selected Interactive folder.");
+                return;
+            }
+
+            // Always start from the initial segment when opening from a different interactive
+            string initialSegment = null;
+
+            // Get video duration
+            long videoDuration = GetVideoDuration(videoFile);
+
+            // Parse JSON files
+            Dictionary<string, Segment> segments = JsonParser.ParseSegments(mainJsonFile, ref initialSegment, videoDuration);
+            var (momentsBySegment, videoId, globalState, persistentState, segmentGroups, segmentStates) = JsonParser.ParseMoments(infoJsonFile);
+
+            // Handle missing segments or moments
+            if (segments == null || momentsBySegment == null)
+            {
+                Console.WriteLine("Error: Failed to parse JSON.");
+                return;
+            }
+
+            // Set starting segment to the initial segment
+            string currentSegment = initialSegment ?? segments.Values.FirstOrDefault(s => s.IsStartingSegment)?.Id ?? segments.Keys.First();
+
+            // Merge moments into segments
+            JsonParser.MergeMomentsIntoSegments(segments, momentsBySegment);
+
+            // Initialize LibVLC with subtitle options
+            var libVLC = new LibVLC(
+                "--freetype-font=Consolas",
+                "--freetype-bold",
+                "--freetype-outline-thickness=3"
+            );
+            var media = new Media(libVLC, new Uri(Path.GetFullPath(videoFile)));
+            var mediaPlayer = new MediaPlayer(media);
+
+            try
+            {
+                // Start playing the video
+                mediaPlayer.Play();
+
+                while (!string.IsNullOrEmpty(currentSegment))
+                {
+                    if (!segments.TryGetValue(currentSegment, out Segment segment))
+                    {
+                        Console.WriteLine($"Error: Segment {currentSegment} not found.");
+                        break;
+                    }
+
+                    Console.WriteLine($"Now playing segment: {segment.Id}");
+                    currentSegment = JsonParser.HandleSegment(mediaPlayer, segment, segments, newEpisodeFolder, videoId, ref globalState, ref persistentState, infoJsonFile, saveFilePath, segmentGroups, segmentStates, true);
+
+                    SaveManager.SaveProgress(saveFilePath, currentSegment, globalState, persistentState);
+                }
+
+                Console.WriteLine("Interactive finished.");
+            }
+            finally
+            {
+                mediaPlayer.Dispose();
+                libVLC.Dispose();
+            }
+        }
+        else
+        {
+            Console.WriteLine($"Error: Episode folder {episodeFolder} not found.");
+        }
+    }
 }

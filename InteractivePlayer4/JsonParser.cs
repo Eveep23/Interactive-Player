@@ -497,6 +497,16 @@ public static class JsonParser
             }
         }
 
+        // Check for special segment IDs to start a new episode
+        string episodeFolder = GetEpisodeFolder(nextSegment);
+        if (episodeFolder != null)
+        {
+            Console.WriteLine($"Starting new episode: {episodeFolder}");
+            mediaPlayer.Stop(); // Stop the current interactive
+            Program.StartNewEpisode(episodeFolder);
+            return null; // Return null to indicate the current interactive should stop
+        }
+
         return nextSegment;
     }
 
@@ -733,5 +743,14 @@ public static class JsonParser
         }
 
         return selectedChoice;
+    }
+    private static string GetEpisodeFolder(string segmentId)
+    {
+        var match = System.Text.RegularExpressions.Regex.Match(segmentId, @"playEpisode(\d+)");
+        if (match.Success)
+        {
+            return Path.Combine("BK", $"Battle Kitty E{match.Groups[1].Value.PadLeft(2, '0')}");
+        }
+        return null;
     }
 }
