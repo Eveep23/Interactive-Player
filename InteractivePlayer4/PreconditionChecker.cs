@@ -31,7 +31,7 @@ public static class PreconditionChecker
         // Dictionary to store precondition results
         var preconditionResults = new Dictionary<string, int>();
 
-        // Evaluate and store preconditions that act as states
+        // Evaluate and store preconditions that act as states (like sums) first
         foreach (var precondition in preconditions)
         {
             string preconditionId = precondition.Key;
@@ -39,7 +39,7 @@ public static class PreconditionChecker
 
             if (preconditionLogic[0].ToString() == "sum")
             {
-                int result = EvaluateSum(preconditionLogic.Skip(1), persistentState, globalState);
+                int result = EvaluateSum(preconditionLogic.Skip(1), persistentState, globalState, preconditionResults, infoPath);
                 preconditionResults[preconditionId] = result;
             }
         }
@@ -52,7 +52,14 @@ public static class PreconditionChecker
 
             bool result = EvaluatePrecondition(preconditionLogic, persistentState, globalState, preconditionResults, infoPath);
 
-            Console.WriteLine($"{preconditionId}: {(result ? "Met" : "Not Met")}");
+            if (preconditionLogic[0].ToString() == "sum")
+            {
+                Console.WriteLine($"{preconditionId}: {preconditionResults[preconditionId]}");
+            }
+            else
+            {
+                Console.WriteLine($"{preconditionId}: {(result ? "Met" : "Not Met")}");
+            }
         }
     }
 
@@ -73,8 +80,44 @@ public static class PreconditionChecker
             return false;
         }
 
-        // Evaluate the precondition
-        return EvaluatePrecondition(preconditionLogic, JObject.FromObject(persistentState), JObject.FromObject(globalState), new Dictionary<string, int>(), infoJsonFile);
+        // Dictionary to store precondition results
+        var preconditionResults = new Dictionary<string, int>();
+
+        // Evaluate and store preconditions that act as states (like sums) first
+        foreach (var precondition in preconditions)
+        {
+            string preconditionKey = precondition.Key;
+            var preconditionValue = precondition.Value;
+
+            if (preconditionValue[0].ToString() == "sum")
+            {
+                int result = EvaluateSum(preconditionValue.Skip(1), JObject.FromObject(persistentState), JObject.FromObject(globalState), preconditionResults, infoJsonFile);
+                preconditionResults[preconditionKey] = result;
+            }
+        }
+
+        // Iterate through preconditions and evaluate them
+        foreach (var precondition in preconditions)
+        {
+            string preconditionKey = precondition.Key;
+            var preconditionValue = precondition.Value;
+
+            bool result = EvaluatePrecondition(preconditionValue, JObject.FromObject(persistentState), JObject.FromObject(globalState), preconditionResults, infoJsonFile);
+
+            if (preconditionValue[0].ToString() != "sum")
+            {
+                preconditionResults[preconditionKey] = result ? 1 : 0; // Assuming precondition result is boolean
+            }
+        }
+
+        // Check the specific precondition
+        if (!preconditionResults.TryGetValue(preconditionId, out int preconditionResult))
+        {
+            Console.WriteLine($"Precondition {preconditionId} not evaluated.");
+            return false;
+        }
+
+        return preconditionResult == 1;
     }
 
     private static Dictionary<string, JToken> LoadPreconditionsFromInfoJson(string infoJsonFile)
@@ -122,8 +165,9 @@ public static class PreconditionChecker
             case "gte":
                 return EvaluateGreaterThanOrEqual(logic[1], logic[2], persistentState, globalState, preconditionResults, infoJsonFile);
             case "sum":
-                int sum = EvaluateSum(logic.Skip(1), persistentState, globalState);
-                return sum > 0; // Adjust this condition as needed
+                int sum = EvaluateSum(logic.Skip(1), persistentState, globalState, preconditionResults, infoJsonFile);
+                preconditionResults[logic[1].ToString()] = sum; // Store the sum result in preconditionResults
+                return true; // Sum operation itself is always true
             default:
                 throw new NotImplementedException($"Unsupported operation: {operation}");
         }
@@ -164,7 +208,7 @@ public static class PreconditionChecker
         }
         else if (stateType == "sum")
         {
-            int sum = EvaluateSum(path.Skip(1), persistentState, globalState);
+            int sum = EvaluateSum(path.Skip(1), persistentState, globalState, preconditionResults, infoJsonFile);
             return sum == expectedValue.ToObject<int>();
         }
         else
@@ -210,7 +254,7 @@ public static class PreconditionChecker
         }
         else if (stateType == "sum")
         {
-            int sum = EvaluateSum(path.Skip(1), persistentState, globalState);
+            int sum = EvaluateSum(path.Skip(1), persistentState, globalState, preconditionResults, infoJsonFile);
             return sum < expectedValue.ToObject<int>();
         }
         else
@@ -256,7 +300,7 @@ public static class PreconditionChecker
         }
         else if (stateType == "sum")
         {
-            int sum = EvaluateSum(path.Skip(1), persistentState, globalState);
+            int sum = EvaluateSum(path.Skip(1), persistentState, globalState, preconditionResults, infoJsonFile);
             return sum > expectedValue.ToObject<int>();
         }
         else
@@ -302,7 +346,7 @@ public static class PreconditionChecker
         }
         else if (stateType == "sum")
         {
-            int sum = EvaluateSum(path.Skip(1), persistentState, globalState);
+            int sum = EvaluateSum(path.Skip(1), persistentState, globalState, preconditionResults, infoJsonFile);
             return sum <= expectedValue.ToObject<int>();
         }
         else
@@ -348,7 +392,7 @@ public static class PreconditionChecker
         }
         else if (stateType == "sum")
         {
-            int sum = EvaluateSum(path.Skip(1), persistentState, globalState);
+            int sum = EvaluateSum(path.Skip(1), persistentState, globalState, preconditionResults, infoJsonFile);
             return sum >= expectedValue.ToObject<int>();
         }
         else
@@ -359,7 +403,7 @@ public static class PreconditionChecker
         return actualValue != null && actualValue.Type == JTokenType.Integer && expectedValue.Type == JTokenType.Integer && (int)actualValue >= (int)expectedValue;
     }
 
-    static int EvaluateSum(IEnumerable<JToken> paths, JObject persistentState, JObject globalState)
+    static int EvaluateSum(IEnumerable<JToken> paths, JObject persistentState, JObject globalState, Dictionary<string, int> preconditionResults, string infoJsonFile)
     {
         int sum = 0;
 
@@ -376,6 +420,25 @@ public static class PreconditionChecker
             else if (stateType == "globalState")
             {
                 actualValue = globalState?[key];
+            }
+            else if (stateType == "precondition")
+            {
+                if (!preconditionResults.TryGetValue(key, out int preconditionValue))
+                {
+                    // Evaluate the precondition if it hasn't been evaluated yet
+                    var preconditions = LoadPreconditionsFromInfoJson(infoJsonFile);
+                    if (preconditions != null && preconditions.TryGetValue(key, out var preconditionLogic))
+                    {
+                        bool result = EvaluatePrecondition(preconditionLogic, persistentState, globalState, preconditionResults, infoJsonFile);
+                        preconditionValue = result ? 1 : 0; // Assuming precondition result is boolean
+                        preconditionResults[key] = preconditionValue;
+                    }
+                    else
+                    {
+                        throw new ArgumentException($"Unknown precondition: {key}");
+                    }
+                }
+                sum += preconditionValue;
             }
             else
             {

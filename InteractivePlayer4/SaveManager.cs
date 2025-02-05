@@ -121,19 +121,19 @@ public static class SaveManager
             if (Path.GetDirectoryName(saveFilePath).Contains("Battle Kitty"))
             {
                 string bkFolder = Path.Combine(Directory.GetCurrentDirectory(), "BK");
-                var saveFiles = Directory.GetFiles(bkFolder, "save.json", SearchOption.AllDirectories);
-                if (saveFiles.Length > 0)
+                string bkSaveFilePath = Path.Combine(bkFolder, "bk_save.json");
+
+                if (File.Exists(bkSaveFilePath))
                 {
-                    var mostRecentSaveFile = saveFiles.OrderByDescending(f => File.GetLastWriteTime(f)).First();
-                    var mostRecentSaveData = JsonConvert.DeserializeObject<SaveData>(File.ReadAllText(mostRecentSaveFile));
+                    var bkSaveData = JsonConvert.DeserializeObject<SaveData>(File.ReadAllText(bkSaveFilePath));
                     var currentSaveData = JsonConvert.DeserializeObject<SaveData>(File.ReadAllText(saveFilePath));
 
                     // Merge states
-                    foreach (var kvp in mostRecentSaveData.GlobalState)
+                    foreach (var kvp in bkSaveData.GlobalState)
                     {
                         currentSaveData.GlobalState[kvp.Key] = kvp.Value;
                     }
-                    foreach (var kvp in mostRecentSaveData.PersistentState)
+                    foreach (var kvp in bkSaveData.PersistentState)
                     {
                         currentSaveData.PersistentState[kvp.Key] = kvp.Value;
                     }
@@ -166,19 +166,14 @@ public static class SaveManager
             // Load existing save data
             saveData = JsonConvert.DeserializeObject<SaveData>(File.ReadAllText(saveFilePath));
 
-            // Update the current segment
-            saveData.CurrentSegment = currentSegment;
-
-            // Merge global state
-            foreach (var kvp in globalState)
+            // Check if the save data is from the same episode
+            if (saveData.CurrentSegment != null && saveData.CurrentSegment.StartsWith("playEpisode"))
             {
-                saveData.GlobalState[kvp.Key] = kvp.Value;
-            }
+                // Update the current segment
+                saveData.CurrentSegment = currentSegment;
 
-            // Merge persistent state
-            foreach (var kvp in persistentState)
-            {
-                saveData.PersistentState[kvp.Key] = kvp.Value;
+                // Save the updated save data to the file
+                File.WriteAllText(saveFilePath, JsonConvert.SerializeObject(saveData, Formatting.Indented));
             }
         }
         else
@@ -225,18 +220,13 @@ public static class SaveManager
             if (movieFolder.Contains("Battle Kitty"))
             {
                 string bkFolder = Path.Combine(Directory.GetCurrentDirectory(), "BK");
-                var saveFiles = Directory.GetFiles(bkFolder, "save.json", SearchOption.AllDirectories);
-                if (saveFiles.Length > 0)
-                {
-                    var mostRecentSaveFile = saveFiles.OrderByDescending(f => File.GetLastWriteTime(f)).First();
-                    var mostRecentSaveData = JsonConvert.DeserializeObject<SaveData>(File.ReadAllText(mostRecentSaveFile));
+                string bkSaveFilePath = Path.Combine(bkFolder, "bk_save.json");
 
-                    // Merge states
-                    foreach (var kvp in mostRecentSaveData.GlobalState)
-                    {
-                        globalState[kvp.Key] = kvp.Value;
-                    }
-                    foreach (var kvp in mostRecentSaveData.PersistentState)
+                if (File.Exists(bkSaveFilePath))
+                {
+                    var bkSaveData = JsonConvert.DeserializeObject<SaveData>(File.ReadAllText(bkSaveFilePath));
+
+                    foreach (var kvp in bkSaveData.PersistentState)
                     {
                         persistentState[kvp.Key] = kvp.Value;
                     }
@@ -250,9 +240,24 @@ public static class SaveManager
                 GlobalState = globalState,
                 PersistentState = persistentState
             };
+
+            // Save the new save data to the file
+            File.WriteAllText(saveFilePath, JsonConvert.SerializeObject(saveData, Formatting.Indented));
         }
 
-        // Save the updated or new save data to the file
-        File.WriteAllText(saveFilePath, JsonConvert.SerializeObject(saveData, Formatting.Indented));
+        // Save the states to the Battle Kitty save file if applicable
+        if (Path.GetDirectoryName(saveFilePath).Contains("Battle Kitty"))
+        {
+            string bkFolder = Path.Combine(Directory.GetCurrentDirectory(), "BK");
+            string bkSaveFilePath = Path.Combine(bkFolder, "bk_save.json");
+
+            var bkSaveData = new SaveData
+            {
+                GlobalState = globalState,
+                PersistentState = persistentState
+            };
+
+            File.WriteAllText(bkSaveFilePath, JsonConvert.SerializeObject(bkSaveData, Formatting.Indented));
+        }
     }
 }

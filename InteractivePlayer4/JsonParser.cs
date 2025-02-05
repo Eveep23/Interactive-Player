@@ -5,6 +5,7 @@ using System.Drawing;
 using Newtonsoft.Json.Linq;
 using System.Linq;
 using LibVLCSharp.Shared;
+using System.Windows.Forms;
 using System.Threading;
 using System.Net;
 using Newtonsoft.Json;
@@ -498,12 +499,13 @@ public static class JsonParser
         }
 
         // Check for special segment IDs to start a new episode
-        string episodeFolder = GetEpisodeFolder(nextSegment);
-        if (episodeFolder != null)
+        if (nextSegment.Contains("playEpisode"))
         {
-            Console.WriteLine($"Starting new episode: {episodeFolder}");
-            mediaPlayer.Stop(); // Stop the current interactive
-            Program.StartNewEpisode(episodeFolder);
+            // Extract episode number
+            string episodeNumber = new string(nextSegment.Where(char.IsDigit).ToArray());
+            string message = $"To Continue, Play Episode {episodeNumber}";
+
+            MessageBox.Show(message, "Episode Required", MessageBoxButtons.OK, MessageBoxIcon.Information, MessageBoxDefaultButton.Button1, MessageBoxOptions.DefaultDesktopOnly);
             return null; // Return null to indicate the current interactive should stop
         }
 
@@ -710,47 +712,5 @@ public static class JsonParser
             return segment.Choices[segment.DefaultChoiceIndex.Value].SegmentId;
         }
         return segment.DefaultNext;
-    }
-
-    private static string GetChoiceWithTimeout(Segment segment, long timeLimitMs)
-    {
-        string selectedChoice = null;
-        bool inputCaptured = false;
-
-        Thread inputThread = new Thread(() =>
-        {
-            Console.WriteLine($"You have {timeLimitMs / 1000} seconds to make a choice:");
-            for (int i = 0; i < segment.Choices.Count; i++)
-            {
-                Console.WriteLine($"{i + 1}: {segment.Choices[i].Text}");
-            }
-
-            Console.Write("Enter your choice: ");
-            if (int.TryParse(Console.ReadLine(), out int choiceIndex) &&
-                choiceIndex > 0 && choiceIndex <= segment.Choices.Count)
-            {
-                selectedChoice = segment.Choices[choiceIndex - 1].SegmentId;
-                inputCaptured = true;
-            }
-        });
-
-        inputThread.Start();
-        inputThread.Join((int)timeLimitMs);
-
-        if (!inputCaptured)
-        {
-            Console.WriteLine("Input timed out.");
-        }
-
-        return selectedChoice;
-    }
-    private static string GetEpisodeFolder(string segmentId)
-    {
-        var match = System.Text.RegularExpressions.Regex.Match(segmentId, @"playEpisode(\d+)");
-        if (match.Success)
-        {
-            return Path.Combine("BK", $"Battle Kitty E{match.Groups[1].Value.PadLeft(2, '0')}");
-        }
-        return null;
     }
 }
