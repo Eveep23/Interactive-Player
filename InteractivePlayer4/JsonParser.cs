@@ -437,7 +437,55 @@ public static class JsonParser
                             {
                                 foreach (var kvp in impressionData.Persistent)
                                 {
-                                    localPersistentState[kvp.Key] = kvp.Value;
+                                    if (kvp.Value is JArray operation && operation[0].ToString() == "sum")
+                                    {
+                                        string stateType = operation[1][0].ToString();
+                                        string key = operation[1][1].ToString();
+                                        int value = operation[2].ToObject<int>();
+
+                                        if (stateType == "persistentState" && localPersistentState.ContainsKey(key))
+                                        {
+                                            if (localPersistentState[key] is int intValue)
+                                            {
+                                                localPersistentState[key] = intValue + value;
+                                            }
+                                            else if (localPersistentState[key] is long longValue)
+                                            {
+                                                localPersistentState[key] = longValue + value;
+                                            }
+                                            else if (localPersistentState[key] is double doubleValue)
+                                            {
+                                                localPersistentState[key] = doubleValue + value;
+                                            }
+                                            else
+                                            {
+                                                throw new InvalidCastException($"Cannot cast {localPersistentState[key].GetType()} to int, long, or double.");
+                                            }
+                                        }
+                                        else if (stateType == "globalState" && localGlobalState.ContainsKey(key))
+                                        {
+                                            if (localGlobalState[key] is int intValue)
+                                            {
+                                                localGlobalState[key] = intValue + value;
+                                            }
+                                            else if (localGlobalState[key] is long longValue)
+                                            {
+                                                localGlobalState[key] = longValue + value;
+                                            }
+                                            else if (localGlobalState[key] is double doubleValue)
+                                            {
+                                                localGlobalState[key] = doubleValue + value;
+                                            }
+                                            else
+                                            {
+                                                throw new InvalidCastException($"Cannot cast {localGlobalState[key].GetType()} to int, long, or double.");
+                                            }
+                                        }
+                                    }
+                                    else
+                                    {
+                                        localPersistentState[kvp.Key] = kvp.Value;
+                                    }
                                     Console.WriteLine($"Persistent state changed: {kvp.Key} = {kvp.Value}");
                                 }
                             }

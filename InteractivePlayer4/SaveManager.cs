@@ -166,15 +166,13 @@ public static class SaveManager
             // Load existing save data
             saveData = JsonConvert.DeserializeObject<SaveData>(File.ReadAllText(saveFilePath));
 
-            // Check if the save data is from the same episode
-            if (saveData.CurrentSegment != null && saveData.CurrentSegment.StartsWith("playEpisode"))
-            {
-                // Update the current segment
-                saveData.CurrentSegment = currentSegment;
+            // Update the current segment
+            saveData.CurrentSegment = currentSegment;
+            saveData.GlobalState = globalState;
+            saveData.PersistentState = persistentState;
 
-                // Save the updated save data to the file
-                File.WriteAllText(saveFilePath, JsonConvert.SerializeObject(saveData, Formatting.Indented));
-            }
+            // Save the updated save data to the file
+            File.WriteAllText(saveFilePath, JsonConvert.SerializeObject(saveData, Formatting.Indented));
         }
         else
         {
