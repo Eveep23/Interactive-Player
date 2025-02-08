@@ -10,7 +10,7 @@ This is an emulator for Netflix's interactive movies and shows!
   
 ![Screenshot 2025-02-01 135715](https://github.com/user-attachments/assets/d91aa065-b6fe-4916-a246-e7f2e6805182)
 
-* Carmen Sandiego
+* Carmen Sandiego:
   
 ![Screenshot 2025-02-01 143837](https://github.com/user-attachments/assets/1491310d-a5b4-478d-aaab-eee689516d47)
 
