@@ -10,3 +10,14 @@ To install an Interactive, all you need is the internal video. In the install me
 * You can switch the subtitle track in settings or when watching an interactive with the "S" key!
 
 * You can pause the spacebar in the console!
+
+# Dependencies:
+If you're looking to modify the emulator, it runs on these dependencies,
+
+* LibVLCSharp
+
+* SharpDX.XInput
+
+* SharpDX.DirectInput
+
+* Newtonsoft.Json
