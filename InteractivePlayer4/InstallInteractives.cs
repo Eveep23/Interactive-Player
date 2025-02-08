@@ -165,13 +165,32 @@ public static class InstallInteractives
                 {
                     correspondingFolder = Path.Combine(currentDirectory, "MCSM", fileNameWithoutExtension);
                 }
+                else if (fileNameWithoutExtension.StartsWith("Battle Kitty E"))
+                {
+                    correspondingFolder = Path.Combine(currentDirectory, "BK", fileNameWithoutExtension);
+                }
+                else if (fileNameWithoutExtension.StartsWith("You vs Wild EP"))
+                {
+                    correspondingFolder = Path.Combine(currentDirectory, "YvW", fileNameWithoutExtension);
+                }
                 else
                 {
                     correspondingFolder = Path.Combine(currentDirectory, fileNameWithoutExtension);
                 }
 
+
                 bool isInstalled;
                 if (fileNameWithoutExtension.StartsWith("Minecraft Story Mode Ep"))
+                {
+                    // Check if there are any JSON files in the folder
+                    isInstalled = Directory.Exists(correspondingFolder) && Directory.GetFiles(correspondingFolder, "*.json").Any();
+                }
+                else if (fileNameWithoutExtension.StartsWith("Battle Kitty E"))
+                {
+                    // Check if there are any JSON files in the folder
+                    isInstalled = Directory.Exists(correspondingFolder) && Directory.GetFiles(correspondingFolder, "*.json").Any();
+                }
+                else if (fileNameWithoutExtension.StartsWith("You vs Wild EP"))
                 {
                     // Check if there are any JSON files in the folder
                     isInstalled = Directory.Exists(correspondingFolder) && Directory.GetFiles(correspondingFolder, "*.json").Any();
