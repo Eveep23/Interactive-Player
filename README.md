@@ -6,9 +6,9 @@ This is an emulator for Netflix's interactive movies and shows!
   
 ![Screenshot 2025-02-01 123308](https://github.com/user-attachments/assets/bb716d5b-33b6-4fae-a201-04c21a7e1338)
 
-* The Maybe Pile:
+* Minecraft Story Mode:
   
-![Screenshot 2025-02-01 135715](https://github.com/user-attachments/assets/d91aa065-b6fe-4916-a246-e7f2e6805182)
+![Screenshot 2025-01-17 185957](https://github.com/user-attachments/assets/60e9780d-0a94-4276-8aab-f63879548d94)
 
 * Carmen Sandiego:
   
