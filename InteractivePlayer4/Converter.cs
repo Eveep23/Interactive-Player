@@ -16,7 +16,8 @@ public class SegmentGroupConverter : JsonConverter<SegmentGroup>
             return new SegmentGroup
             {
                 Segment = obj["segment"]?.ToString(),
-                Precondition = obj["precondition"]?.ToString()
+                Precondition = obj["precondition"]?.ToString(),
+                GroupSegment = obj["segmentGroup"]?.ToString()
             };
         }
         throw new JsonSerializationException("Unexpected token type: " + reader.TokenType);
@@ -24,18 +25,22 @@ public class SegmentGroupConverter : JsonConverter<SegmentGroup>
 
     public override void WriteJson(JsonWriter writer, SegmentGroup value, JsonSerializer serializer)
     {
-        if (value.Precondition == null)
+        writer.WriteStartObject();
+        if (value.Segment != null)
         {
-            writer.WriteValue(value.Segment);
-        }
-        else
-        {
-            writer.WriteStartObject();
             writer.WritePropertyName("segment");
             writer.WriteValue(value.Segment);
+        }
+        if (value.Precondition != null)
+        {
             writer.WritePropertyName("precondition");
             writer.WriteValue(value.Precondition);
-            writer.WriteEndObject();
         }
+        if (value.GroupSegment != null)
+        {
+            writer.WritePropertyName("segmentGroup");
+            writer.WriteValue(value.GroupSegment);
+        }
+        writer.WriteEndObject();
     }
 }

@@ -214,8 +214,15 @@ public static class UIManager
             Text = "Make a Choice",
             StartPosition = FormStartPosition.Manual,
             FormBorderStyle = FormBorderStyle.None,
-            BackColor = videoId == "80149064" ? Color.FromArgb(15, 15, 15) : (videoId == "80151644" ? Color.FromArgb(125, 125, 125) : (videoId == "81004016" ? Color.Black : Color.FromArgb(41, 41, 41))),
-            TransparencyKey = videoId == "80149064" ? Color.FromArgb(15, 15, 15) : (videoId == "80151644" ? Color.FromArgb(125, 125, 125) : Color.FromArgb(41, 41, 41)),
+            BackColor = videoId == "80149064" ? Color.FromArgb(15, 15, 15) :
+                       (videoId == "80151644" ? Color.FromArgb(125, 125, 125) :
+                       (videoId == "81004016" || videoId == "80988062" ? Color.Black :
+                       (videoId == "81131714" ? Color.FromArgb(247, 233, 95) :
+                       Color.FromArgb(41, 41, 41)))),
+            TransparencyKey = (videoId == "81004016" || videoId == "80988062" || videoId == "81131714") ? Color.Empty :
+                              (videoId == "80149064" ? Color.FromArgb(15, 15, 15) :
+                              (videoId == "80151644" ? Color.FromArgb(125, 125, 125) :
+                              Color.FromArgb(41, 41, 41))),
             MaximizeBox = false,
             MinimizeBox = false,
             TopMost = true,
@@ -233,7 +240,7 @@ public static class UIManager
         double scaleFactor = (double)choiceForm.Width / formWidth;
 
         // Apply additional scaling for specific video ID
-        if (videoId == "10000001" || videoId == "81251335" || videoId == "81287545" || videoId == "80149064" || videoId == "81260654" || videoId == "80994695" || videoId == "81328829" || videoId == "81058723" || videoId == "81054409" || videoId == "81108751" || videoId == "81004016" || videoId == "81205738" || videoId == "80227804" || videoId == "80227805" || videoId == "80227800" || videoId == "80227801" || videoId == "80227802" || videoId == "80227803" || videoId == "80227699" || videoId == "80227698" || videoId == "81319137" || videoId == "81205737" || videoId == "81054415" || videoId == "81175265" || videoId == "81019938" || videoId == "80227815" || videoId == "81250260" || videoId == "81250261" || videoId == "81250262" || videoId == "81250263" || videoId == "81250264" || videoId == "81250265" || videoId == "81250266" || videoId == "81250267")
+        if (videoId == "10000001" || videoId == "81251335" || videoId == "81287545" || videoId == "80149064" || videoId == "81260654" || videoId == "80994695" || videoId == "81328829" || videoId == "81058723" || videoId == "81054409" || videoId == "81108751" || videoId == "81004016" || videoId == "80988062" || videoId == "81131714" || videoId == "81205738" || videoId == "80227804" || videoId == "80227805" || videoId == "80227800" || videoId == "80227801" || videoId == "80227802" || videoId == "80227803" || videoId == "80227699" || videoId == "80227698" || videoId == "81319137" || videoId == "81205737" || videoId == "81054415" || videoId == "81175265" || videoId == "81019938" || videoId == "80227815" || videoId == "81250260" || videoId == "81250261" || videoId == "81250262" || videoId == "81250263" || videoId == "81250264" || videoId == "81250265" || videoId == "81250266" || videoId == "81250267")
         {
             scaleFactor *= 0.75;
         }
@@ -320,7 +327,7 @@ public static class UIManager
                     Font = new Font("Arial", (float)(videoId == "10000001" ? 28 * scaleFactor : 22 * scaleFactor), videoId == "10000001" ? FontStyle.Regular : FontStyle.Bold),
                     ForeColor = (new[] { "80227804", "80227805", "80227800", "80227801", "80227802", "80227803", "80227699", "80227698" }.Contains(videoId)) ? ColorTranslator.FromHtml("#27170a") : Color.White,
                     TextAlign = (new[] { "81004016", "81205738", "81108751", "80151644", "80227804", "80227805", "80227800", "80227801", "80227802", "80227803", "80227699", "80227698", "81319137" }.Contains(videoId)) ? ContentAlignment.MiddleLeft : ContentAlignment.MiddleCenter,
-                    Padding = (new[] { "81004016", "81205738", "81108751", "80151644", "80227804", "80227805", "80227800", "80227801", "80227802", "80227803", "80227699", "80227698", "81319137" }.Contains(videoId)) ? new Padding((int)(buttonWidth * 0.5), 0, 0, 0) : new Padding(0)
+                    Padding = (new[] { "81004016", "81205738", "81108751", "80151644", "80227804", "80227805", "80227800", "80227801", "80227802", "80227803", "80227699", "80227698", "81319137" }.Contains(videoId)) ? new Padding((int)(buttonWidth * 0.4), 0, 0, 0) : new Padding(0)
                 };
 
                 button.FlatAppearance.BorderSize = 0;
@@ -1305,6 +1312,12 @@ public static class UIManager
                     case "81004016":
                         heightFactor = 0.24;
                         break;
+                    case "80988062":
+                        heightFactor = 0.24;
+                        break;
+                    case "81131714":
+                        heightFactor = 0.24;
+                        break;
                     case "80151644":
                         heightFactor = 0.3;
                         break;
@@ -1551,7 +1564,7 @@ public static class UIManager
             controller.SetVibration(new Vibration { LeftMotorSpeed = 65535, RightMotorSpeed = 65535 });
             Task.Delay(300).ContinueWith(_ => controller.SetVibration(new Vibration())); // Stop rumble after 300ms
 
-            if (videoId == "10000001"|| videoId == "81251335" || videoId == "80994695" || videoId == "80135585" || videoId == "81328829" || videoId == "81205738" || videoId == "81205737" || videoId == "80227815" || videoId == "81250260" || videoId == "81250261" || videoId == "81250262" || videoId == "81250263" || videoId == "81250264" || videoId == "81250265" || videoId == "81250266" || videoId == "81250267")
+            if (videoId == "10000001" || videoId == "81251335" || videoId == "80994695" || videoId == "80135585" || videoId == "81328829" || videoId == "81205738" || videoId == "80227804" || videoId == "80227805" || videoId == "80227800" || videoId == "80227801" || videoId == "80227802" || videoId == "80227803" || videoId == "80227699" || videoId == "80227698" || videoId == "81319137" || videoId == "81205737" || videoId == "80227815" || videoId == "81250260" || videoId == "81250261" || videoId == "81250262" || videoId == "81250263" || videoId == "81250264" || videoId == "81250265" || videoId == "81250266" || videoId == "81250267")
             {
                 choiceForm.Close(); // Close the form immediately after a choice is made
             }

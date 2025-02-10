@@ -168,9 +168,63 @@ public static class PreconditionChecker
                 int sum = EvaluateSum(logic.Skip(1), persistentState, globalState, preconditionResults, infoJsonFile);
                 preconditionResults[logic[1].ToString()] = sum; // Store the sum result in preconditionResults
                 return true; // Sum operation itself is always true
+            case "mult":
+                int mult = EvaluateMultiplication(logic.Skip(1), persistentState, globalState, preconditionResults, infoJsonFile);
+                preconditionResults[logic[1].ToString()] = mult; // Store the multiplication result in preconditionResults
+                return true; // Multiplication operation itself is always true
             default:
                 throw new NotImplementedException($"Unsupported operation: {operation}");
         }
+    }
+
+    static int EvaluateMultiplication(IEnumerable<JToken> operands, JObject persistentState, JObject globalState, Dictionary<string, int> preconditionResults, string infoJsonFile)
+    {
+        int result = 1;
+
+        foreach (var operand in operands)
+        {
+            if (operand.Type == JTokenType.Integer || operand.Type == JTokenType.Float)
+            {
+                result *= operand.ToObject<int>();
+            }
+            else if (operand.Type == JTokenType.Array)
+            {
+                var subOperation = operand[0].ToString();
+                if (subOperation == "sum")
+                {
+                    result *= EvaluateSum(operand.Skip(1), persistentState, globalState, preconditionResults, infoJsonFile);
+                }
+                else if (subOperation == "precondition")
+                {
+                    string preconditionKey = operand[1].ToString();
+                    if (!preconditionResults.TryGetValue(preconditionKey, out int preconditionValue))
+                    {
+                        var preconditions = LoadPreconditionsFromInfoJson(infoJsonFile);
+                        if (preconditions != null && preconditions.TryGetValue(preconditionKey, out var preconditionLogic))
+                        {
+                            bool preconditionResult = EvaluatePrecondition(preconditionLogic, persistentState, globalState, preconditionResults, infoJsonFile);
+                            preconditionValue = preconditionResult ? 1 : 0; // Assuming precondition result is boolean
+                            preconditionResults[preconditionKey] = preconditionValue;
+                        }
+                        else
+                        {
+                            throw new ArgumentException($"Unknown precondition: {preconditionKey}");
+                        }
+                    }
+                    result *= preconditionValue;
+                }
+                else
+                {
+                    throw new ArgumentException($"Unsupported sub-operation in multiplication: {subOperation}");
+                }
+            }
+            else
+            {
+                throw new ArgumentException($"Unsupported operand type in multiplication: {operand.Type}");
+            }
+        }
+
+        return result;
     }
 
     static bool EvaluateEquality(JToken path, JToken expectedValue, JObject persistentState, JObject globalState, Dictionary<string, int> preconditionResults, string infoJsonFile)
@@ -409,45 +463,56 @@ public static class PreconditionChecker
 
         foreach (var path in paths)
         {
-            string stateType = path[0].ToString();
-            string key = path[1].ToString();
+            if (path.Type == JTokenType.Integer || path.Type == JTokenType.Float)
+            {
+                sum += path.ToObject<int>();
+            }
+            else if (path.Type == JTokenType.Array)
+            {
+                string stateType = path[0].ToString();
+                string key = path[1].ToString();
 
-            JToken actualValue = null;
-            if (stateType == "persistentState")
-            {
-                actualValue = persistentState?[key];
-            }
-            else if (stateType == "globalState")
-            {
-                actualValue = globalState?[key];
-            }
-            else if (stateType == "precondition")
-            {
-                if (!preconditionResults.TryGetValue(key, out int preconditionValue))
+                JToken actualValue = null;
+                if (stateType == "persistentState")
                 {
-                    // Evaluate the precondition if it hasn't been evaluated yet
-                    var preconditions = LoadPreconditionsFromInfoJson(infoJsonFile);
-                    if (preconditions != null && preconditions.TryGetValue(key, out var preconditionLogic))
-                    {
-                        bool result = EvaluatePrecondition(preconditionLogic, persistentState, globalState, preconditionResults, infoJsonFile);
-                        preconditionValue = result ? 1 : 0; // Assuming precondition result is boolean
-                        preconditionResults[key] = preconditionValue;
-                    }
-                    else
-                    {
-                        throw new ArgumentException($"Unknown precondition: {key}");
-                    }
+                    actualValue = persistentState?[key];
                 }
-                sum += preconditionValue;
+                else if (stateType == "globalState")
+                {
+                    actualValue = globalState?[key];
+                }
+                else if (stateType == "precondition")
+                {
+                    if (!preconditionResults.TryGetValue(key, out int preconditionValue))
+                    {
+                        // Evaluate the precondition if it hasn't been evaluated yet
+                        var preconditions = LoadPreconditionsFromInfoJson(infoJsonFile);
+                        if (preconditions != null && preconditions.TryGetValue(key, out var preconditionLogic))
+                        {
+                            bool result = EvaluatePrecondition(preconditionLogic, persistentState, globalState, preconditionResults, infoJsonFile);
+                            preconditionValue = result ? 1 : 0; // Assuming precondition result is boolean
+                            preconditionResults[key] = preconditionValue;
+                        }
+                        else
+                        {
+                            throw new ArgumentException($"Unknown precondition: {key}");
+                        }
+                    }
+                    sum += preconditionValue;
+                }
+                else
+                {
+                    throw new ArgumentException($"Unknown state type: {stateType}");
+                }
+
+                if (actualValue != null && actualValue.Type == JTokenType.Integer)
+                {
+                    sum += (int)actualValue;
+                }
             }
             else
             {
-                throw new ArgumentException($"Unknown state type: {stateType}");
-            }
-
-            if (actualValue != null && actualValue.Type == JTokenType.Integer)
-            {
-                sum += (int)actualValue;
+                throw new ArgumentException($"Unsupported operand type in sum: {path.Type}");
             }
         }
 

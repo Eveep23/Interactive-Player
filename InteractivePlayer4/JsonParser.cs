@@ -151,6 +151,9 @@ public static class JsonParser
                     // Transfer Notification information
                     segment.Notification = choiceMoment.Notification;
 
+                    // Transfer ImpressionData information
+                    segment.ImpressionData = choiceMoment.ImpressionData;
+
                     // Assign segmentId to each choice
                     if (segment.Choices != null)
                     {
@@ -170,6 +173,13 @@ public static class JsonParser
                     if (notificationMoment != null)
                     {
                         segment.Notification = notificationMoment.Notification;
+                    }
+
+                    // Handle moments with only impressionData
+                    var impressionMoment = moments.Find(m => m.ImpressionData != null);
+                    if (impressionMoment != null)
+                    {
+                        segment.ImpressionData = impressionMoment.ImpressionData;
                     }
                 }
             }
@@ -235,6 +245,32 @@ public static class JsonParser
                             localPersistentState[kvp.Key] = kvp.Value;
                             Console.WriteLine($"Persistent state changed: {kvp.Key} = {kvp.Value}");
                         }
+                    }
+                }
+            }
+        }
+
+        // Apply segment impressionData changes
+        if (segment.ImpressionData != null)
+        {
+            var impressionData = segment.ImpressionData.Data;
+            if (impressionData != null)
+            {
+                if (impressionData.Global != null)
+                {
+                    foreach (var kvp in impressionData.Global)
+                    {
+                        localGlobalState[kvp.Key] = kvp.Value;
+                        Console.WriteLine($"Global state changed: {kvp.Key} = {kvp.Value}");
+                    }
+                }
+
+                if (impressionData.Persistent != null)
+                {
+                    foreach (var kvp in impressionData.Persistent)
+                    {
+                        localPersistentState[kvp.Key] = kvp.Value;
+                        Console.WriteLine($"Persistent state changed: {kvp.Key} = {kvp.Value}");
                     }
                 }
             }
@@ -522,25 +558,20 @@ public static class JsonParser
             {
                 if (item.Precondition == null || PreconditionChecker.CheckPrecondition(item.Precondition, localGlobalState, localPersistentState, infoJsonFile))
                 {
-                    nextSegment = item.Segment;
+                    nextSegment = item.Segment ?? item.GroupSegment;
                     break;
                 }
             }
         }
 
         // Handle segment group (sg) if nextSegment is a segment group and no SegmentId is listed
-        if (segments.ContainsKey(nextSegment))
-        {
-            return nextSegment;
-        }
-
-        if (segmentGroups.TryGetValue(nextSegment, out List<SegmentGroup> nextGroup))
+        while (!segments.ContainsKey(nextSegment) && segmentGroups.TryGetValue(nextSegment, out List<SegmentGroup> nextGroup))
         {
             foreach (var item in nextGroup)
             {
                 if (item.Precondition == null || PreconditionChecker.CheckPrecondition(item.Precondition, localGlobalState, localPersistentState, infoJsonFile))
                 {
-                    nextSegment = item.Segment;
+                    nextSegment = item.Segment ?? item.GroupSegment;
                     break;
                 }
             }
