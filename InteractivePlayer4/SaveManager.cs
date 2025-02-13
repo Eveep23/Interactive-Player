@@ -117,23 +117,23 @@ public static class SaveManager
                 }
             };
 
-            // Check if the folder name contains "Battle Kitty"
-            if (Path.GetDirectoryName(saveFilePath).Contains("Battle Kitty"))
+            // Check if the folder name contains "Battle Kitty" or "Trivia Quest"
+            if (Path.GetDirectoryName(saveFilePath).Contains("Battle Kitty") || Path.GetDirectoryName(saveFilePath).Contains("Trivia Quest"))
             {
-                string bkFolder = Path.Combine(Directory.GetCurrentDirectory(), "BK");
-                string bkSaveFilePath = Path.Combine(bkFolder, "bk_save.json");
+                string folder = Path.GetDirectoryName(saveFilePath).Contains("Battle Kitty") ? "BK" : "TQ";
+                string specificSaveFilePath = Path.Combine(Directory.GetCurrentDirectory(), folder, folder == "BK" ? "bk_save.json" : "tq_save.json");
 
-                if (File.Exists(bkSaveFilePath))
+                if (File.Exists(specificSaveFilePath))
                 {
-                    var bkSaveData = JsonConvert.DeserializeObject<SaveData>(File.ReadAllText(bkSaveFilePath));
+                    var saveData = JsonConvert.DeserializeObject<SaveData>(File.ReadAllText(specificSaveFilePath));
                     var currentSaveData = JsonConvert.DeserializeObject<SaveData>(File.ReadAllText(saveFilePath));
 
                     // Merge states
-                    foreach (var kvp in bkSaveData.GlobalState)
+                    foreach (var kvp in saveData.GlobalState)
                     {
                         currentSaveData.GlobalState[kvp.Key] = kvp.Value;
                     }
-                    foreach (var kvp in bkSaveData.PersistentState)
+                    foreach (var kvp in saveData.PersistentState)
                     {
                         currentSaveData.PersistentState[kvp.Key] = kvp.Value;
                     }
@@ -214,17 +214,17 @@ public static class SaveManager
                 }
             }
 
-            // Check if the folder name contains "Battle Kitty"
-            if (movieFolder.Contains("Battle Kitty"))
+            // Check if the folder name contains "Battle Kitty" or "Trivia Quest"
+            if (movieFolder.Contains("Battle Kitty") || movieFolder.Contains("Trivia Quest"))
             {
-                string bkFolder = Path.Combine(Directory.GetCurrentDirectory(), "BK");
-                string bkSaveFilePath = Path.Combine(bkFolder, "bk_save.json");
+                string folder = movieFolder.Contains("Battle Kitty") ? "BK" : "TQ";
+                string specificSaveFilePath = Path.Combine(Directory.GetCurrentDirectory(), folder, folder == "BK" ? "bk_save.json" : "tq_save.json");
 
-                if (File.Exists(bkSaveFilePath))
+                if (File.Exists(specificSaveFilePath))
                 {
-                    var bkSaveData = JsonConvert.DeserializeObject<SaveData>(File.ReadAllText(bkSaveFilePath));
+                    var specificSaveData = JsonConvert.DeserializeObject<SaveData>(File.ReadAllText(specificSaveFilePath));
 
-                    foreach (var kvp in bkSaveData.PersistentState)
+                    foreach (var kvp in specificSaveData.PersistentState)
                     {
                         persistentState[kvp.Key] = kvp.Value;
                     }
@@ -243,19 +243,19 @@ public static class SaveManager
             File.WriteAllText(saveFilePath, JsonConvert.SerializeObject(saveData, Formatting.Indented));
         }
 
-        // Save the states to the Battle Kitty save file if applicable
-        if (Path.GetDirectoryName(saveFilePath).Contains("Battle Kitty"))
+        // Save the states to the Battle Kitty or Trivia Quest save file if applicable
+        if (Path.GetDirectoryName(saveFilePath).Contains("Battle Kitty") || Path.GetDirectoryName(saveFilePath).Contains("Trivia Quest"))
         {
-            string bkFolder = Path.Combine(Directory.GetCurrentDirectory(), "BK");
-            string bkSaveFilePath = Path.Combine(bkFolder, "bk_save.json");
+            string folder = Path.GetDirectoryName(saveFilePath).Contains("Battle Kitty") ? "BK" : "TQ";
+            string specificSaveFilePath = Path.Combine(Directory.GetCurrentDirectory(), folder, folder == "BK" ? "bk_save.json" : "tq_save.json");
 
-            var bkSaveData = new SaveData
+            var specificSaveData = new SaveData
             {
                 GlobalState = globalState,
                 PersistentState = persistentState
             };
 
-            File.WriteAllText(bkSaveFilePath, JsonConvert.SerializeObject(bkSaveData, Formatting.Indented));
+            File.WriteAllText(specificSaveFilePath, JsonConvert.SerializeObject(specificSaveData, Formatting.Indented));
         }
     }
 }

@@ -34,12 +34,6 @@ public static class JsonParser
                 {
                     segment.Id = property.Name;
 
-                    // Handle missing endTimeMs
-                    if (segment.EndTimeMs == 0)
-                    {
-                        segment.EndTimeMs = (int)videoDuration;
-                    }
-
                     segments[property.Name] = segment;
                 }
             }
@@ -276,7 +270,10 @@ public static class JsonParser
             }
         }
 
-        while (mediaPlayer.Time < segment.EndTimeMs - 360)
+        // Ensure EndTimeMs has a value
+        int endTimeMs = segment.EndTimeMs > 0 ? segment.EndTimeMs : int.MaxValue;
+
+        while (mediaPlayer.Time < endTimeMs - 360)
         {
             // Display notification if within the specified time range
             if (segment.Notification != null)

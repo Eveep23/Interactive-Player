@@ -88,6 +88,24 @@ public static class SettingsMenu
         };
         subtitleComboBox.Items.AddRange(new string[] { "Disabled", "Arabic", "Forced - Czech", "Czech", "Danish", "Forced - German", "SDH - German", "German", "SDH - English", "English", "Latin American (SDH) - Spanish", "Latin American (Forced) - Spanish", "Latin American - Spanish", "European (Forced) - Spanish", "European - Spanish", "Finnish", "Filpino", "Forced - French", "French", "Hebrew", "Croatian", "Latin (Forced) - Hindi", "Forced - Hungarian", "Hungarian", "Forced - Indonesian", "Indonesian", "Forced - Italian", "Italian", "Forced - Polish", "Polish", "Brazilian (SDH) - Portuguese", "Brazilian (Forced) - Portuguese", "Brazilian - Portuguese", "European - Portuguese", "Forced - Thai", "Thai", "Forced - Turkish", "Turkish", "Forced - Ukrainian", "Ukrainian", "Japanese", "Korean", "Dutch", "Romanian", "Russian", "Swedish", "Vietnamese", "Simplified - Chinese", "Traditional - Chinese", "Malay" });
         subtitleComboBox.SelectedItem = loadedSettings.SubtitleLanguage;
+        
+        // Audio Output Dropdown
+        Label audioOutputLabel = new Label
+        {
+            Text = "Audio Output:",
+            ForeColor = Color.White,
+            AutoSize = true,
+            Font = new Font("Arial", 14, FontStyle.Bold),
+            TextAlign = ContentAlignment.MiddleCenter
+        };
+        ComboBox audioOutputComboBox = new ComboBox
+        {
+            Width = 300,
+            DropDownStyle = ComboBoxStyle.DropDownList,
+            Font = new Font("Arial", 14)
+        };
+        audioOutputComboBox.Items.AddRange(new string[] { "Original", "Headphones" });
+        audioOutputComboBox.SelectedItem = loadedSettings.AudioOutput ?? "Original";
 
         // Custom Story Changing Notification Checkbox
         CheckBox customStoryChangingNotificationCheckBox = new CheckBox
@@ -135,7 +153,8 @@ public static class SettingsMenu
             {
                 AudioLanguage = audioComboBox.SelectedItem.ToString(),
                 SubtitleLanguage = subtitleComboBox.SelectedItem.ToString(),
-                CustomStoryChangingNotification = customStoryChangingNotificationCheckBox.Checked
+                CustomStoryChangingNotification = customStoryChangingNotificationCheckBox.Checked,
+                AudioOutput = audioOutputComboBox.SelectedItem.ToString()
             };
             SaveSettings(settings);
             settingsForm.Close();
@@ -162,18 +181,23 @@ public static class SettingsMenu
         subtitleLabel.Location = new Point(centerX - subtitleLabel.Width / 2, 230);
         subtitleComboBox.Location = new Point(centerX, 260);
 
-        customStoryChangingNotificationCheckBox.Location = new Point(centerX - customStoryChangingNotificationCheckBox.Width / 2, 310);
+        audioOutputLabel.Location = new Point(centerX - audioOutputLabel.Width / 2, 310);
+        audioOutputComboBox.Location = new Point(centerX, 340);
+
+        customStoryChangingNotificationCheckBox.Location = new Point(centerX - customStoryChangingNotificationCheckBox.Width / 2, 390);
 
         // Position social media logos
         int logoStartX = centerX - youtubePictureBox.Width / 2;
-        youtubePictureBox.Location = new Point(logoStartX, 360);
-        discordPictureBox.Location = new Point(logoStartX + youtubePictureBox.Width + 20, 360);
-        githubPictureBox.Location = new Point(logoStartX + youtubePictureBox.Width + discordPictureBox.Width + 40, 360);
+        youtubePictureBox.Location = new Point(logoStartX, 440);
+        discordPictureBox.Location = new Point(logoStartX + youtubePictureBox.Width + 20, 440);
+        githubPictureBox.Location = new Point(logoStartX + youtubePictureBox.Width + discordPictureBox.Width + 40, 440);
 
         settingsForm.Controls.Add(audioLabel);
         settingsForm.Controls.Add(audioComboBox);
         settingsForm.Controls.Add(subtitleLabel);
         settingsForm.Controls.Add(subtitleComboBox);
+        settingsForm.Controls.Add(audioOutputLabel);
+        settingsForm.Controls.Add(audioOutputComboBox);
         settingsForm.Controls.Add(customStoryChangingNotificationCheckBox);
         settingsForm.Controls.Add(youtubePictureBox);
         settingsForm.Controls.Add(discordPictureBox);

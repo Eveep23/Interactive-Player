@@ -325,7 +325,8 @@ public static class UIManager
                     UseVisualStyleBackColor = false,
                     TabStop = false,
                     Font = new Font("Arial", (float)(videoId == "10000001" ? 28 * scaleFactor : 22 * scaleFactor), videoId == "10000001" ? FontStyle.Regular : FontStyle.Bold),
-                    ForeColor = (new[] { "80227804", "80227805", "80227800", "80227801", "80227802", "80227803", "80227699", "80227698" }.Contains(videoId)) ? ColorTranslator.FromHtml("#27170a") : Color.White,
+                    ForeColor = (new[] { "80227804", "80227805", "80227800", "80227801", "80227802", "80227803", "80227699", "80227698" }.Contains(videoId)) ? ColorTranslator.FromHtml("#27170a") :
+                               (videoId == "81131714" ? ColorTranslator.FromHtml("#dc007f") : Color.White),
                     TextAlign = (new[] { "81004016", "81205738", "81108751", "80151644", "80227804", "80227805", "80227800", "80227801", "80227802", "80227803", "80227699", "80227698", "81319137" }.Contains(videoId)) ? ContentAlignment.MiddleLeft : ContentAlignment.MiddleCenter,
                     Padding = (new[] { "81004016", "81205738", "81108751", "80151644", "80227804", "80227805", "80227800", "80227801", "80227802", "80227803", "80227699", "80227698", "81319137" }.Contains(videoId)) ? new Padding((int)(buttonWidth * 0.4), 0, 0, 0) : new Padding(0)
                 };

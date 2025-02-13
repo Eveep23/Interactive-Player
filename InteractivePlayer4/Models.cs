@@ -22,6 +22,7 @@ public class Settings
 {
     public string AudioLanguage { get; set; }
     public string SubtitleLanguage { get; set; }
+    public string AudioOutput { get; set; }
     public bool CustomStoryChangingNotification { get; set; }
 }
 public class Segment

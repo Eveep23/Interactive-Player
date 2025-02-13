@@ -107,6 +107,26 @@ public static class AudioManager
             Console.WriteLine($"Audio track '{saveData.AudioLanguage}' not found. Defaulting to track 1.");
             SetDefaultAudioTrack(mediaPlayer, media);
         }
+
+        // Set audio output mode using equalizer
+        var equalizer = new Equalizer();
+        switch (saveData.AudioOutput)
+        {
+            case "Headphones":
+                // Configure equalizer for Headphones (boost bass and treble)
+                equalizer.SetPreamp(0.0f);
+                equalizer.SetAmp(0, 3); // Boost low frequencies
+                equalizer.SetAmp(1, 2);
+                equalizer.SetAmp(2, 1);
+                equalizer.SetAmp(3, 0); // Mid frequencies
+                equalizer.SetAmp(4, 0);
+                equalizer.SetAmp(5, 1);
+                equalizer.SetAmp(6, 2);
+                equalizer.SetAmp(7, 3); // Boost high frequencies
+                Console.WriteLine("Audio output set to Headphones.");
+                mediaPlayer.SetEqualizer(equalizer);
+                break;
+        }
     }
 
     private static void SetDefaultAudioTrack(MediaPlayer mediaPlayer, Media media)
