@@ -233,6 +233,34 @@ public static class UIManager
 
         AlignWithVideoPlayer(choiceForm, videoId, segment);
 
+        // Add the following code snippet to handle the specific videoIds:
+        if (new[] { "81131714", "81004016", "80988062" }.Contains(videoId))
+        {
+            int targetY = choiceForm.Location.Y;
+            choiceForm.Location = new System.Drawing.Point(choiceForm.Location.X, targetY + 750);
+
+            System.Windows.Forms.Timer animationTimer = new System.Windows.Forms.Timer { Interval = 10 };
+            int elapsed = 0;
+            int duration = 750; // Duration in milliseconds
+
+            animationTimer.Tick += (sender, e) =>
+            {
+                elapsed += animationTimer.Interval;
+                double progress = Math.Min(1.0, (double)elapsed / duration);
+                double easedProgress = EaseOutQuad(progress);
+
+                int newY = (int)(targetY + 750 * (1 - easedProgress));
+                choiceForm.Location = new System.Drawing.Point(choiceForm.Location.X, newY);
+
+                if (progress >= 1.0)
+                {
+                    animationTimer.Stop();
+                }
+            };
+
+            animationTimer.Start();
+        }
+
         // Load settings
         var settings = LoadSettings();
 

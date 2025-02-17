@@ -104,7 +104,7 @@ public static class SettingsMenu
             DropDownStyle = ComboBoxStyle.DropDownList,
             Font = new Font("Arial", 14)
         };
-        audioOutputComboBox.Items.AddRange(new string[] { "Original", "Headphones" });
+        audioOutputComboBox.Items.AddRange(new string[] { "Original", "Stereo", "Headphones" });
         audioOutputComboBox.SelectedItem = loadedSettings.AudioOutput ?? "Original";
 
         // Custom Story Changing Notification Checkbox

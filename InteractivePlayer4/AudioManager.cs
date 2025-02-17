@@ -126,6 +126,21 @@ public static class AudioManager
                 Console.WriteLine("Audio output set to Headphones.");
                 mediaPlayer.SetEqualizer(equalizer);
                 break;
+            case "Stereo":
+                // Configure equalizer for Stereo (balanced frequency response)
+                equalizer.SetPreamp(0.0f);
+                equalizer.SetAmp(0, 0); // Low frequencies
+                equalizer.SetAmp(1, 0);
+                equalizer.SetAmp(2, 0);
+                equalizer.SetAmp(3, 0); // Mid frequencies
+                equalizer.SetAmp(4, 0);
+                equalizer.SetAmp(5, 0);
+                equalizer.SetAmp(6, 0);
+                equalizer.SetAmp(7, 0); // High frequencies
+                Console.WriteLine("Audio output set to Stereo.");
+                mediaPlayer.Media.AddOption(":audio-filter=stereo_widen");
+                mediaPlayer.Media.AddOption(":stereo-mode=3");
+                break;
         }
     }
 
