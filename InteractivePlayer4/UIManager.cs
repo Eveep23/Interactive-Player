@@ -233,7 +233,6 @@ public static class UIManager
 
         AlignWithVideoPlayer(choiceForm, videoId, segment);
 
-        // Add the following code snippet to handle the specific videoIds:
         if (new[] { "81131714", "81004016", "80988062" }.Contains(videoId))
         {
             int targetY = choiceForm.Location.Y;
@@ -289,6 +288,7 @@ public static class UIManager
         string hoverSoundPath = FindTexturePath(movieFolder, new[] { "CSD_Hover.m4a", "cap_focus.m4a", "focus_64.m4a", "sfx_focus.m4a", "sfx_focus_44100.m4a", "toggle.m4a", "sfx_focus.m4a", "IX_choicePointSound_tonal_focus_48k.m4a", "toggle.m4a", "sfx_triviaAnswerFocusHover.m4a" });
         string selectSoundPath = FindTexturePath(movieFolder, new[] { "CSD_Select.m4a", "cap_select.m4a", "selected_64.m4a", "sfx_select.m4a", "sfx_selected_44100.m4a", "select.m4a", "spirit_select_48.m4a", "sfx_buttonSelect.m4a", "IX_choicePointSound_tonal_select_48k.m4a", "sfx_select_44100.m4a", "select.m4a", "PIB_Choice_Ding.m4a" });
         string timeoutSoundPath = FindTexturePath(movieFolder, new[] { "sfx_timeout_44100.m4a", "sfx_timeout.m4a", "IX_choicePointSound_tonal_timeout_48k.m4a", "timeout.m4a" });
+        string tooltipImagePath = FindTexturePath(movieFolder, new[] {"tooltip_top_2x.png" });
 
         // Play appear sound
         if (File.Exists(appearSoundPath))
@@ -327,6 +327,18 @@ public static class UIManager
         {
             currentX = spacing;
         }
+
+        Bitmap tooltipImage = LoadBitmap(tooltipImagePath);
+
+        // Add tooltip PictureBox to the choiceForm instead of the button
+        PictureBox tooltipPictureBox = new PictureBox
+        {
+            Image = tooltipImage,
+            SizeMode = PictureBoxSizeMode.AutoSize,
+            BackColor = Color.Transparent,
+            Visible = false // Initially hidden
+        };
+        choiceForm.Controls.Add(tooltipPictureBox);
 
         for (int i = 0; i < choices.Count; i++)
         {
@@ -381,6 +393,13 @@ public static class UIManager
                             var hoverPlayer = new MediaPlayer(new Media(libVLC, hoverSoundPath, FromType.FromPath));
                             hoverPlayer.Play();
                         }
+                        // Show tooltip only if videoId is 80227815 and the choice has "subText"
+                        if (videoId == "80227815999")
+                        {
+                            tooltipPictureBox.BringToFront();
+                            tooltipPictureBox.Location = new Point(button.Parent.Location.X + button.Location.X + (button.Width - tooltipPictureBox.Width) / 2, button.Parent.Location.Y + button.Location.Y - tooltipPictureBox.Height);
+                            tooltipPictureBox.Visible = true;
+                        }
                     }
                 };
                 button.MouseLeave += (sender, e) =>
@@ -395,6 +414,7 @@ public static class UIManager
                         {
                             button.BackgroundImage = new Bitmap(defaultSprite, new Size(buttonWidth, buttonHeight));
                         }
+                        tooltipPictureBox.Visible = false; // Hide the tooltip
                     }
                 };
                 button.MouseDown += (sender, e) =>
@@ -457,7 +477,7 @@ public static class UIManager
                     BackColor = Color.Transparent
                 };
 
-                // Minecraft Story Mode Custom Possitioning
+                // Minecraft Story Mode Custom Positioning
                 // Custom positioning for "MCSMTeamName"
                 if (segment.LayoutType == "MCSMTeamName")
                 {
@@ -1000,6 +1020,157 @@ public static class UIManager
                 }
 
                 // Battle Kitty Episode 1 custom positioning
+                // Custom positioning for Episode 1 Shore
+                Console.WriteLine($"LayoutType: {segment.LayoutType}, VideoId: {videoId}");
+
+                if (segment.LayoutType == "l0" && videoId == "80227815")
+                {
+                    if (choices[i].Text == "Zoom Back to Realm 1")
+                    {
+                        buttonPanel.Location = new System.Drawing.Point((int)(choiceForm.Width * 0.075), (int)(choiceForm.Height * 0.075));
+                    }
+                    else if (choices[i].Text == "Orc Island")
+                    {
+                        buttonPanel.Location = new System.Drawing.Point((int)(choiceForm.Width * 0.275), (int)(choiceForm.Height * 0.59));
+                    }
+                    else if (choices[i].Text == "First Monster")
+                    {
+                        buttonPanel.Location = new System.Drawing.Point((int)(choiceForm.Width * 0.505), (int)(choiceForm.Height * 0.38));
+                    }
+                }
+
+                // Custom positioning for Episode 1 Open Map
+                if (segment.LayoutType == "l2" && videoId == "80227815")
+                {
+                    if (choices[i].Text == "[E2] Warrior Park")
+                    {
+                        buttonPanel.Location = new System.Drawing.Point((int)(choiceForm.Width * 0.075), (int)(choiceForm.Height * 0.50));
+                    }
+                    else if (choices[i].Text == "Warrior Beach")
+                    {
+                        buttonPanel.Location = new System.Drawing.Point((int)(choiceForm.Width * 0.305), (int)(choiceForm.Height * 0.70));
+                    }
+                    else if (choices[i].Text == "Guardian Gate 1")
+                    {
+                        buttonPanel.Location = new System.Drawing.Point((int)(choiceForm.Width * 0.53), (int)(choiceForm.Height * 0.30));
+                    }
+                }
+
+                // Custom positioning for Episode 1 Gate
+                if (segment.LayoutType == "l1" && videoId == "80227815")
+                {
+                    if (choices[i].Text == "Zoom Back to Realm 1")
+                    {
+                        buttonPanel.Location = new System.Drawing.Point((int)(choiceForm.Width * 0.075), (int)(choiceForm.Height * 0.075));
+                    }
+                    else if (choices[i].Text == "Statue Mystery")
+                    {
+                        buttonPanel.Location = new System.Drawing.Point((int)(choiceForm.Width * 0.275), (int)(choiceForm.Height * 0.675));
+                    }
+                    else if (choices[i].Text == "To Next Realm")
+                    {
+                        buttonPanel.Location = new System.Drawing.Point((int)(choiceForm.Width * 0.525), (int)(choiceForm.Height * 0.515));
+                    }
+                }
+
+                // Battle Kitty Episode 2 custom positioning
+                // Custom positioning for Episode 2 Open Map
+                if (segment.LayoutType == "l4" && videoId == "81250260")
+                {
+                    if (choices[i].Text == "Warrior Park")
+                    {
+                        buttonPanel.Location = new System.Drawing.Point((int)(choiceForm.Width * 0.075), (int)(choiceForm.Height * 0.50));
+                    }
+                    else if (choices[i].Text == "[E1] Warrior Beach")
+                    {
+                        buttonPanel.Location = new System.Drawing.Point((int)(choiceForm.Width * 0.305), (int)(choiceForm.Height * 0.70));
+                    }
+                    else if (choices[i].Text == "Guardian Gate 1")
+                    {
+                        buttonPanel.Location = new System.Drawing.Point((int)(choiceForm.Width * 0.53), (int)(choiceForm.Height * 0.30));
+                    }
+                }
+
+                // Custom positioning for Episode 2 Gate
+                if (segment.LayoutType == "l3" && videoId == "81250260")
+                {
+                    if (choices[i].Text == "Back to Realm 1")
+                    {
+                        buttonPanel.Location = new System.Drawing.Point((int)(choiceForm.Width * 0.075), (int)(choiceForm.Height * 0.075));
+                    }
+                    else if (choices[i].Text == "Statue Mystery")
+                    {
+                        buttonPanel.Location = new System.Drawing.Point((int)(choiceForm.Width * 0.275), (int)(choiceForm.Height * 0.675));
+                    }
+                    else if (choices[i].Text == "To Next Realm")
+                    {
+                        buttonPanel.Location = new System.Drawing.Point((int)(choiceForm.Width * 0.525), (int)(choiceForm.Height * 0.515));
+                    }
+                }
+
+                // Custom positioning for Episode 2 Map
+                if (segment.LayoutType == "l0" && videoId == "81250260")
+                {
+                    if (choices[i].Text == "Back to Realm 1")
+                    {
+                        buttonPanel.Location = new System.Drawing.Point((int)(choiceForm.Width * 0.075), (int)(choiceForm.Height * 0.075));
+                    }
+                    else if (choices[i].Text == "Racer Monster")
+                    {
+                        buttonPanel.Location = new System.Drawing.Point((int)(choiceForm.Width * 0.275), (int)(choiceForm.Height * 0.575));
+                    }
+                    else if (choices[i].Text == "Submap 1 - Workout Zone")
+                    {
+                        buttonPanel.Location = new System.Drawing.Point((int)(choiceForm.Width * 0.53), (int)(choiceForm.Height * 0.30));
+                    }
+                    else if (choices[i].Text == "Submap 2 - Power Plaza")
+                    {
+                        buttonPanel.Location = new System.Drawing.Point((int)(choiceForm.Width * 0.76), (int)(choiceForm.Height * 0.50));
+                    }
+                }
+
+                // Custom positioning for Episode 2 Workout Zone
+                if (segment.LayoutType == "l1" && videoId == "81250260")
+                {
+                    if (choices[i].Text == "Back to Region Map")
+                    {
+                        buttonPanel.Location = new System.Drawing.Point((int)(choiceForm.Width * 0.075), (int)(choiceForm.Height * 0.075));
+                    }
+                    else if (choices[i].Text == "Target Monster")
+                    {
+                        buttonPanel.Location = new System.Drawing.Point((int)(choiceForm.Width * 0.275), (int)(choiceForm.Height * 0.38));
+                    }
+                    else if (choices[i].Text == "Kitty Walk")
+                    {
+                        buttonPanel.Location = new System.Drawing.Point((int)(choiceForm.Width * 0.505), (int)(choiceForm.Height * 0.575));
+                    }
+                    else if (choices[i].Text == "Gym Day")
+                    {
+                        buttonPanel.Location = new System.Drawing.Point((int)(choiceForm.Width * 0.735), (int)(choiceForm.Height * 0.38));
+                    }
+                }
+
+                // Custom positioning for Episode 2 Power Plaza
+                if (segment.LayoutType == "l2" && videoId == "81250260")
+                {
+                    if (choices[i].Text == "Back to Region Map")
+                    {
+                        buttonPanel.Location = new System.Drawing.Point((int)(choiceForm.Width * 0.075), (int)(choiceForm.Height * 0.075));
+                    }
+                    else if (choices[i].Text == "Pool Emergency")
+                    {
+                        buttonPanel.Location = new System.Drawing.Point((int)(choiceForm.Width * 0.275), (int)(choiceForm.Height * 0.575));
+                    }
+                    else if (choices[i].Text == "Boxing Monster")
+                    {
+                        buttonPanel.Location = new System.Drawing.Point((int)(choiceForm.Width * 0.505), (int)(choiceForm.Height * 0.38));
+                    }
+                    else if (choices[i].Text == "Warrior Intros")
+                    {
+                        buttonPanel.Location = new System.Drawing.Point((int)(choiceForm.Width * 0.735), (int)(choiceForm.Height * 0.47));
+                    }
+                }
+
 
                 buttonPanel.Controls.Add(button);
 
@@ -1044,11 +1215,55 @@ public static class UIManager
             }
         }
 
+        if (new[] { "80227815", "81250260", "81250261", "81250262", "81250263", "81250264", "81250265", "81250266", "81250267" }.Contains(videoId))
+        {
+            System.Windows.Forms.Timer animationTimer = new System.Windows.Forms.Timer { Interval = 10 };
+            int elapsed = 0;
+            int duration = 400; // Duration in milliseconds
+
+            // Store the original sizes of the buttons
+            List<Size> originalSizes = buttons.Select(button => button.Size).ToList();
+
+            // Set initial size to very small
+            foreach (var button in buttons)
+            {
+                button.Size = new Size(1, 1);
+            }
+
+            animationTimer.Tick += (sender, e) =>
+            {
+                elapsed += animationTimer.Interval;
+                double progress = Math.Min(1.0, (double)elapsed / duration);
+                double easedProgress = EaseOutElastic(progress);
+
+                for (int i = 0; i < buttons.Count; i++)
+                {
+                    var button = buttons[i];
+                    var originalSize = originalSizes[i];
+                    int newWidth = (int)(originalSize.Width * easedProgress);
+                    int newHeight = (int)(originalSize.Height * easedProgress);
+                    button.Size = new Size(newWidth, newHeight);
+                    button.Location = new System.Drawing.Point((button.Parent.Width - newWidth) / 2, (button.Parent.Height - newHeight) / 2);
+                }
+
+                if (progress >= 1.0)
+                {
+                    animationTimer.Stop();
+                }
+            };
+
+            animationTimer.Start();
+        }
+
         // Adjust the timer bar position to avoid overlapping with the buttons and labels
         int timerBarY;
         if (segment.LayoutType == "ReubenZone" || segment.LayoutType == "EnderconZone" || segment.LayoutType == "TempleZone" || segment.LayoutType == "MCSMTeamName" || segment.LayoutType == "Crafting" || segment.LayoutType == "EpisodeEnd" || segment.LayoutType == "RedstoniaZone" || segment.LayoutType == "MCSMThroneZone" || segment.LayoutType == "MCSMTownZone" || segment.LayoutType == "MCSMWoolLand" || segment.LayoutType == "MCSMLabZone" || segment.LayoutType == "MCSMGunZone" || segment.LayoutType == "IvorZone")
         {
             timerBarY = (int)(choiceForm.Height * 0.88);
+        }
+        else if (new[] { "80227815", "81250260" }.Contains(videoId))
+        {
+            timerBarY = (int)(choiceForm.Height * 0.92);
         }
         else if (new[] { "81054409", "81287545", "81019938", "81260654", "81054415", "81058723" }.Contains(videoId))
         {
@@ -1141,6 +1356,13 @@ public static class UIManager
             {
                 // Calculate the eased Y position
                 double progress = Math.Min(1.0, (double)stopwatch.ElapsedMilliseconds / 370);
+                double easedProgress = EaseOutQuad(progress);
+                currentY = (int)(timerBarY + (choiceForm.Height - timerBarY) * (1 - easedProgress));
+            }
+            else if (new[] { "80227815", "81250260", "81250261", "81250262", "81250263", "81250264", "81250265", "81250266", "81250267" }.Contains(videoId))
+            {
+                // Calculate the eased Y position for the specified video IDs
+                double progress = Math.Min(1.0, (double)stopwatch.ElapsedMilliseconds / 400);
                 double easedProgress = EaseOutQuad(progress);
                 currentY = (int)(timerBarY + (choiceForm.Height - timerBarY) * (1 - easedProgress));
             }
@@ -1249,18 +1471,18 @@ public static class UIManager
             choiceForm.Invoke(new Action(() => choiceForm.Close()));
         });
 
-        if (videoId == "10000001")
+        if (new[] { "10000001", "80227815", "81250260", "81250261", "81250262", "81250263", "81250264", "81250265", "81250266", "81250267" }.Contains(videoId))
         {
             Task.Run(async () =>
             {
-                while (stopwatch.ElapsedMilliseconds < 370)
+                int duration = videoId == "10000001" ? 370 : 400;
+                while (stopwatch.ElapsedMilliseconds < duration)
                 {
                     drawingPanel.Invalidate();
                     await Task.Delay(16); // Update approximately every 16ms (~60 FPS)
                 }
             });
         }
-
 
         Task.Run(async () =>
         {
@@ -1423,10 +1645,10 @@ public static class UIManager
                         heightFactor = 0.25;
                         break;
                     case "80227815":
-                        heightFactor = 0.33;
+                        heightFactor = 1;
                         break;
                     case "81250260":
-                        heightFactor = 0.33;
+                        heightFactor = 1;
                         break;
                     case "81250261":
                         heightFactor = 0.33;
@@ -1529,15 +1751,15 @@ public static class UIManager
         int previousIndex = selectedIndex;
         bool moved = false;
 
-        // Handle D-Pad and joystick input
+        // Handle D-Pad, left joystick, right joystick, and bumper input
         if (!inputCaptured)
         {
-            if (gamepad.Buttons.HasFlag(GamepadButtonFlags.DPadLeft) || gamepad.LeftThumbX < -5000)
+            if (gamepad.Buttons.HasFlag(GamepadButtonFlags.DPadLeft) || gamepad.LeftThumbX < -5000 || gamepad.RightThumbX < -5000 || gamepad.Buttons.HasFlag(GamepadButtonFlags.LeftShoulder))
             {
                 selectedIndex = Math.Max(0, selectedIndex - 1);
                 moved = true;
             }
-            else if (gamepad.Buttons.HasFlag(GamepadButtonFlags.DPadRight) || gamepad.LeftThumbX > 5000)
+            else if (gamepad.Buttons.HasFlag(GamepadButtonFlags.DPadRight) || gamepad.LeftThumbX > 5000 || gamepad.RightThumbX > 5000 || gamepad.Buttons.HasFlag(GamepadButtonFlags.RightShoulder))
             {
                 selectedIndex = Math.Min(buttons.Count - 1, selectedIndex + 1);
                 moved = true;
@@ -1567,7 +1789,7 @@ public static class UIManager
         }
 
         // Handle selection
-        if ((gamepad.Buttons.HasFlag(GamepadButtonFlags.A) || gamepad.RightTrigger > 128) && !inputCaptured)
+        if ((gamepad.Buttons.HasFlag(GamepadButtonFlags.A) || gamepad.RightTrigger > 128 || gamepad.LeftTrigger > 128) && !inputCaptured)
         {
             selectedSegmentId = (string)buttons[selectedIndex].Tag;
             inputCaptured = true;
@@ -1659,6 +1881,13 @@ public static class UIManager
     {
         return t * (2 - t);
     }
+
+    private static double EaseOutElastic(double t)
+    {
+        double p = 0.3;
+        return Math.Pow(2, -10 * t) * Math.Sin((t - p / 4) * (2 * Math.PI) / p) + 1;
+    }
+
 
     private static Bitmap BlendSprites(Bitmap sprite1, Bitmap sprite2, double progress)
     {
