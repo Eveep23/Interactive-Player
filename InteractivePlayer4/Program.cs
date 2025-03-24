@@ -12,12 +12,26 @@ class Program
     {
         Core.Initialize();
 
-        // Display movie selection menu
-        string movieFolder = Utilities.ShowMovieSelectionMenu();
-        if (movieFolder == null)
+        string movieFolder = null;
+
+        if (args.Length > 0)
         {
-            Console.WriteLine("No Interactive selected. Exiting.");
-            return;
+            movieFolder = args[0].Trim('"');
+            if (!Directory.Exists(movieFolder))
+            {
+                Console.WriteLine("The specified folder does not exist.");
+                return;
+            }
+        }
+        else
+        {
+            // Display movie selection menu
+            movieFolder = Utilities.ShowMovieSelectionMenu();
+            if (movieFolder == null)
+            {
+                Console.WriteLine("No Interactive selected. Exiting.");
+                return;
+            }
         }
 
         // Set paths for JSON files and save file
