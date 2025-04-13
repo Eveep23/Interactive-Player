@@ -21,10 +21,10 @@ public static class SaveManager
             Form form = new Form
             {
                 Text = "Interactive Player",
-                Size = new Size(1400, 750),
+                Size = new Size(500, 400),
                 StartPosition = FormStartPosition.CenterScreen,
                 Icon = Icon.ExtractAssociatedIcon(Application.ExecutablePath),
-                BackColor = Color.Black
+                BackColor = ColorTranslator.FromHtml("#141414")
             };
 
             Panel topBarPanel = new Panel
@@ -49,30 +49,16 @@ public static class SaveManager
                 logoPictureBox.Location = new Point((topBarPanel.Width - logoPictureBox.Width) / 2, (topBarPanel.Height - logoPictureBox.Height) / 2);
             };
 
-            FlowLayoutPanel buttonPanel = new FlowLayoutPanel
-            {
-                Dock = DockStyle.Fill,
-                FlowDirection = FlowDirection.LeftToRight,
-                WrapContents = false,
-                Padding = new Padding(0, 50, 0, 0),
-                AutoSize = true,
-                AutoSizeMode = AutoSizeMode.GrowAndShrink
-            };
-
-            form.Controls.Add(buttonPanel);
             form.Controls.Add(topBarPanel);
 
             Button continueButton = new Button
             {
-                Width = 400,
-                Height = 477,
-                BackgroundImage = Image.FromFile(defaultBackdropPath),
+                Width = 334,
+                Height = 60,
+                BackgroundImage = Image.FromFile(Path.Combine(Directory.GetCurrentDirectory(), "general", "Continue_Button.png")),
                 BackgroundImageLayout = ImageLayout.Stretch,
-                Text = "Continue",
-                TextAlign = ContentAlignment.MiddleCenter,
-                Font = new Font("Arial", 12, FontStyle.Bold),
-                ForeColor = Color.White,
-                Anchor = AnchorStyles.None
+                FlatStyle = FlatStyle.Flat,
+                FlatAppearance = { BorderSize = 0 }
             };
 
             continueButton.Click += (sender, e) =>
@@ -85,15 +71,12 @@ public static class SaveManager
 
             Button restartButton = new Button
             {
-                Width = 400,
-                Height = 477,
-                BackgroundImage = Image.FromFile(defaultBackdropPath),
+                Width = 334,
+                Height = 60,
+                BackgroundImage = Image.FromFile(Path.Combine(Directory.GetCurrentDirectory(), "general", "Restart_Button.png")),
                 BackgroundImageLayout = ImageLayout.Stretch,
-                Text = "Restart",
-                TextAlign = ContentAlignment.MiddleCenter,
-                Font = new Font("Arial", 12, FontStyle.Bold),
-                ForeColor = Color.White,
-                Anchor = AnchorStyles.None
+                FlatStyle = FlatStyle.Flat,
+                FlatAppearance = { BorderSize = 0 }
             };
 
             restartButton.Click += (sender, e) =>
@@ -103,11 +86,33 @@ public static class SaveManager
                 SelectedMovieFolder = null;
             };
 
-            buttonPanel.Controls.Add(continueButton);
-            buttonPanel.Controls.Add(restartButton);
+            // Adjust the TableLayoutPanel for better vertical positioning of buttons
+            TableLayoutPanel buttonPanel = new TableLayoutPanel
+            {
+                Dock = DockStyle.Fill,
+                ColumnCount = 1,
+                RowCount = 4,
+                AutoSize = false
+            };
 
-            // Center the buttons horizontally
-            buttonPanel.Padding = new Padding((form.ClientSize.Width - (continueButton.Width + restartButton.Width)) / 2, 50, 0, 0);
+            // Set the row and column styles to position the buttons higher
+            buttonPanel.ColumnStyles.Add(new ColumnStyle(SizeType.Percent, 100F));
+            buttonPanel.RowStyles.Add(new RowStyle(SizeType.Percent, 60F)); // Top spacing
+            buttonPanel.RowStyles.Add(new RowStyle(SizeType.AutoSize));     // Continue button
+            buttonPanel.RowStyles.Add(new RowStyle(SizeType.AutoSize));     // Restart button
+            buttonPanel.RowStyles.Add(new RowStyle(SizeType.Percent, 40F)); // Bottom spacing
+
+            // Add the buttons to the TableLayoutPanel
+            buttonPanel.Controls.Add(continueButton, 0, 1);
+            buttonPanel.Controls.Add(restartButton, 0, 2);
+
+            // Center the buttons horizontally by setting their Anchor property
+            continueButton.Anchor = AnchorStyles.None;
+            restartButton.Anchor = AnchorStyles.None;
+
+            // Add the TableLayoutPanel to the form
+            form.Controls.Add(buttonPanel);
+
 
             form.FormClosed += (sender, e) =>
             {

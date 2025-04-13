@@ -133,6 +133,8 @@ public static class JsonParser
                 if (choiceMoment != null)
                 {
                     segment.Choices = choiceMoment.Choices;
+                    segment.ChoiceSets = choiceMoment.ChoiceSets;
+                    segment.AnswerSequence = choiceMoment.AnswerSequence;
                     segment.ChoiceDisplayTimeMs = choiceMoment.UIDisplayMS ?? 0;
                     segment.HideChoiceTimeMs = choiceMoment.HideTimeoutUiMS ?? segment.EndTimeMs;
 

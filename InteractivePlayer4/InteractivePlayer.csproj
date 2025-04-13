@@ -101,6 +101,7 @@
     <Compile Include="AudioManager.cs" />
     <Compile Include="Converter.cs" />
     <Compile Include="InstallInteractives.cs" />
+    <Compile Include="InteractiveDetailsMenu.cs" />
     <Compile Include="JsonParser.cs" />
     <Compile Include="Models.cs" />
     <Compile Include="PreconditionChecker.cs" />

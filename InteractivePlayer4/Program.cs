@@ -11,7 +11,7 @@ class Program
     static void Main(string[] args)
     {
         Core.Initialize();
-
+        
         string movieFolder = null;
 
         if (args.Length > 0)

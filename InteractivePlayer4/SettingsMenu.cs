@@ -24,7 +24,7 @@ public static class SettingsMenu
             Size = new Size(1400, 750),
             StartPosition = FormStartPosition.CenterScreen,
             Icon = Icon.ExtractAssociatedIcon(Application.ExecutablePath),
-            BackColor = Color.Black
+            BackColor = ColorTranslator.FromHtml("#141414")
         };
 
         Panel topBarPanel = new Panel

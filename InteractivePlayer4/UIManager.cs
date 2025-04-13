@@ -201,7 +201,6 @@ public static class UIManager
         }
     }
 
-
     public static string ShowChoiceUI(List<Choice> choices, List<Bitmap> buttonSprites, List<Bitmap> buttonIcons, int timeLimitMs, string movieFolder, string videoId, Segment segment)
     {
         string selectedSegmentId = null;
@@ -365,8 +364,9 @@ public static class UIManager
                     UseVisualStyleBackColor = false,
                     TabStop = false,
                     Font = new Font("Arial", (float)(videoId == "10000001" ? 28 * scaleFactor : 22 * scaleFactor), videoId == "10000001" ? FontStyle.Regular : FontStyle.Bold),
-                    ForeColor = (new[] { "80227804", "80227805", "80227800", "80227801", "80227802", "80227803", "80227699", "80227698" }.Contains(videoId)) ? ColorTranslator.FromHtml("#27170a") :
-                               (videoId == "81131714" ? ColorTranslator.FromHtml("#dc007f") : Color.White),
+                    ForeColor = (videoId == "81328829") ? Color.Black : // Set text color to black for Headspace
+                                (new[] { "80227804", "80227805", "80227800", "80227801", "80227802", "80227803", "80227699", "80227698" }.Contains(videoId)) ? ColorTranslator.FromHtml("#27170a") :
+                                (videoId == "81131714" ? ColorTranslator.FromHtml("#dc007f") : Color.White),
                     TextAlign = (new[] { "81004016", "81205738", "81108751", "80151644", "80227804", "80227805", "80227800", "80227801", "80227802", "80227803", "80227699", "80227698", "81319137" }.Contains(videoId)) ? ContentAlignment.MiddleLeft : ContentAlignment.MiddleCenter,
                     Padding = (new[] { "81004016", "81205738", "81108751", "80151644", "80227804", "80227805", "80227800", "80227801", "80227802", "80227803", "80227699", "80227698", "81319137" }.Contains(videoId)) ? new Padding((int)(buttonWidth * 0.4), 0, 0, 0) : new Padding(0)
                 };
@@ -1303,6 +1303,33 @@ public static class UIManager
             timerTopPath = null;
             webPath = isControllerConnected ? FindTexturePath(movieFolder, new[] { "controller_2x.png" }) : FindTexturePath(movieFolder, new[] { "web_2x.png", "device_web_2x.png", "web_2x_v2.png", "web_3x.png", "web_icon_2x.png" });
         }
+        else if (videoId == "81328829" && segment.LayoutType == "l0")
+        {
+            timerFillPath = FindTexturePath(movieFolder, new[] { "timer_neutral_fill_2x.png" });
+            timerCapLPath = FindTexturePath(movieFolder, new[] { "timer_neutral_capL_2x.png" });
+            timerCapRPath = FindTexturePath(movieFolder, new[] { "timer_neutral_capR_2x.png" });
+            timerBottomPath = FindTexturePath(movieFolder, new[] { "timer_neutral_bottom_2x.png" });
+            timerTopPath = null;
+            webPath = null;
+        }
+        else if (videoId == "81328829" && segment.LayoutType == "l1")
+        {
+            timerFillPath = FindTexturePath(movieFolder, new[] { "timer_relax_fill_2x.png" });
+            timerCapLPath = FindTexturePath(movieFolder, new[] { "timer_relax_capL_2x.png" });
+            timerCapRPath = FindTexturePath(movieFolder, new[] { "timer_relax_capR_2x.png" });
+            timerBottomPath = FindTexturePath(movieFolder, new[] { "timer_relax_bottom_2x.png" });
+            timerTopPath = null;
+            webPath = null;
+        }
+        else if (videoId == "81328829" && segment.LayoutType == "l2")
+        {
+            timerFillPath = FindTexturePath(movieFolder, new[] { "timer_sleep_fill_2x.png" });
+            timerCapLPath = FindTexturePath(movieFolder, new[] { "timer_sleep_capL_2x.png" });
+            timerCapRPath = FindTexturePath(movieFolder, new[] { "timer_sleep_capR_2x.png" });
+            timerBottomPath = FindTexturePath(movieFolder, new[] { "timer_sleep_bottom_2x.png" });
+            timerTopPath = null;
+            webPath = null;
+        }
         else
         {
             timerFillPath = FindTexturePath(movieFolder, new[] { "timer_fill_2x.png", "timer_fill_2x_v2.png", "timer_fill_3x.png" });
@@ -1562,6 +1589,9 @@ public static class UIManager
                 {
                     case "81004016":
                         heightFactor = 0.24;
+                        break;
+                    case "81328829":
+                        heightFactor = 0.23;
                         break;
                     case "10000003":
                         heightFactor = 0.2;

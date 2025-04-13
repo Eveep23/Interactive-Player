@@ -30,7 +30,7 @@ public static class InstallInteractives
             Size = new Size(1400, 750),
             StartPosition = FormStartPosition.CenterScreen,
             Icon = Icon.ExtractAssociatedIcon(Application.ExecutablePath),
-            BackColor = Color.Black
+            BackColor = ColorTranslator.FromHtml("#141414")
         };
 
         Panel topBarPanel = new Panel
@@ -78,7 +78,7 @@ public static class InstallInteractives
         TableLayoutPanel mainPanel = new TableLayoutPanel
         {
             Dock = DockStyle.Fill,
-            BackColor = Color.Black,
+            BackColor = ColorTranslator.FromHtml("#141414"),
             ColumnCount = 2,
             RowCount = 1,
             Padding = new Padding(0, topBarPanel.Height, 0, 0)
@@ -98,7 +98,7 @@ public static class InstallInteractives
         Panel rightPanel = new Panel
         {
             Dock = DockStyle.Fill,
-            BackColor = Color.Black,
+            BackColor = ColorTranslator.FromHtml("#141414"),
             Padding = new Padding(10)
         };
 
@@ -113,7 +113,7 @@ public static class InstallInteractives
         Label titleLabel = new Label
         {
             ForeColor = Color.White,
-            BackColor = Color.Black,
+            BackColor = ColorTranslator.FromHtml("#141414"),
             AutoSize = true,
             Dock = DockStyle.Top,
             Font = new Font("Arial", 20, FontStyle.Bold),
@@ -124,7 +124,7 @@ public static class InstallInteractives
         Label descriptionLabel = new Label
         {
             ForeColor = Color.White,
-            BackColor = Color.Black,
+            BackColor = ColorTranslator.FromHtml("#141414"),
             AutoSize = false,
             Dock = DockStyle.Fill,
             Font = new Font("Arial", 14),
@@ -239,7 +239,7 @@ public static class InstallInteractives
                 {
                     Width = (int)(leftPanel.ClientSize.Width * 3.25),
                     Height = 80,
-                    BackColor = Color.Black,
+                    BackColor = ColorTranslator.FromHtml("#141414"),
                     Margin = new Padding(5)
                 };
 
@@ -256,7 +256,7 @@ public static class InstallInteractives
                 {
                     Text = fileNameWithoutExtension,
                     ForeColor = Color.White,
-                    BackColor = Color.Black,
+                    BackColor = ColorTranslator.FromHtml("#141414"),
                     AutoSize = true,
                     MaximumSize = new Size(filePanel.Width - buttonPictureBox.Width - 15, 0),
                     Padding = new Padding(5),
