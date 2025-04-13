@@ -55,6 +55,9 @@
   <PropertyGroup>
     <SignManifests>false</SignManifests>
   </PropertyGroup>
+  <PropertyGroup>
+    <ApplicationManifest>app.manifest</ApplicationManifest>
+  </PropertyGroup>
   <ItemGroup>
     <Reference Include="LibVLCSharp, Version=3.9.2.0, Culture=neutral, processorArchitecture=MSIL">
       <HintPath>..\packages\LibVLCSharp.3.9.2\lib\net471\LibVLCSharp.dll</HintPath>
@@ -115,6 +118,7 @@
   </ItemGroup>
   <ItemGroup>
     <None Include="App.config" />
+    <None Include="app.manifest" />
     <None Include="packages.config" />
   </ItemGroup>
   <ItemGroup>
