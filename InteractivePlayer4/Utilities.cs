@@ -116,7 +116,7 @@ public static class Utilities
 
         Label footerLabel = new Label
         {
-            Text = "Interactive Player 1.5.24 Preview developed by Eveep23",
+            Text = "Interactive Player 1.5.33 Preview developed by Eveep23",
             Font = new Font("Arial", 10, FontStyle.Italic),
             ForeColor = Color.White,
             TextAlign = ContentAlignment.MiddleCenter,

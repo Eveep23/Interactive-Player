@@ -42,6 +42,7 @@ public class Segment
     public List<Notification> Notification { get; set; }
     public List<List<Choice>> ChoiceSets { get; set; }
     public List<int> AnswerSequence { get; set; }
+    public HeaderImage HeaderImage { get; set; }
 }
 
 public class Notification
@@ -141,6 +142,11 @@ public class Moment
     public List<Notification> Notification { get; set; }
     public List<List<Choice>> ChoiceSets { get; set; }
     public List<int> AnswerSequence { get; set; }
+    public HeaderImage HeaderImage { get; set; }
+}
+public class HeaderImage
+{
+    public string Url { get; set; }
 }
 
 public class TimeoutSegment

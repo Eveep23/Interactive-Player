@@ -80,6 +80,28 @@ public static class JsonParser
                 momentsBySegment[segmentId] = moments;
             }
 
+            var headerImageToken = video["interactiveVideoMoments"]?["value"]?["headerImage"];
+            if (headerImageToken != null)
+            {
+                foreach (var property in momentsBySegmentToken.Children<JProperty>())
+                {
+                    var segmentId = property.Name;
+                    var moments = property.Value.ToObject<List<Moment>>();
+
+                    // Assign headerImage to each moment
+                    foreach (var moment in moments)
+                    {
+                        var headerImageUrl = headerImageToken["url"]?.ToString();
+                        if (!string.IsNullOrEmpty(headerImageUrl))
+                        {
+                            moment.HeaderImage = new HeaderImage { Url = headerImageUrl };
+                        }
+                    }
+
+                    momentsBySegment[segmentId] = moments;
+                }
+            }
+
             // Extract global and persistent states
             var stateHistory = video["interactiveVideoMoments"]?["value"]?["stateHistory"];
             var globalState = stateHistory?["global"]?.ToObject<Dictionary<string, object>>() ?? new Dictionary<string, object>();
@@ -132,8 +154,10 @@ public static class JsonParser
                 var choiceMoment = moments.Find(m => m.Type == "scene:cs_template");
                 if (choiceMoment != null)
                 {
-                    segment.Choices = choiceMoment.Choices;
+                    // Handle "choices" or "choiceSet"
+                    segment.Choices = choiceMoment.Choices ?? choiceMoment.ChoiceSets?.FirstOrDefault();
                     segment.ChoiceSets = choiceMoment.ChoiceSets;
+                    segment.HeaderImage = choiceMoment.HeaderImage;
                     segment.AnswerSequence = choiceMoment.AnswerSequence;
                     segment.ChoiceDisplayTimeMs = choiceMoment.UIDisplayMS ?? 0;
                     segment.HideChoiceTimeMs = choiceMoment.HideTimeoutUiMS ?? segment.EndTimeMs;
@@ -297,15 +321,51 @@ public static class JsonParser
 
                 Console.WriteLine($"Choice point reached for segment {segment.Id}");
 
-                // Filter out choices with exceptions and those with text "blank"
-                var validChoices = segment.Choices.Where(choice =>
+                // Determine the valid choices to display
+                List<Choice> validChoices;
+                int? correctChoiceIndex = null;
+
+                if (segment.ChoiceSets != null && segment.ChoiceSets.Count > 0)
                 {
-                    if (!string.IsNullOrEmpty(choice.Exception))
+                    // Use the first two choices from the first choiceSet
+                    validChoices = segment.ChoiceSets[0].Take(6).ToList();
+
+                    // Check for the answerSequence and determine the correct choice index
+                    if (segment.AnswerSequence != null && segment.AnswerSequence.Count > 0)
                     {
-                        return !PreconditionChecker.CheckPrecondition(choice.Exception, localGlobalState, localPersistentState, infoJsonFile);
+                        correctChoiceIndex = segment.AnswerSequence[0];
                     }
-                    return choice.Text != "blank";
-                }).ToList();
+                }
+                else
+                {
+                    // Use the regular choices if choiceSets are not present
+                    // Filter out choices with exceptions and those with text "blank"
+                    validChoices = segment.Choices.Where(choice =>
+                    {
+                        if (!string.IsNullOrEmpty(choice.Exception))
+                        {
+                            return !PreconditionChecker.CheckPrecondition(choice.Exception, localGlobalState, localPersistentState, infoJsonFile);
+                        }
+                        return choice.Text != "blank";
+                    }).ToList();
+                }
+
+                // Highlight or mark the correct choice if the index is determined
+                if (correctChoiceIndex.HasValue && correctChoiceIndex.Value >= 0 && correctChoiceIndex.Value < validChoices.Count)
+                {
+                    //Console.WriteLine($"Correct choice is: {validChoices[correctChoiceIndex.Value].Text}");
+                }
+
+                // Determine the correct and wrong segments
+                string correctSegmentId = validChoices.FirstOrDefault()?.SegmentId ?? validChoices.FirstOrDefault()?.sg;
+                string wrongSegmentId = validChoices.LastOrDefault()?.SegmentId ?? validChoices.LastOrDefault()?.sg;
+
+                if (segment.AnswerSequence != null && segment.AnswerSequence.Count > 0)
+                {
+                    // The correct answer is always the first choice, and the wrong answer is the last choice
+                    correctSegmentId = validChoices.FirstOrDefault()?.SegmentId ?? validChoices.FirstOrDefault()?.sg;
+                    wrongSegmentId = validChoices.LastOrDefault()?.SegmentId ?? validChoices.LastOrDefault()?.sg;
+                }
 
                 // Apply overrides if preconditions are met
                 foreach (var choice in validChoices)
@@ -541,6 +601,29 @@ public static class JsonParser
                     else
                     {
                         nextSegment = GetDefaultChoice(segment);
+                    }
+                }
+
+                if (videoId == "81271335" && segment.AnswerSequence != null && segment.AnswerSequence.Count > 0)
+                {
+                    if (!string.IsNullOrEmpty(selectedSegment))
+                    {
+                        // Determine the index of the selected choice
+                        int selectedIndex = validChoices.FindIndex(choice => choice.SegmentId == selectedSegment);
+
+                        // Check if the selected index matches the correct answer index
+                        bool isCorrect = segment.AnswerSequence != null && segment.AnswerSequence.Count > 0 && selectedIndex == segment.AnswerSequence[0];
+
+                        if (isCorrect)
+                        {
+                            Console.WriteLine("Correct choice selected. Transitioning to the correct segment.");
+                            nextSegment = correctSegmentId; // Transition to the correct segment
+                        }
+                        else
+                        {
+                            Console.WriteLine("Wrong choice selected. Transitioning to the wrong segment.");
+                            nextSegment = wrongSegmentId; // Transition to the wrong segment
+                        }
                     }
                 }
 

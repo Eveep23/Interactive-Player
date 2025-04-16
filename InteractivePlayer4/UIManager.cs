@@ -215,10 +215,10 @@ public static class UIManager
             FormBorderStyle = FormBorderStyle.None,
             BackColor = videoId == "80149064" ? Color.FromArgb(15, 15, 15) :
                        (videoId == "80151644" ? Color.FromArgb(125, 125, 125) :
-                       (videoId == "81004016" || videoId == "80988062" ? Color.Black :
+                       (videoId == "81004016" || videoId == "80988062" || videoId == "81271335" ? Color.Black :
                        (videoId == "81131714" ? Color.FromArgb(247, 233, 95) :
                        Color.FromArgb(41, 41, 41)))),
-            TransparencyKey = (videoId == "81004016" || videoId == "80988062" || videoId == "81131714") ? Color.Empty :
+            TransparencyKey = (videoId == "81004016" || videoId == "80988062" || videoId == "81131714" || videoId == "81271335") ? Color.Empty :
                               (videoId == "80149064" ? Color.FromArgb(15, 15, 15) :
                               (videoId == "80151644" ? Color.FromArgb(125, 125, 125) :
                               Color.FromArgb(41, 41, 41))),
@@ -232,7 +232,26 @@ public static class UIManager
 
         AlignWithVideoPlayer(choiceForm, videoId, segment);
 
-        if (new[] { "81131714", "81004016", "80988062", "10000003" }.Contains(videoId))
+        if (videoId == "81271335" && segment.LayoutType == "l1")
+        {
+            string backgroundImagePath = FindTexturePath(movieFolder, new[] { "lvl1_2x.png" });
+            if (!string.IsNullOrEmpty(backgroundImagePath) && File.Exists(backgroundImagePath))
+            {
+                choiceForm.BackgroundImage = new Bitmap(backgroundImagePath);
+                choiceForm.BackgroundImageLayout = ImageLayout.Stretch;
+            }
+        }
+        else if (videoId == "81271335" && segment.LayoutType == "l0")
+        {
+            string backgroundImagePath = FindTexturePath(movieFolder, new[] { "lvl6_2x.png" });
+            if (!string.IsNullOrEmpty(backgroundImagePath) && File.Exists(backgroundImagePath))
+            {
+                choiceForm.BackgroundImage = new Bitmap(backgroundImagePath);
+                choiceForm.BackgroundImageLayout = ImageLayout.Stretch;
+            }
+        }
+
+        if (new[] { "81131714", "81004016", "80988062", "81271335", "10000003" }.Contains(videoId))
         {
             int targetY = choiceForm.Location.Y;
             choiceForm.Location = new System.Drawing.Point(choiceForm.Location.X, targetY + 750);
@@ -266,7 +285,7 @@ public static class UIManager
         double scaleFactor = (double)choiceForm.Width / formWidth;
 
         // Apply additional scaling for specific video ID
-        if (videoId == "10000001" || videoId == "10000003" || videoId == "81251335" || videoId == "81287545" || videoId == "80149064" || videoId == "81260654" || videoId == "80994695" || videoId == "81328829" || videoId == "81058723" || videoId == "81054409" || videoId == "81108751" || videoId == "81004016" || videoId == "80988062" || videoId == "81131714" || videoId == "81205738" || videoId == "80227804" || videoId == "80227805" || videoId == "80227800" || videoId == "80227801" || videoId == "80227802" || videoId == "80227803" || videoId == "80227699" || videoId == "80227698" || videoId == "81319137" || videoId == "81205737" || videoId == "81054415" || videoId == "81175265" || videoId == "81019938" || videoId == "80227815" || videoId == "81250260" || videoId == "81250261" || videoId == "81250262" || videoId == "81250263" || videoId == "81250264" || videoId == "81250265" || videoId == "81250266" || videoId == "81250267")
+        if (videoId == "10000001" || videoId == "10000003" || videoId == "81251335" || videoId == "81271335" || videoId == "81287545" || videoId == "80149064" || videoId == "81260654" || videoId == "80994695" || videoId == "81328829" || videoId == "81058723" || videoId == "81054409" || videoId == "81108751" || videoId == "81004016" || videoId == "80988062" || videoId == "81131714" || videoId == "81205738" || videoId == "80227804" || videoId == "80227805" || videoId == "80227800" || videoId == "80227801" || videoId == "80227802" || videoId == "80227803" || videoId == "80227699" || videoId == "80227698" || videoId == "81319137" || videoId == "81205737" || videoId == "81054415" || videoId == "81175265" || videoId == "81019938" || videoId == "80227815" || videoId == "81250260" || videoId == "81250261" || videoId == "81250262" || videoId == "81250263" || videoId == "81250264" || videoId == "81250265" || videoId == "81250266" || videoId == "81250267")
         {
             scaleFactor *= 0.75;
         }
@@ -278,6 +297,40 @@ public static class UIManager
         List<int> buttonWidths = new List<int>();
         List<Button> buttons = new List<Button>();
 
+        // Add header image for video ID 81271335
+        if (videoId == "81271335" && segment.HeaderImage != null && !string.IsNullOrEmpty(segment.HeaderImage.Url))
+        {
+            string headerImagePath = FindTexturePath(movieFolder, new[] { Path.GetFileName(new Uri(segment.HeaderImage.Url).LocalPath) });
+            if (!string.IsNullOrEmpty(headerImagePath) && File.Exists(headerImagePath))
+            {
+                Bitmap headerImage = new Bitmap(headerImagePath);
+
+                Panel headerPanel = new Panel
+                {
+                    Width = choiceForm.Width,
+                    Height = (int)(headerImage.Height * ((double)choiceForm.Width / headerImage.Width)),
+                    BackColor = Color.Transparent
+                };
+
+                PictureBox headerPictureBox = new PictureBox
+                {
+                    Image = headerImage,
+                    SizeMode = PictureBoxSizeMode.Zoom,
+                    Dock = DockStyle.Fill,
+                    BackColor = Color.Transparent
+                };
+
+                headerPanel.Controls.Add(headerPictureBox);
+                choiceForm.Controls.Add(headerPanel);
+
+                headerPanel.SendToBack();
+
+                headerPanel.Location = new Point(0, 0);
+
+                buttonTopMargin += headerPanel.Height;
+            }
+        }
+
         // Initialize VLC
         Core.Initialize();
         var libVLC = new LibVLC();
@@ -288,6 +341,8 @@ public static class UIManager
         string selectSoundPath = FindTexturePath(movieFolder, new[] { "CSD_Select.m4a", "cap_select.m4a", "selected_64.m4a", "sfx_select.m4a", "sfx_selected_44100.m4a", "select.m4a", "spirit_select_48.m4a", "sfx_buttonSelect.m4a", "IX_choicePointSound_tonal_select_48k.m4a", "sfx_select_44100.m4a", "select.m4a", "PIB_Choice_Ding.m4a" });
         string timeoutSoundPath = FindTexturePath(movieFolder, new[] { "sfx_timeout_44100.m4a", "sfx_timeout.m4a", "IX_choicePointSound_tonal_timeout_48k.m4a", "timeout.m4a" });
         string tooltipImagePath = FindTexturePath(movieFolder, new[] {"tooltip_top_2x.png" });
+        string correctSoundPath = FindTexturePath(movieFolder, new[] { "sfx_select_correct.m4a" });
+        string incorrectSoundPath = FindTexturePath(movieFolder, new[] { "sfx_select_incorrect.m4a" });
 
         // Play appear sound
         if (File.Exists(appearSoundPath))
@@ -348,12 +403,27 @@ public static class UIManager
                 Bitmap focusedSprite = ExtractSprite(spriteSheet, 1);
                 Bitmap selectedSprite = ExtractSprite(spriteSheet, 2);
 
+                if (videoId == "81271335" && segment.LayoutType == "l1")
+                {
+                    // For videoId 81271335, use the single sprite directly
+                    defaultSprite = spriteSheet;
+                    focusedSprite = spriteSheet;
+                    selectedSprite = spriteSheet;
+                }
+                else
+                {
+                    // For other videoIds, split the sprite sheet into rows
+                    defaultSprite = ExtractSprite(spriteSheet, 0);
+                    focusedSprite = ExtractSprite(spriteSheet, 1);
+                    selectedSprite = ExtractSprite(spriteSheet, 2);
+                }
+
                 int buttonWidth = buttonWidths[i];
                 buttonHeight = (int)(defaultSprite.Height * scaleFactor);
 
                 var button = new Button
                 {
-                    Text = (segment.LayoutType == "ReubenZone" || segment.LayoutType == "EnderconZone" || segment.LayoutType == "TempleZone" || segment.LayoutType == "Crafting" || segment.LayoutType == "EpisodeEnd" || segment.LayoutType == "RedstoniaZone" || segment.LayoutType == "MCSMThroneZone" || segment.LayoutType == "MCSMTownZone" || segment.LayoutType == "MCSMWoolLand" || segment.LayoutType == "MCSMLabZone" || segment.LayoutType == "MCSMGunZone" || segment.LayoutType == "IvorZone") ? string.Empty : (new[] { "80149064", "80135585", "81054409", "81287545", "81019938", "81260654", "81054415", "81058723", "80227815", "81250260", "81250261", "81250262", "81250263", "81250264", "81250265", "81250266", "81250267" }.Contains(videoId)) ? string.Empty : choices[i].Text,
+                    Text = (segment.LayoutType == "ReubenZone" || segment.LayoutType == "EnderconZone" || segment.LayoutType == "TempleZone" || segment.LayoutType == "Crafting" || segment.LayoutType == "EpisodeEnd" || segment.LayoutType == "RedstoniaZone" || segment.LayoutType == "MCSMThroneZone" || segment.LayoutType == "MCSMTownZone" || segment.LayoutType == "MCSMWoolLand" || segment.LayoutType == "MCSMLabZone" || segment.LayoutType == "MCSMGunZone" || segment.LayoutType == "IvorZone" || videoId == "81271335" && segment.LayoutType == "l1") ? string.Empty : (new[] { "80149064", "80135585", "81054409", "81287545", "81019938", "81260654", "81054415", "81058723", "80227815", "81250260", "81250261", "81250262", "81250263", "81250264", "81250265", "81250266", "81250267" }.Contains(videoId)) ? string.Empty : choices[i].Text,
                     Size = new Size(buttonWidth, buttonHeight),
                     Location = new System.Drawing.Point(0, 0), // Position within the panel
                     BackgroundImage = new Bitmap(defaultSprite, new Size(buttonWidth, buttonHeight)),
@@ -448,6 +518,22 @@ public static class UIManager
                             {
                                 btn.Enabled = false;
                             }
+                        }
+
+                        // Determine if the selected choice is correct
+                        bool isCorrect = false;
+                        if (segment.AnswerSequence != null && segment.AnswerSequence.Count > 0)
+                        {
+                            int correctIndex = segment.AnswerSequence[0];
+                            isCorrect = buttons.IndexOf(button) == correctIndex;
+                        }
+
+                        // Play the appropriate sound
+                        string soundPath = isCorrect ? correctSoundPath : incorrectSoundPath;
+                        if (!string.IsNullOrEmpty(soundPath) && File.Exists(soundPath))
+                        {
+                            var soundPlayer = new MediaPlayer(new Media(libVLC, soundPath, FromType.FromPath));
+                            soundPlayer.Play();
                         }
 
                         if (File.Exists(selectSoundPath))
@@ -1171,7 +1257,6 @@ public static class UIManager
                     }
                 }
 
-
                 buttonPanel.Controls.Add(button);
 
                 if (buttonIcons[i] != null)
@@ -1303,6 +1388,24 @@ public static class UIManager
             timerTopPath = null;
             webPath = isControllerConnected ? FindTexturePath(movieFolder, new[] { "controller_2x.png" }) : FindTexturePath(movieFolder, new[] { "web_2x.png", "device_web_2x.png", "web_2x_v2.png", "web_3x.png", "web_icon_2x.png" });
         }
+        else if (videoId == "81271335" && segment.LayoutType == "l1")
+        {
+            timerFillPath = FindTexturePath(movieFolder, new[] { "timer_sprite_2x_v2.png" });
+            timerCapLPath = null;
+            timerCapRPath = null;
+            timerBottomPath = null;
+            timerTopPath = null;
+            webPath = null;
+        }
+        else if (videoId == "81271335" && segment.LayoutType == "l0")
+        {
+            timerFillPath = FindTexturePath(movieFolder, new[] { "timer_sprite_reengagement_2x.png" });
+            timerCapLPath = null;
+            timerCapRPath = null;
+            timerBottomPath = null;
+            timerTopPath = null;
+            webPath = null;
+        }
         else if (videoId == "81328829" && segment.LayoutType == "l0")
         {
             timerFillPath = FindTexturePath(movieFolder, new[] { "timer_neutral_fill_2x.png" });
@@ -1413,6 +1516,60 @@ public static class UIManager
                         int webY = currentY + ((int)(frameHeight * scaleFactor) / 2) - (int)(webSprite.Height * scaleFactor / 2);
                         g.DrawImage(webSprite, new Rectangle((choiceForm.Width - (int)(webSprite.Width * scaleFactor)) / 2, webY, (int)(webSprite.Width * scaleFactor), (int)(webSprite.Height * scaleFactor)));
                     }
+                }
+            }
+            else if (videoId == "81271335" && segment.LayoutType == "l1")
+            {
+                if (timerFillSprite != null)
+                {
+                    int totalRows = 20; // Total rows in the sprite
+                    int usedRows = 18;  // Rows used for countdown
+                    int frameHeight = timerFillSprite.Height / totalRows;
+
+                    // Calculate the current frame based on elapsed time
+                    int currentFrame = (int)((double)stopwatch.ElapsedMilliseconds / timeLimitMs * usedRows);
+                    currentFrame = Math.Min(currentFrame, usedRows - 1);
+
+                    // Define the source rectangle for the current frame
+                    Rectangle sourceRect = new Rectangle(0, currentFrame * frameHeight, timerFillSprite.Width, frameHeight);
+
+                    // Define the destination rectangle for rendering
+                    Rectangle destRect = new Rectangle(
+                        (choiceForm.Width - (int)(timerFillSprite.Width * scaleFactor)) / 2,
+                        timerBarY,
+                        (int)(timerFillSprite.Width * scaleFactor),
+                        (int)(frameHeight * scaleFactor)
+                    );
+
+                    // Draw the current frame
+                    g.DrawImage(timerFillSprite, destRect, sourceRect, GraphicsUnit.Pixel);
+                }
+            }
+            else if (videoId == "81271335" && segment.LayoutType == "l0")
+            {
+                if (timerFillSprite != null)
+                {
+                    int totalRows = 18; // Total rows in the sprite
+                    int usedRows = 18;  // Rows used for countdown
+                    int frameHeight = timerFillSprite.Height / totalRows;
+
+                    // Calculate the current frame based on elapsed time
+                    int currentFrame = (int)((double)stopwatch.ElapsedMilliseconds / timeLimitMs * usedRows);
+                    currentFrame = Math.Min(currentFrame, usedRows - 1);
+
+                    // Define the source rectangle for the current frame
+                    Rectangle sourceRect = new Rectangle(0, currentFrame * frameHeight, timerFillSprite.Width, frameHeight);
+
+                    // Define the destination rectangle for rendering
+                    Rectangle destRect = new Rectangle(
+                        (choiceForm.Width - (int)(timerFillSprite.Width * scaleFactor)) / 2,
+                        timerBarY,
+                        (int)(timerFillSprite.Width * scaleFactor),
+                        (int)(frameHeight * scaleFactor)
+                    );
+
+                    // Draw the current frame
+                    g.DrawImage(timerFillSprite, destRect, sourceRect, GraphicsUnit.Pixel);
                 }
             }
             else
@@ -1598,6 +1755,9 @@ public static class UIManager
                         break;
                     case "80988062":
                         heightFactor = 0.24;
+                        break;
+                    case "81271335":
+                        heightFactor = 0.30;
                         break;
                     case "81131714":
                         heightFactor = 0.24;
