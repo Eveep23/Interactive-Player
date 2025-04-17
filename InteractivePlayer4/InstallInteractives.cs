@@ -346,6 +346,22 @@ public static class InstallInteractives
                                 // Delete the temporary directory
                                 Directory.Delete(tempDirectory, true);
 
+                                // Check the OptimizeInteractives setting
+                                string configFilePath = Path.Combine(Directory.GetCurrentDirectory(), "config.json");
+                                bool optimizeInteractives = true; // Default to true if the setting is missing
+
+                                if (File.Exists(configFilePath))
+                                {
+                                    var configData = JObject.Parse(File.ReadAllText(configFilePath));
+                                    optimizeInteractives = configData["OptimizeInteractives"]?.ToObject<bool>() ?? true;
+                                }
+
+                                if (optimizeInteractives)
+                                {
+                                    // Flatten the directory structure
+                                    FlattenDirectoryStructure(correspondingFolder);
+                                }
+
                                 // Create the build.txt file
                                 string buildJsonContent = $"{{\n  \"build\": {newBuild}\n}}";
                                 File.WriteAllText(Path.Combine(correspondingFolder, "build.txt"), buildJsonContent);
@@ -376,6 +392,22 @@ public static class InstallInteractives
 
                                             // Extract the .intpak file to the corresponding folder
                                             System.IO.Compression.ZipFile.ExtractToDirectory(file, correspondingFolder);
+
+                                            // Check the OptimizeInteractives setting
+                                            string configFilePath = Path.Combine(Directory.GetCurrentDirectory(), "config.json");
+                                            bool optimizeInteractives = true; // Default to true if the setting is missing
+
+                                            if (File.Exists(configFilePath))
+                                            {
+                                                var configData = JObject.Parse(File.ReadAllText(configFilePath));
+                                                optimizeInteractives = configData["OptimizeInteractives"]?.ToObject<bool>() ?? true;
+                                            }
+
+                                            if (optimizeInteractives)
+                                            {
+                                                // Flatten the directory structure
+                                                FlattenDirectoryStructure(correspondingFolder);
+                                            }
 
                                             // Create the direct.json file
                                             string directJsonContent = $"{{\n  \"Directory\": \"{selectedVideoFile.Replace("\\", "\\\\")}\"\n}}";
@@ -418,6 +450,64 @@ public static class InstallInteractives
         var eventHandlerList = (EventHandlerList)typeof(Control).GetProperty("Events", System.Reflection.BindingFlags.NonPublic | System.Reflection.BindingFlags.Instance).GetValue(control, null);
         var eventKey = fieldInfo.GetValue(null);
         eventHandlerList.RemoveHandler(eventKey, eventHandlerList[eventKey]);
+    }
+
+    private static void FlattenDirectoryStructure(string rootFolder)
+    {
+        try
+        {
+            // Get all subdirectories in a bottom-up order
+            var subDirectories = Directory.GetDirectories(rootFolder, "*", SearchOption.AllDirectories)
+                                           .OrderByDescending(d => d.Length) // Process deeper directories first
+                                           .ToList();
+
+            foreach (var subDirectory in subDirectories)
+            {
+                if (!Directory.Exists(subDirectory))
+                {
+                    // Skip if the directory no longer exists
+                    continue;
+                }
+
+                // Move all files in the subdirectory to the root folder
+                foreach (var file in Directory.GetFiles(subDirectory))
+                {
+                    string destinationFile = Path.Combine(rootFolder, Path.GetFileName(file));
+
+                    try
+                    {
+                        // Move the file to the root folder
+                        if (File.Exists(destinationFile))
+                        {
+                            File.Delete(destinationFile); // Overwrite if the file already exists
+                        }
+                        File.Move(file, destinationFile);
+                    }
+                    catch (Exception ex)
+                    {
+                        // Log or handle file-specific errors
+                        Console.WriteLine($"Error moving file '{file}' to '{destinationFile}': {ex.Message}");
+                    }
+                }
+
+                try
+                {
+                    // Delete the empty subdirectory
+                    if (!Directory.EnumerateFileSystemEntries(subDirectory).Any())
+                    {
+                        Directory.Delete(subDirectory, true);
+                    }
+                }
+                catch (Exception ex)
+                {
+                    Console.WriteLine($"Error deleting directory '{subDirectory}': {ex.Message}");
+                }
+            }
+        }
+        catch (Exception ex)
+        {
+            Console.WriteLine($"Error flattening directory structure: {ex.Message}");
+        }
     }
 }
 

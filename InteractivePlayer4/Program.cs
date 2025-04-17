@@ -5,13 +5,15 @@ using System.Linq;
 using LibVLCSharp.Shared;
 using Newtonsoft.Json;
 using Newtonsoft.Json.Linq;
+using System.Windows.Forms;
+using System.Threading;
 
 class Program
 {
     static void Main(string[] args)
     {
         Core.Initialize();
-        
+
         string movieFolder = null;
 
         if (args.Length > 0)
@@ -97,7 +99,9 @@ class Program
         var libVLC = new LibVLC(
             "--freetype-font=Consolas",
             "--freetype-bold",
-            "--freetype-outline-thickness=3"
+            "--freetype-outline-thickness=3",
+            "--no-stats",
+            "--quiet"
         );
         var media = new Media(libVLC, new Uri(Path.GetFullPath(videoFile)));
         var mediaPlayer = new MediaPlayer(media);

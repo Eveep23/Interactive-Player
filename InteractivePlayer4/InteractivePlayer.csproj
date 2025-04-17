@@ -102,6 +102,9 @@
   </ItemGroup>
   <ItemGroup>
     <Compile Include="AudioManager.cs" />
+    <Compile Include="ConsoleWindow.cs">
+      <SubType>Form</SubType>
+    </Compile>
     <Compile Include="Converter.cs" />
     <Compile Include="InstallInteractives.cs" />
     <Compile Include="InteractiveDetailsMenu.cs" />
