@@ -164,3 +164,9 @@ public class SegmentStateData
 {
     public Dictionary<string, object> Persistent { get; set; }
 }
+
+public class Question
+{
+    public List<List<Choice>> ChoiceSets { get; set; }
+    public List<int> AnswerSequence { get; set; }
+}

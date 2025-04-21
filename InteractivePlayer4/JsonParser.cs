@@ -325,6 +325,67 @@ public static class JsonParser
                 List<Choice> validChoices;
                 int? correctChoiceIndex = null;
 
+                // Load questions from questions.json
+                string questionsFilePath = Path.Combine(movieFolder, "questions.json");
+                if (File.Exists(questionsFilePath))
+                {
+                    var questionsJson = JObject.Parse(File.ReadAllText(questionsFilePath));
+                    var questions = questionsJson["questions"]?.ToObject<Dictionary<string, Question>>();
+
+                    if (questions != null && questions.Count > 0)
+                    {
+                        // Randomly select a question
+                        var random = new Random();
+                        var randomQuestionKey = questions.Keys.ElementAt(random.Next(questions.Count));
+                        var randomQuestion = questions[randomQuestionKey];
+
+                        Console.WriteLine($"Loaded question: {randomQuestionKey}");
+
+                        // Replace choiceSets while retaining SegmentId and sg
+                        if (segment.ChoiceSets != null && randomQuestion.ChoiceSets != null)
+                        {
+                            for (int i = 0; i < segment.ChoiceSets.Count && i < randomQuestion.ChoiceSets.Count; i++)
+                            {
+                                var originalChoices = segment.ChoiceSets[i];
+                                var newChoices = randomQuestion.ChoiceSets[i];
+
+                                for (int j = 0; j < originalChoices.Count && j < newChoices.Count; j++)
+                                {
+                                    // Retain SegmentId and sg, replace other fields
+                                    originalChoices[j].Text = newChoices[j].Text;
+                                    originalChoices[j].SubText = newChoices[j].SubText;
+                                    originalChoices[j].Background = newChoices[j].Background;
+                                    originalChoices[j].Icon = newChoices[j].Icon;
+                                    originalChoices[j].Overrides = newChoices[j].Overrides;
+                                    originalChoices[j].Default = newChoices[j].Default;
+                                    originalChoices[j].ImpressionData = newChoices[j].ImpressionData;
+                                }
+                            }
+                        }
+
+                        // Replace AnswerSequence
+                        if (randomQuestion.AnswerSequence != null)
+                        {
+                            segment.AnswerSequence = randomQuestion.AnswerSequence;
+                        }
+
+                        // Replace HeaderImage with the corresponding image for the random question
+                        if (segment.ChoiceSets != null && segment.ChoiceSets.Count > 0)
+                        {
+                            string headerImagePath = FindTexturePath(movieFolder, $"{randomQuestionKey}.png");
+                            if (!string.IsNullOrEmpty(headerImagePath) && File.Exists(headerImagePath))
+                            {
+                                segment.HeaderImage = new HeaderImage { Url = headerImagePath };
+                            }
+                        }
+                        else
+                        {
+                            segment.HeaderImage = null;
+                        }
+
+                    }
+                }
+
                 if (segment.ChoiceSets != null && segment.ChoiceSets.Count > 0)
                 {
                     // Use the first two choices from the first choiceSet
