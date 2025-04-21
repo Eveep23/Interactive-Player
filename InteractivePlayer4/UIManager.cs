@@ -201,10 +201,14 @@ public static class UIManager
         }
     }
 
+    private static bool soundPlayed = false;
+
     public static string ShowChoiceUI(List<Choice> choices, List<Bitmap> buttonSprites, List<Bitmap> buttonIcons, int timeLimitMs, string movieFolder, string videoId, Segment segment)
     {
         string selectedSegmentId = null;
         bool inputCaptured = false;
+
+        soundPlayed = false;
 
         int formWidth = 1900;
 
@@ -215,10 +219,10 @@ public static class UIManager
             FormBorderStyle = FormBorderStyle.None,
             BackColor = videoId == "80149064" ? Color.FromArgb(15, 15, 15) :
                        (videoId == "80151644" ? Color.FromArgb(125, 125, 125) :
-                       (videoId == "81004016" || videoId == "80988062" || videoId == "81271335" ? Color.Black :
+                       (videoId == "81004016" || videoId == "80988062" || videoId == "81271335" && segment.LayoutType == "l1" ? Color.Black :
                        (videoId == "81131714" ? Color.FromArgb(247, 233, 95) :
                        Color.FromArgb(41, 41, 41)))),
-            TransparencyKey = (videoId == "81004016" || videoId == "80988062" || videoId == "81131714" || videoId == "81271335") ? Color.Empty :
+            TransparencyKey = (videoId == "81004016" || videoId == "80988062" || videoId == "81131714" || videoId == "81271335" && segment.LayoutType == "l1") ? Color.Empty :
                               (videoId == "80149064" ? Color.FromArgb(15, 15, 15) :
                               (videoId == "80151644" ? Color.FromArgb(125, 125, 125) :
                               Color.FromArgb(41, 41, 41))),
@@ -234,19 +238,50 @@ public static class UIManager
 
         if (videoId == "81271335" && segment.LayoutType == "l1")
         {
-            string backgroundImagePath = FindTexturePath(movieFolder, new[] { "lvl1_2x.png" });
-            if (!string.IsNullOrEmpty(backgroundImagePath) && File.Exists(backgroundImagePath))
+            // Load the persistent state from the save file
+            string saveFilePath = Path.Combine(movieFolder, "save.json");
+            var saveData = SaveManager.LoadSaveData(saveFilePath);
+
+            int p_qs = 1; // Default to 1 if not found
+            if (saveData?.PersistentState != null && saveData.PersistentState.TryGetValue("p_qs", out var p_qsValue))
             {
-                choiceForm.BackgroundImage = new Bitmap(backgroundImagePath);
-                choiceForm.BackgroundImageLayout = ImageLayout.Stretch;
+                if (int.TryParse(p_qsValue.ToString(), out int parsedValue))
+                {
+                    p_qs = parsedValue;
+                }
             }
-        }
-        else if (videoId == "81271335" && segment.LayoutType == "l0")
-        {
-            string backgroundImagePath = FindTexturePath(movieFolder, new[] { "lvl6_2x.png" });
-            if (!string.IsNullOrEmpty(backgroundImagePath) && File.Exists(backgroundImagePath))
+
+            string backgroundFileName;
+            switch (p_qs)
             {
-                choiceForm.BackgroundImage = new Bitmap(backgroundImagePath);
+                case 0:
+                    backgroundFileName = "lvl1_2x.png";
+                    break;
+                case 1:
+                    backgroundFileName = "lvl2_2x.png";
+                    break;
+                case 2:
+                    backgroundFileName = "lvl3_2x.png";
+                    break;
+                case 3:
+                    backgroundFileName = "lvl4_2x.png";
+                    break;
+                case 4:
+                    backgroundFileName = "lvl5_2x.png";
+                    break;
+                case 5:
+                    backgroundFileName = "lvl6_2x.png";
+                    break;
+                default:
+                    backgroundFileName = "lvl1_2x.png"; 
+                    break;
+            }
+
+            // Find the background path
+            string backgroundPath = FindTexturePath(movieFolder, new[] { backgroundFileName });
+            if (!string.IsNullOrEmpty(backgroundPath) && File.Exists(backgroundPath))
+            {
+                choiceForm.BackgroundImage = new Bitmap(backgroundPath);
                 choiceForm.BackgroundImageLayout = ImageLayout.Stretch;
             }
         }
@@ -562,6 +597,20 @@ public static class UIManager
                     Location = new System.Drawing.Point(currentX, buttonTopMargin),
                     BackColor = Color.Transparent
                 };
+
+                if (videoId == "81271335" && segment.LayoutType == "l1")
+                {
+                    // Align the left button with the left side of the window
+                    if (i == 0)
+                    {
+                        buttonPanel.Location = new System.Drawing.Point(0, buttonTopMargin);
+                    }
+                    // Align the right button with the right side of the window
+                    else if (i == 1)
+                    {
+                        buttonPanel.Location = new System.Drawing.Point(choiceForm.Width - buttonPanel.Width, buttonTopMargin);
+                    }
+                }
 
                 // Minecraft Story Mode Custom Positioning
                 // Custom positioning for "MCSMTeamName"
@@ -1376,6 +1425,129 @@ public static class UIManager
         var controller = new Controller(UserIndex.One);
         bool isControllerConnected = controller.IsConnected;
 
+        // If Cat Burglar and a controller is connected, show a message and restart the program
+        if (videoId == "81271335" && isControllerConnected)
+        {
+            var result = MessageBox.Show(
+                "Cat Burglar isn't currently compatible with a gamepad controller, please disconnect the gamepad controller",
+                "Controller Not Supported",
+                MessageBoxButtons.OK,
+                MessageBoxIcon.Warning
+            );
+
+            if (result == DialogResult.OK)
+            {
+                Application.Restart();
+                Environment.Exit(0); 
+            }
+        }
+
+        if (videoId == "81271335" && segment.LayoutType == "l1")
+        {
+            string accessoryImagePath = FindTexturePath(movieFolder, new[] { "accessory_2x.png" });
+            if (!string.IsNullOrEmpty(accessoryImagePath) && File.Exists(accessoryImagePath))
+            {
+                Bitmap accessorySpriteSheet = new Bitmap(accessoryImagePath);
+
+                // Extract the top-right sprite (left arrow)
+                int spriteWidth = accessorySpriteSheet.Width / 2;
+                int spriteHeight = accessorySpriteSheet.Height / 2;
+                Rectangle topRightRect = new Rectangle(spriteWidth, 0, spriteWidth, spriteHeight);
+                Bitmap leftArrowSprite = accessorySpriteSheet.Clone(topRightRect, accessorySpriteSheet.PixelFormat);
+
+                // Extract the bottom-left sprite (right arrow)
+                Rectangle bottomLeftRect = new Rectangle(0, spriteHeight, spriteWidth, spriteHeight);
+                Bitmap rightArrowSprite = accessorySpriteSheet.Clone(bottomLeftRect, accessorySpriteSheet.PixelFormat);
+
+                // Extract the top-left sprite (correct arrow)
+                Rectangle topLeftRect = new Rectangle(0, 0, spriteWidth, spriteHeight);
+                Bitmap correctArrowSprite = accessorySpriteSheet.Clone(topLeftRect, accessorySpriteSheet.PixelFormat);
+
+                // Extract the bottom-right sprite (incorrect arrow)
+                Rectangle bottomRightRect = new Rectangle(spriteWidth, spriteHeight, spriteWidth, spriteHeight);
+                Bitmap incorrectArrowSprite = accessorySpriteSheet.Clone(bottomRightRect, accessorySpriteSheet.PixelFormat);
+
+                // Create PictureBox for the left arrow
+                PictureBox leftArrowPictureBox = new PictureBox
+                {
+                    Image = leftArrowSprite,
+                    SizeMode = PictureBoxSizeMode.Zoom,
+                    Size = new Size((int)(spriteWidth * scaleFactor), (int)(spriteHeight * scaleFactor)),
+                    BackColor = Color.Transparent
+                };
+
+                // Create PictureBox for the right arrow
+                PictureBox rightArrowPictureBox = new PictureBox
+                {
+                    Image = rightArrowSprite,
+                    SizeMode = PictureBoxSizeMode.Zoom,
+                    Size = new Size((int)(spriteWidth * scaleFactor), (int)(spriteHeight * scaleFactor)),
+                    BackColor = Color.Transparent
+                };
+
+                // Position the arrows in the middle of the choice window
+                int arrowOffset = (int)(50 * scaleFactor);
+                int verticalAdjustment = (int)(15 * scaleFactor);
+                leftArrowPictureBox.Location = new Point(
+                    (choiceForm.Width / 2) - leftArrowPictureBox.Width - arrowOffset,
+                    (choiceForm.Height / 2) - (leftArrowPictureBox.Height / 2) - verticalAdjustment
+                );
+                rightArrowPictureBox.Location = new Point(
+                    (choiceForm.Width / 2) + arrowOffset,
+                    (choiceForm.Height / 2) - (rightArrowPictureBox.Height / 2) - verticalAdjustment
+                );
+
+                // Add the arrows to the choice form
+                choiceForm.Controls.Add(leftArrowPictureBox);
+                choiceForm.Controls.Add(rightArrowPictureBox);
+
+                // Handle choice selection
+                foreach (var button in buttons)
+                {
+                    button.Click += (sender, e) =>
+                    {
+                        // Determine if the selected choice is correct
+                        bool isCorrect = false;
+                        if (segment.AnswerSequence != null && segment.AnswerSequence.Count > 0)
+                        {
+                            int correctIndex = segment.AnswerSequence[0];
+                            isCorrect = buttons.IndexOf(button) == correctIndex;
+                        }
+
+                        // Update the arrows based on the result
+                        if (isCorrect)
+                        {
+                            // Switch the arrow pointing to the selected choice to the top-left sprite (correct)
+                            if (button == buttons[0]) // Left choice selected
+                            {
+                                leftArrowPictureBox.Image = correctArrowSprite;
+                                rightArrowPictureBox.Visible = false; // Hide the other arrow
+                            }
+                            else // Right choice selected
+                            {
+                                rightArrowPictureBox.Image = correctArrowSprite;
+                                leftArrowPictureBox.Visible = false; // Hide the other arrow
+                            }
+                        }
+                        else
+                        {
+                            // Switch the arrow pointing to the selected choice to the bottom-right sprite (incorrect)
+                            if (button == buttons[0]) // Left choice selected
+                            {
+                                leftArrowPictureBox.Image = incorrectArrowSprite;
+                                rightArrowPictureBox.Visible = false; // Hide the other arrow
+                            }
+                            else // Right choice selected
+                            {
+                                rightArrowPictureBox.Image = incorrectArrowSprite;
+                                leftArrowPictureBox.Visible = false; // Hide the other arrow
+                            }
+                        }
+                    };
+                }
+            }
+        }
+
         // Define possible names for each texture
         string timerFillPath, timerCapLPath, timerCapRPath, timerBottomPath, timerTopPath, webPath;
 
@@ -1529,6 +1701,45 @@ public static class UIManager
                     // Calculate the current frame based on elapsed time
                     int currentFrame = (int)((double)stopwatch.ElapsedMilliseconds / timeLimitMs * usedRows);
                     currentFrame = Math.Min(currentFrame, usedRows - 1);
+
+                    // Check if the 19th frame (last frame) is reached
+                    if (currentFrame == usedRows - 1 && !soundPlayed)
+                    {
+                        if (!inputCaptured)
+                        {
+                            // Play the fail sound
+                            string failSoundPath = FindTexturePath(movieFolder, new[] { "sfx_timer_end_fail.m4a" });
+                            if (File.Exists(failSoundPath))
+                            {
+                                var failSoundPlayer = new MediaPlayer(new Media(libVLC, failSoundPath, FromType.FromPath));
+                                failSoundPlayer.Play();
+                            }
+                        }
+                        else
+                        {
+                            // If a choice was made, determine if it was correct or wrong
+                            bool isCorrect = false;
+                            if (segment.AnswerSequence != null && segment.AnswerSequence.Count > 0)
+                            {
+                                int correctIndex = segment.AnswerSequence[0];
+                                isCorrect = buttons.IndexOf(buttons.FirstOrDefault(b => b.Tag as string == selectedSegmentId)) == correctIndex;
+                            }
+
+                            // Play the appropriate sound
+                            string soundPath = isCorrect
+                                ? FindTexturePath(movieFolder, new[] { "sfx_timer_end_pass.m4a" })
+                                : FindTexturePath(movieFolder, new[] { "sfx_timer_end_fail.m4a" });
+
+                            if (File.Exists(soundPath))
+                            {
+                                var soundPlayer = new MediaPlayer(new Media(libVLC, soundPath, FromType.FromPath));
+                                soundPlayer.Play();
+                            }
+                        }
+
+                        // Mark the sound as played
+                        soundPlayed = true;
+                    }
 
                     // Define the source rectangle for the current frame
                     Rectangle sourceRect = new Rectangle(0, currentFrame * frameHeight, timerFillSprite.Width, frameHeight);
@@ -1757,7 +1968,14 @@ public static class UIManager
                         heightFactor = 0.24;
                         break;
                     case "81271335":
-                        heightFactor = 0.30;
+                        if (segment.LayoutType == "l1")
+                        {
+                            heightFactor = 0.30;
+                        }
+                        else if (segment.LayoutType == "l0")
+                        {
+                            heightFactor = 0.23;
+                        }
                         break;
                     case "81131714":
                         heightFactor = 0.24;

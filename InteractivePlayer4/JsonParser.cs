@@ -586,6 +586,60 @@ public static class JsonParser
                             }
                         }
                     }
+
+                    // Special handling for "Cat Burglar" folder
+                    if (movieFolder.EndsWith("Cat Burglar", StringComparison.OrdinalIgnoreCase) &&
+                        (chosenOption?.Text?.Equals("PLAY AGAIN", StringComparison.OrdinalIgnoreCase) == true ||
+                         chosenOption?.Text?.Equals("TRY AGAIN", StringComparison.OrdinalIgnoreCase) == true))
+                    {
+                        // Switch to the next info JSON file in the sequence
+                        string currentInfoFileName = Path.GetFileName(infoJsonFile);
+                        if (currentInfoFileName.StartsWith("info", StringComparison.OrdinalIgnoreCase) &&
+                            currentInfoFileName.EndsWith(".json", StringComparison.OrdinalIgnoreCase))
+                        {
+                            // Extract the current index from the file name
+                            int currentIndex = 1; // Default to 1 if parsing fails
+                            string numberPart = currentInfoFileName.Length > 8
+                                ? currentInfoFileName.Substring(4, currentInfoFileName.Length - 9) // Extract the number part
+                                : string.Empty;
+
+                            if (int.TryParse(numberPart, out int parsedIndex))
+                            {
+                                currentIndex = parsedIndex; // Successfully parsed the number
+                            }
+
+                            // Calculate the next index
+                            int nextIndex = currentIndex == 9 ? 1 : currentIndex + 1;
+                            string nextInfoFileName = nextIndex == 1 ? "info.json" : $"info{nextIndex}.json";
+                            string nextInfoFilePath = Path.Combine(movieFolder, nextInfoFileName);
+
+                            if (File.Exists(nextInfoFilePath))
+                            {
+                                // Update the global infoJsonFile variable to the new file
+                                infoJsonFile = nextInfoFilePath;
+                                Console.WriteLine($"Switched to next info JSON: {infoJsonFile}");
+
+                                // Reload moments and states from the new info JSON
+                                var (newMomentsBySegment, newVideoId, newGlobalState, newPersistentState, newSegmentGroups, newSegmentStates) =
+                                    ParseMoments(infoJsonFile);
+
+                                var (momentsBySegment, _, _, _, _, _) = ParseMoments(infoJsonFile);
+
+                                // Update the current state with the new data
+                                momentsBySegment = newMomentsBySegment ?? momentsBySegment;
+                                segmentGroups = newSegmentGroups ?? segmentGroups;
+                                segmentStates = newSegmentStates ?? segmentStates;
+
+                                // Merge moments into segments again
+                                MergeMomentsIntoSegments(segments, momentsBySegment);
+                            }
+                            else
+                            {
+                                Console.WriteLine($"Next info JSON file '{nextInfoFileName}' does not exist.");
+                            }
+                        }
+                    }
+
                     if (videoId == "10000001" || videoId == "10000003" || videoId == "81251335" || videoId == "80994695" || videoId == "80135585" || videoId == "81328829" || videoId == "80227804" || videoId == "80227805" || videoId == "80227800" || videoId == "80227801" || videoId == "80227802" || videoId == "80227803" || videoId == "80227699" || videoId == "80227698" || videoId == "81319137" || videoId == "81205738" || videoId == "81205737" || videoId == "80227815" || videoId == "81250260" || videoId == "81250261" || videoId == "81250262" || videoId == "81250263" || videoId == "81250264" || videoId == "81250265" || videoId == "81250266" || videoId == "81250267")
                     {
                         break; // Break out of the loop and return the selected segment immediately
