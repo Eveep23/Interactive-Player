@@ -16,11 +16,14 @@ This is an emulator for Netflix's interactive movies and shows!
 
 # How to Use:
 
-To install an Interactive, all you need is the internal video. In the install menu (the + in the top left) find the interactive and select that video file!
+**To run** the Interactive Player, from the [Releases page](https://github.com/Eveep23/Interactive-Player/releases), you need to download the ".exe" file, clicking on the "Assets" from the latest version. 
 
-* You can switch the audio track in settings or when watching an interactive with the "L" key!
+**To play** an Interactive, all you need is the internal ".mkv" video (the .mkv include all the audio languages and subtitles). You can choose one of the download options [from here](https://archive.org/details/puss-in-book-trapped-in-an-epic-tale-interactive). Torrent is the fastest. 
+Once you have the .mkv video file, run the Interactive Player, in the install menu (the + in the top left) find the interactive in your PC, and select that video file. Once is added to the catalogue list, you can click on it to reproduce it.
 
-* You can switch the subtitle track in settings or when watching an interactive with the "S" key!
+* You can switch the audio track in settings or when watching an interactive with the "L" key (first click on the console app, not on the video)
+
+* You can switch the subtitle track in settings or when watching an interactive with the "S" key (first click on the console app, not on the video)
 
 * You can pause the spacebar in the console!
 
