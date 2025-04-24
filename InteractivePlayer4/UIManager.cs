@@ -202,11 +202,14 @@ public static class UIManager
     }
 
     private static bool soundPlayed = false;
+    private static int correctAnswersCount = 0;
 
     public static string ShowChoiceUI(List<Choice> choices, List<Bitmap> buttonSprites, List<Bitmap> buttonIcons, int timeLimitMs, string movieFolder, string videoId, Segment segment)
     {
         string selectedSegmentId = null;
         bool inputCaptured = false;
+
+        correctAnswersCount = 0;
 
         soundPlayed = false;
 
@@ -547,28 +550,40 @@ public static class UIManager
                         button.BackgroundImage = new Bitmap(selectedSprite, new Size(buttonWidth, buttonHeight));
                         button.Enabled = false;
 
-                        foreach (var btn in buttons)
+                        if (videoId == "81271335" && segment.LayoutType == "l1")
+                        { 
+                            // Determine if the selected choice is correct
+                            bool isCorrect = false;
+                            if (segment.AnswerSequence != null && segment.AnswerSequence.Count > 0)
+                            {
+                                int choiceSetIndex = buttons.IndexOf(button) / segment.ChoiceSets[0].Count;
+                                int correctIndex = segment.AnswerSequence.ElementAtOrDefault(choiceSetIndex);
+                                isCorrect = buttons.IndexOf(button) % segment.ChoiceSets[0].Count == correctIndex;
+                            }
+
+                            Console.WriteLine(isCorrect ? "Correct choice selected." : "Incorrect choice selected.");
+
+                            if (isCorrect)
+                            {
+                                correctAnswersCount++;
+                            }
+
+                            Console.WriteLine("Correct choice count: " + correctAnswersCount);
+
+                            // Play the appropriate sound
+                            string soundPath = isCorrect ? correctSoundPath : incorrectSoundPath;
+                            if (!string.IsNullOrEmpty(soundPath) && File.Exists(soundPath))
+                            {
+                                var soundPlayer = new MediaPlayer(new Media(libVLC, soundPath, FromType.FromPath));
+                                soundPlayer.Play();
+                            }
+                        }
+                        else foreach (var btn in buttons)
                         {
                             if (btn != button)
                             {
                                 btn.Enabled = false;
                             }
-                        }
-
-                        // Determine if the selected choice is correct
-                        bool isCorrect = false;
-                        if (segment.AnswerSequence != null && segment.AnswerSequence.Count > 0)
-                        {
-                            int correctIndex = segment.AnswerSequence[0];
-                            isCorrect = buttons.IndexOf(button) == correctIndex;
-                        }
-
-                        // Play the appropriate sound
-                        string soundPath = isCorrect ? correctSoundPath : incorrectSoundPath;
-                        if (!string.IsNullOrEmpty(soundPath) && File.Exists(soundPath))
-                        {
-                            var soundPlayer = new MediaPlayer(new Media(libVLC, soundPath, FromType.FromPath));
-                            soundPlayer.Play();
                         }
 
                         if (File.Exists(selectSoundPath))
@@ -583,7 +598,16 @@ public static class UIManager
                         }
                         else
                         {
-                            choiceForm.ActiveControl = null;
+                            if (videoId == "81271335" && segment.LayoutType == "l1")
+                            {
+                                inputCaptured = false;
+                                button.Enabled = true;
+                            }
+                            else
+                            {
+                                choiceForm.ActiveControl = null;
+                            }
+                                
                         }
                     }
                 };
@@ -610,6 +634,46 @@ public static class UIManager
                     {
                         buttonPanel.Location = new System.Drawing.Point(choiceForm.Width - buttonPanel.Width, buttonTopMargin);
                     }
+                    // Store the rest offscreen
+                    else
+                    {
+                        buttonPanel.Location = new System.Drawing.Point(-buttonPanel.Width, buttonTopMargin);
+                    }
+
+                    button.Click += async (sender, e) =>
+                    {
+                        // Determine which button was clicked
+                        int clickedIndex = buttons.IndexOf((Button)sender);
+
+                        if (clickedIndex == 0 || clickedIndex == 1)
+                        {
+                            buttons[0].Parent.Location = new System.Drawing.Point(-buttons[0].Parent.Width, buttonTopMargin);
+                            buttons[1].Parent.Location = new System.Drawing.Point(-buttons[1].Parent.Width, buttonTopMargin);
+
+                            await Task.Delay(1000);
+
+                            buttons[2].Parent.Location = new System.Drawing.Point(0, buttonTopMargin);
+                            buttons[3].Parent.Location = new System.Drawing.Point(choiceForm.Width - buttons[3].Parent.Width, buttonTopMargin);
+                        }
+                        else if (clickedIndex == 2 || clickedIndex == 3)
+                        {
+                            buttons[2].Parent.Location = new System.Drawing.Point(-buttons[2].Parent.Width, buttonTopMargin);
+                            buttons[3].Parent.Location = new System.Drawing.Point(-buttons[3].Parent.Width, buttonTopMargin);
+
+                            await Task.Delay(1000);
+
+                            buttons[4].Parent.Location = new System.Drawing.Point(0, buttonTopMargin);
+                            buttons[5].Parent.Location = new System.Drawing.Point(choiceForm.Width - buttons[5].Parent.Width, buttonTopMargin);
+                        }
+                        else if (clickedIndex == 4 || clickedIndex == 5)
+                        {
+                            buttons[4].Parent.Location = new System.Drawing.Point(-buttonPanel.Width, buttonTopMargin);
+                            buttons[5].Parent.Location = new System.Drawing.Point(-buttonPanel.Width, buttonTopMargin);
+                        }
+
+                        // Force the form to redraw to reflect the changes
+                        choiceForm.Invalidate();
+                    };
                 }
 
                 // Minecraft Story Mode Custom Positioning
@@ -1501,6 +1565,9 @@ public static class UIManager
                 choiceForm.Controls.Add(leftArrowPictureBox);
                 choiceForm.Controls.Add(rightArrowPictureBox);
 
+                // Track the number of choices made
+                int choicesMade = 0;
+
                 // Handle choice selection
                 foreach (var button in buttons)
                 {
@@ -1510,20 +1577,24 @@ public static class UIManager
                         bool isCorrect = false;
                         if (segment.AnswerSequence != null && segment.AnswerSequence.Count > 0)
                         {
-                            int correctIndex = segment.AnswerSequence[0];
-                            isCorrect = buttons.IndexOf(button) == correctIndex;
+                            int choiceSetIndex = buttons.IndexOf(button) / segment.ChoiceSets[0].Count;
+                            int correctIndex = segment.AnswerSequence.ElementAtOrDefault(choiceSetIndex);
+                            isCorrect = buttons.IndexOf(button) % segment.ChoiceSets[0].Count == correctIndex;
                         }
+
+                        // Determine if the clicked button corresponds to the left or right arrow
+                        int buttonIndex = buttons.IndexOf(button);
+                        bool isLeftArrow = buttonIndex % 2 == 0; // Even indices correspond to the left arrow
 
                         // Update the arrows based on the result
                         if (isCorrect)
                         {
-                            // Switch the arrow pointing to the selected choice to the top-left sprite (correct)
-                            if (button == buttons[0]) // Left choice selected
+                            if (isLeftArrow)
                             {
                                 leftArrowPictureBox.Image = correctArrowSprite;
                                 rightArrowPictureBox.Visible = false; // Hide the other arrow
                             }
-                            else // Right choice selected
+                            else
                             {
                                 rightArrowPictureBox.Image = correctArrowSprite;
                                 leftArrowPictureBox.Visible = false; // Hide the other arrow
@@ -1531,18 +1602,42 @@ public static class UIManager
                         }
                         else
                         {
-                            // Switch the arrow pointing to the selected choice to the bottom-right sprite (incorrect)
-                            if (button == buttons[0]) // Left choice selected
+                            if (isLeftArrow)
                             {
                                 leftArrowPictureBox.Image = incorrectArrowSprite;
                                 rightArrowPictureBox.Visible = false; // Hide the other arrow
                             }
-                            else // Right choice selected
+                            else
                             {
                                 rightArrowPictureBox.Image = incorrectArrowSprite;
                                 leftArrowPictureBox.Visible = false; // Hide the other arrow
                             }
                         }
+
+                        // Increment the number of choices made
+                        choicesMade++;
+
+                        // Reset the arrows after 1 second, or hide them after the third choice
+                        Task.Delay(1000).ContinueWith(_ =>
+                        {
+                            choiceForm.Invoke(new Action(() =>
+                            {
+                                if (choicesMade < 3)
+                                {
+                                    // Reset to the original two arrows
+                                    leftArrowPictureBox.Image = leftArrowSprite;
+                                    rightArrowPictureBox.Image = rightArrowSprite;
+                                    leftArrowPictureBox.Visible = true;
+                                    rightArrowPictureBox.Visible = true;
+                                }
+                                else
+                                {
+                                    // Hide the arrows after the third choice
+                                    leftArrowPictureBox.Visible = false;
+                                    rightArrowPictureBox.Visible = false;
+                                }
+                            }));
+                        });
                     };
                 }
             }
@@ -1694,47 +1789,40 @@ public static class UIManager
             {
                 if (timerFillSprite != null)
                 {
+
                     int totalRows = 20; // Total rows in the sprite
-                    int usedRows = 18;  // Rows used for countdown
+                    int usedRows = 19;  // Rows used for countdown
                     int frameHeight = timerFillSprite.Height / totalRows;
 
                     // Calculate the current frame based on elapsed time
                     int currentFrame = (int)((double)stopwatch.ElapsedMilliseconds / timeLimitMs * usedRows);
                     currentFrame = Math.Min(currentFrame, usedRows - 1);
 
-                    // Check if the 19th frame (last frame) is reached
-                    if (currentFrame == usedRows - 1 && !soundPlayed)
+                    // Determine the 19th frame based on correctAnswersCount
+                    if (currentFrame == 18) // 19th frame
                     {
-                        if (!inputCaptured)
+                        currentFrame = correctAnswersCount == 3 ? 18 : 19;
+                    }
+
+                    if ((currentFrame == 18 || currentFrame == 19) && !soundPlayed)
+                    {
+                        string soundPath = null;
+
+                        if (currentFrame == 18 && correctAnswersCount == 3)
                         {
-                            // Play the fail sound
-                            string failSoundPath = FindTexturePath(movieFolder, new[] { "sfx_timer_end_fail.m4a" });
-                            if (File.Exists(failSoundPath))
-                            {
-                                var failSoundPlayer = new MediaPlayer(new Media(libVLC, failSoundPath, FromType.FromPath));
-                                failSoundPlayer.Play();
-                            }
+                            // Play the success sound if all answers are correct
+                            soundPath = FindTexturePath(movieFolder, new[] { "sfx_timer_end_pass.m4a" });
                         }
-                        else
+                        else if (currentFrame == 19 && correctAnswersCount != 3)
                         {
-                            // If a choice was made, determine if it was correct or wrong
-                            bool isCorrect = false;
-                            if (segment.AnswerSequence != null && segment.AnswerSequence.Count > 0)
-                            {
-                                int correctIndex = segment.AnswerSequence[0];
-                                isCorrect = buttons.IndexOf(buttons.FirstOrDefault(b => b.Tag as string == selectedSegmentId)) == correctIndex;
-                            }
+                            // Play the fail sound if not all answers are correct
+                            soundPath = FindTexturePath(movieFolder, new[] { "sfx_timer_end_fail.m4a" });
+                        }
 
-                            // Play the appropriate sound
-                            string soundPath = isCorrect
-                                ? FindTexturePath(movieFolder, new[] { "sfx_timer_end_pass.m4a" })
-                                : FindTexturePath(movieFolder, new[] { "sfx_timer_end_fail.m4a" });
-
-                            if (File.Exists(soundPath))
-                            {
-                                var soundPlayer = new MediaPlayer(new Media(libVLC, soundPath, FromType.FromPath));
-                                soundPlayer.Play();
-                            }
+                        if (!string.IsNullOrEmpty(soundPath) && File.Exists(soundPath))
+                        {
+                            var soundPlayer = new MediaPlayer(new Media(libVLC, soundPath, FromType.FromPath));
+                            soundPlayer.Play();
                         }
 
                         // Mark the sound as played
@@ -1912,6 +2000,20 @@ public static class UIManager
         visibilityTimer.Start();
 
         choiceForm.ShowDialog();
+
+        if (videoId == "81271335" && segment.LayoutType == "l1")
+        {
+            if (correctAnswersCount == 3)
+            {
+                selectedSegmentId = choices[0].SegmentId;
+                //Console.WriteLine("Correct Segment.");
+            }
+            else
+            {
+                selectedSegmentId = choices[1].SegmentId;
+                //Console.WriteLine("Incorrect Segment.");
+            }
+        }
 
         return selectedSegmentId;
     }
