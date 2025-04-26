@@ -68,7 +68,7 @@ public static class SettingsMenu
             DropDownStyle = ComboBoxStyle.DropDownList,
             Font = new Font("Arial", 14)
         };
-        audioComboBox.Items.AddRange(new string[] { "Czech", "German", "English", "Latin American - Spanish", "European - Spanish", "French", "Hindi", "Hungarian", "Indonesian", "Italian", "Polish", "Brazilian - Portuguese", "Thai", "Turkish", "Ukrainian" });
+        audioComboBox.Items.AddRange(new string[] { "Czech", "German", "English", "Latin American - Spanish", "European - Spanish", "French", "Hindi", "Hungarian", "Indonesian", "Italian", "Polish", "Brazilian - Portuguese", "European - Portuguese", "Thai", "Turkish", "Ukrainian" });
         audioComboBox.SelectedItem = loadedSettings.AudioLanguage;
 
         // Subtitle Language Dropdown

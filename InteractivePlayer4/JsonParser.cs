@@ -368,6 +368,8 @@ public static class JsonParser
                             segment.AnswerSequence = randomQuestion.AnswerSequence;
                         }
 
+                        //Console.WriteLine($"Current Answer Sequence: {string.Join(", ", segment.AnswerSequence)}");
+
                         // Replace HeaderImage with the corresponding image for the random question
                         if (segment.ChoiceSets != null && segment.ChoiceSets.Count > 0)
                         {
@@ -691,7 +693,8 @@ public static class JsonParser
                 choiceDisplayed = true;
             }
 
-            HandleKeyPress(mediaPlayer, infoJsonFile, saveFilePath);
+            //KeyForm.InitializeKeyPressWindow(mediaPlayer, infoJsonFile, saveFilePath, segment);
+            HandleKeyPress(mediaPlayer, infoJsonFile, saveFilePath, segment);
         }
 
         // Check segment groups for the next segment
@@ -885,7 +888,7 @@ public static class JsonParser
         }
     }
 
-    private static void HandleKeyPress(MediaPlayer mediaPlayer, string infoJsonFile, string saveFilePath)
+    private static void HandleKeyPress(MediaPlayer mediaPlayer, string infoJsonFile, string saveFilePath, Segment currentSegment)
     {
         if (!Console.KeyAvailable) return;
 
@@ -921,10 +924,46 @@ public static class JsonParser
                 PreconditionChecker.CheckPreconditions(infoJsonFile, saveFilePath);
                 break;
 
+            case ConsoleKey.RightArrow:
+                SkipTime(mediaPlayer, currentSegment, 10000);
+                break;
+
+            case ConsoleKey.LeftArrow:
+                SkipTime(mediaPlayer, currentSegment, -10000);
+                break;
+
             default:
                 // No action for other keys
                 break;
         }
+    }
+
+    private static void SkipTime(MediaPlayer mediaPlayer, Segment currentSegment, int offsetMs)
+    {
+        long newTime = mediaPlayer.Time + offsetMs;
+
+        // Make sure the time doesn't go out of the segment bounds
+        if (newTime < currentSegment.StartTimeMs)
+        {
+            newTime = currentSegment.StartTimeMs;
+        }
+        else if (newTime > currentSegment.EndTimeMs)
+        {
+            newTime = currentSegment.EndTimeMs;
+        }
+
+        // Make sure the time doesn't go into a choice point
+        if (currentSegment.Choices != null && currentSegment.Choices.Count > 0)
+        {
+            if (newTime >= currentSegment.ChoiceDisplayTimeMs && newTime <= currentSegment.HideChoiceTimeMs)
+            {
+                Console.WriteLine("Cannot skip into a choice point.");
+                return;
+            }
+        }
+
+        mediaPlayer.Time = newTime;
+        Console.WriteLine($"Skipped to {mediaPlayer.Time} ms.");
     }
 
     private static string GetDefaultChoice(Segment segment)

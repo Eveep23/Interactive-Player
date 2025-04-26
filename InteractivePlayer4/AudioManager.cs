@@ -87,8 +87,34 @@ public static class AudioManager
         }
 
         var selectedTrack = audioTracks.FirstOrDefault(track =>
-            track.Language.Equals(trackLanguage, StringComparison.OrdinalIgnoreCase) &&
-            (trackName == null || track.Description.Equals(trackName, StringComparison.OrdinalIgnoreCase)));
+            track.Language != null && track.Language.Equals(trackLanguage, StringComparison.OrdinalIgnoreCase) &&
+            (trackName == null || (track.Description != null && track.Description.Equals(trackName, StringComparison.OrdinalIgnoreCase))));
+
+        // Handle special cases for Spanish and Portuguese
+        if (saveData.AudioLanguage.Equals("Latin American - Spanish", StringComparison.OrdinalIgnoreCase))
+        {
+            selectedTrack = audioTracks.FirstOrDefault(track =>
+                track.Language != null && track.Language.Equals("spa", StringComparison.OrdinalIgnoreCase));
+        }
+        else if (saveData.AudioLanguage.Equals("European - Spanish", StringComparison.OrdinalIgnoreCase))
+        {
+            selectedTrack = audioTracks
+                .Where(track => track.Language != null && track.Language.Equals("spa", StringComparison.OrdinalIgnoreCase))
+                .Skip(1) // Get the second Spanish track
+                .FirstOrDefault();
+        }
+        else if (saveData.AudioLanguage.Equals("Brazilian - Portuguese", StringComparison.OrdinalIgnoreCase))
+        {
+            selectedTrack = audioTracks.FirstOrDefault(track =>
+                track.Language != null && track.Language.Equals("por", StringComparison.OrdinalIgnoreCase));
+        }
+        else if (saveData.AudioLanguage.Equals("European - Portuguese", StringComparison.OrdinalIgnoreCase))
+        {
+            selectedTrack = audioTracks
+                .Where(track => track.Language != null && track.Language.Equals("por", StringComparison.OrdinalIgnoreCase))
+                .Skip(1) // Get the second Portuguese track
+                .FirstOrDefault();
+        }
 
         if (!selectedTrack.Equals(default(MediaTrack)))
         {

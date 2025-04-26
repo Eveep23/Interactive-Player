@@ -109,6 +109,7 @@
     <Compile Include="InstallInteractives.cs" />
     <Compile Include="InteractiveDetailsMenu.cs" />
     <Compile Include="JsonParser.cs" />
+    <Compile Include="KeyForm.cs" />
     <Compile Include="Models.cs" />
     <Compile Include="PreconditionChecker.cs" />
     <Compile Include="Program.cs" />
