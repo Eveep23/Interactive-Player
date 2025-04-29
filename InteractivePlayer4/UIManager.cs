@@ -1999,6 +1999,39 @@ public static class UIManager
         };
         visibilityTimer.Start();
 
+        Task.Run(async () =>
+        {
+            while (stopwatch.ElapsedMilliseconds < timeLimitMs)
+            {
+                await Task.Delay(16);
+            }
+
+            if (!inputCaptured)
+            {
+                // If no choice was made, select the default choice
+                if (segment.DefaultChoiceIndex.HasValue && segment.DefaultChoiceIndex.Value >= 0 && segment.DefaultChoiceIndex.Value < choices.Count)
+                {
+
+                    if (segment.TimeoutSegment != null)
+                    {
+                        selectedSegmentId = IsControllerConnected() ? "Fallback_Tutorial_Controller" : "Fallback_Tutorial_Site";
+                    }
+                    else
+                    {
+                        selectedSegmentId = choices[segment.DefaultChoiceIndex.Value].SegmentId;
+                    }
+                        
+                    Console.WriteLine($"No choice made. Defaulting to the specified choice.");
+                }
+                else
+                {
+                    Console.WriteLine("No choice made. No default choice specified.");
+                }
+
+                choiceForm.Invoke(new Action(() => choiceForm.Close()));
+            }
+        });
+
         choiceForm.ShowDialog();
 
         if (videoId == "81271335" && segment.LayoutType == "l1")
@@ -2195,6 +2228,30 @@ public static class UIManager
             choiceForm.Location = new System.Drawing.Point(centerX, bottomY);
             SetWindowLong(choiceForm.Handle, GWL_HWNDPARENT, videoPlayerHandle);
         }
+    }
+
+    // Check if an Xbox controller is connected
+    private static bool IsControllerConnected()
+    {
+        var directInput = new SharpDX.DirectInput.DirectInput();
+        var joystickGuid = Guid.Empty;
+
+        foreach (var deviceInstance in directInput.GetDevices(SharpDX.DirectInput.DeviceType.Gamepad, SharpDX.DirectInput.DeviceEnumerationFlags.AllDevices))
+        {
+            joystickGuid = deviceInstance.InstanceGuid;
+            break;
+        }
+
+        if (joystickGuid == Guid.Empty)
+        {
+            foreach (var deviceInstance in directInput.GetDevices(SharpDX.DirectInput.DeviceType.Joystick, SharpDX.DirectInput.DeviceEnumerationFlags.AllDevices))
+            {
+                joystickGuid = deviceInstance.InstanceGuid;
+                break;
+            }
+        }
+
+        return joystickGuid != Guid.Empty;
     }
 
     [StructLayout(LayoutKind.Sequential)]

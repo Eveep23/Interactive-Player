@@ -154,24 +154,16 @@ public static class JsonParser
                 var choiceMoment = moments.Find(m => m.Type == "scene:cs_template");
                 if (choiceMoment != null)
                 {
-                    // Handle "choices" or "choiceSet"
                     segment.Choices = choiceMoment.Choices ?? choiceMoment.ChoiceSets?.FirstOrDefault();
                     segment.ChoiceSets = choiceMoment.ChoiceSets;
                     segment.HeaderImage = choiceMoment.HeaderImage;
                     segment.AnswerSequence = choiceMoment.AnswerSequence;
                     segment.ChoiceDisplayTimeMs = choiceMoment.UIDisplayMS ?? 0;
                     segment.HideChoiceTimeMs = choiceMoment.HideTimeoutUiMS ?? segment.EndTimeMs;
-
-                    // Transfer TimeoutSegment information
                     segment.TimeoutSegment = choiceMoment.TimeoutSegment;
-
-                    // Transfer LayoutType information
                     segment.LayoutType = choiceMoment.LayoutType;
-
-                    // Transfer Notification information
                     segment.Notification = choiceMoment.Notification;
-
-                    // Transfer ImpressionData information
+                    segment.DefaultChoiceIndex = choiceMoment.DefaultChoiceIndex;
                     segment.ImpressionData = choiceMoment.ImpressionData;
 
                     // Assign segmentId to each choice
@@ -677,18 +669,6 @@ public static class JsonParser
                         break; // Break out of the loop and return the selected segment immediately
                     }
                 }
-                else
-                {
-                    Console.WriteLine("No choice made. Defaulting to the specified choice.");
-                    if (segment.TimeoutSegment != null)
-                    {
-                        nextSegment = IsControllerConnected() ? "Fallback_Tutorial_Controller" : "Fallback_Tutorial_Site";
-                    }
-                    else
-                    {
-                        nextSegment = GetDefaultChoice(segment);
-                    }
-                }
 
                 choiceDisplayed = true;
             }
@@ -748,31 +728,6 @@ public static class JsonParser
         var persistentState = stateHistory?["persistent"]?.ToObject<Dictionary<string, object>>() ?? new Dictionary<string, object>();
 
         return (globalState, persistentState);
-    }
-
-
-    // Check if an Xbox controller is connected
-    private static bool IsControllerConnected()
-    {
-        var directInput = new SharpDX.DirectInput.DirectInput();
-        var joystickGuid = Guid.Empty;
-
-        foreach (var deviceInstance in directInput.GetDevices(SharpDX.DirectInput.DeviceType.Gamepad, SharpDX.DirectInput.DeviceEnumerationFlags.AllDevices))
-        {
-            joystickGuid = deviceInstance.InstanceGuid;
-            break;
-        }
-
-        if (joystickGuid == Guid.Empty)
-        {
-            foreach (var deviceInstance in directInput.GetDevices(SharpDX.DirectInput.DeviceType.Joystick, SharpDX.DirectInput.DeviceEnumerationFlags.AllDevices))
-            {
-                joystickGuid = deviceInstance.InstanceGuid;
-                break;
-            }
-        }
-
-        return joystickGuid != Guid.Empty;
     }
 
     // Find the default button texture
