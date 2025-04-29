@@ -22,6 +22,8 @@ To install an Interactive, all you need is the internal video. In the install me
 
 * You can switch the subtitle track in settings or when watching an interactive with the "S" key!
 
+* You can skip forward and backward 10 seconds in the console!
+
 * You can pause the spacebar in the console!
 
 # Currently Supported Interactives:
