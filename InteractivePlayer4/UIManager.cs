@@ -1999,38 +1999,43 @@ public static class UIManager
         };
         visibilityTimer.Start();
 
-        Task.Run(async () =>
+
+        if (!(videoId == "81271335" && segment.LayoutType == "l1"))
+        { }
+        else
         {
-            while (stopwatch.ElapsedMilliseconds < timeLimitMs)
+            Task.Run(async () =>
             {
-                await Task.Delay(16);
-            }
-
-            if (!inputCaptured)
-            {
-                // If no choice was made, select the default choice
-                if (segment.DefaultChoiceIndex.HasValue && segment.DefaultChoiceIndex.Value >= 0 && segment.DefaultChoiceIndex.Value < choices.Count)
+                while (stopwatch.ElapsedMilliseconds < timeLimitMs)
                 {
+                    await Task.Delay(16);
+                }
 
-                    if (segment.TimeoutSegment != null)
+                if (!inputCaptured)
+                {
+                    // If no choice was made, select the default choice
+                    if (segment.DefaultChoiceIndex.HasValue && segment.DefaultChoiceIndex.Value >= 0 && segment.DefaultChoiceIndex.Value < choices.Count)
                     {
-                        selectedSegmentId = IsControllerConnected() ? "Fallback_Tutorial_Controller" : "Fallback_Tutorial_Site";
+                        if (segment.TimeoutSegment != null)
+                        {
+                            selectedSegmentId = IsControllerConnected() ? "Fallback_Tutorial_Controller" : "Fallback_Tutorial_Site";
+                        }
+                        else
+                        {
+                            selectedSegmentId = choices[segment.DefaultChoiceIndex.Value].SegmentId;
+                        }
+
+                        Console.WriteLine($"No choice made. Defaulting to the specified choice.");
                     }
                     else
                     {
-                        selectedSegmentId = choices[segment.DefaultChoiceIndex.Value].SegmentId;
+                        Console.WriteLine("No choice made. No default choice specified.");
                     }
-                        
-                    Console.WriteLine($"No choice made. Defaulting to the specified choice.");
-                }
-                else
-                {
-                    Console.WriteLine("No choice made. No default choice specified.");
-                }
 
-                choiceForm.Invoke(new Action(() => choiceForm.Close()));
-            }
-        });
+                    choiceForm.Invoke(new Action(() => choiceForm.Close()));
+                }
+            });
+        }
 
         choiceForm.ShowDialog();
 
