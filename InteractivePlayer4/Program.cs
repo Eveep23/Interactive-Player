@@ -95,7 +95,7 @@ class Program
         }
 
         // Merge moments into segments
-        JsonParser.MergeMomentsIntoSegments(segments, momentsBySegment);
+        JsonParser.MergeMomentsIntoSegments(segments, momentsBySegment, videoId);
 
         // Set starting segment if not continuing
         if (currentSegment == null)

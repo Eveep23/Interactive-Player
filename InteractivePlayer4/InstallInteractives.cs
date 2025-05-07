@@ -4,7 +4,6 @@ using System.IO;
 using System.Linq;
 using System.Windows.Forms;
 using Newtonsoft.Json.Linq;
-using System.IO.Compression;
 using System.Threading;
 using System.ComponentModel;
 

@@ -34,9 +34,12 @@ public class Segment
     public string DefaultNext { get; set; }
     public bool IsStartingSegment { get; set; }
     public int ChoiceDisplayTimeMs { get; set; }
+    public int fakeChoiceDisplayTimeMs { get; set; }
     public int HideChoiceTimeMs { get; set; }
+    public int fakeHideChoiceTimeMs { get; set; }
     public ImpressionData ImpressionData { get; set; }
     public List<Choice> Choices { get; set; }
+    public List<Choice> fakechoices { get; set; }
     public int? DefaultChoiceIndex { get; set; }
     public TimeoutSegment TimeoutSegment { get; set; }
     public string LayoutType { get; set; }
@@ -135,9 +138,14 @@ public class Moment
 {
     public string Type { get; set; }
     public int? UIDisplayMS { get; set; }
+    public int? uiInteractionStartMS { get; set; }
+    public int? fakeuiInteractionStartMS { get; set; }
     public int? HideTimeoutUiMS { get; set; }
+    public int? uiHideMS { get; set; }
+    public int? fakeuiHideMS { get; set; }
     public ImpressionData ImpressionData { get; set; }
     public List<Choice> Choices { get; set; }
+    public List<Choice> fakechoices { get; set; }
     public int? DefaultChoiceIndex { get; set; }
     public TimeoutSegment TimeoutSegment { get; set; }
     public string LayoutType { get; set; }
@@ -145,6 +153,7 @@ public class Moment
     public List<List<Choice>> ChoiceSets { get; set; }
     public List<int> AnswerSequence { get; set; }
     public HeaderImage HeaderImage { get; set; }
+    public string id { get; set; }
 }
 public class HeaderImage
 {

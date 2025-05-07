@@ -145,7 +145,7 @@ public static class JsonParser
         }
     }
 
-    public static void MergeMomentsIntoSegments(Dictionary<string, Segment> segments, Dictionary<string, List<Moment>> momentsBySegment)
+    public static void MergeMomentsIntoSegments(Dictionary<string, Segment> segments, Dictionary<string, List<Moment>> momentsBySegment, string videoId)
     {
         foreach (var segment in segments.Values)
         {
@@ -155,11 +155,23 @@ public static class JsonParser
                 if (choiceMoment != null)
                 {
                     segment.Choices = choiceMoment.Choices ?? choiceMoment.ChoiceSets?.FirstOrDefault();
+                    segment.fakechoices = choiceMoment.fakechoices;
                     segment.ChoiceSets = choiceMoment.ChoiceSets;
                     segment.HeaderImage = choiceMoment.HeaderImage;
                     segment.AnswerSequence = choiceMoment.AnswerSequence;
-                    segment.ChoiceDisplayTimeMs = choiceMoment.UIDisplayMS ?? 0;
-                    segment.HideChoiceTimeMs = choiceMoment.HideTimeoutUiMS ?? segment.EndTimeMs;
+                    segment.Id = choiceMoment.id;
+
+                    if (videoId == "80988062")
+                    {
+                        segment.ChoiceDisplayTimeMs = choiceMoment.uiInteractionStartMS ?? 0;
+                        segment.HideChoiceTimeMs = choiceMoment.uiHideMS ?? segment.EndTimeMs;
+                    }
+                    else
+                    {
+                        segment.ChoiceDisplayTimeMs = choiceMoment.UIDisplayMS ?? 0;
+                        segment.HideChoiceTimeMs = choiceMoment.HideTimeoutUiMS ?? segment.EndTimeMs;
+                    }
+
                     segment.TimeoutSegment = choiceMoment.TimeoutSegment;
                     segment.LayoutType = choiceMoment.LayoutType;
                     segment.Notification = choiceMoment.Notification;
@@ -176,6 +188,14 @@ public static class JsonParser
                                 choice.SegmentId = choice.sg ?? choice.Id;
                             }
                         }
+                    }
+
+                    // Handle "fake" choices
+                    if (choiceMoment.fakechoices != null && choiceMoment.fakechoices.Count > 0)
+                    {
+                        segment.fakeChoiceDisplayTimeMs = choiceMoment.fakeuiInteractionStartMS ?? segment.ChoiceDisplayTimeMs;
+                        segment.fakeHideChoiceTimeMs = choiceMoment.fakeuiHideMS ?? segment.HideChoiceTimeMs;
+                        segment.fakechoices = choiceMoment.fakechoices;
                     }
                 }
                 else
@@ -216,6 +236,7 @@ public static class JsonParser
         mediaPlayer.Time = segment.StartTimeMs;
         string nextSegment = segment.DefaultNext;
         bool choiceDisplayed = false;
+        bool fakeChoiceDisplayed = false;
 
         string defaultButtonTexturePath = FindDefaultButtonTexture(movieFolder, segment.Choices ?? new List<Choice>());
 
@@ -304,6 +325,49 @@ public static class JsonParser
                         UIManager.ShowNotificationUI(notification.Text, movieFolder, videoId, displayDurationMs);
                     }
                 }
+            }
+
+            // Handle "fake" choices
+            if (!fakeChoiceDisplayed && segment.fakechoices != null && segment.fakechoices.Count > 0 &&
+                mediaPlayer.Time >= segment.fakeChoiceDisplayTimeMs && mediaPlayer.Time < segment.fakeHideChoiceTimeMs)
+            {
+                long fakeChoiceDurationMs = segment.fakeHideChoiceTimeMs - segment.fakeChoiceDisplayTimeMs;
+
+                Console.WriteLine($"Fake choice point reached for segment {segment.Id}");
+
+                var fakeChoiceTexts = segment.fakechoices.Select(fc => fc.Text).ToList();
+                var fakeButtonSprites = new List<Bitmap>();
+                var fakeButtonIcons = new List<Bitmap>();
+
+                foreach (var fakeChoice in segment.fakechoices)
+                {
+                    string buttonSpritePath = defaultButtonTexturePath;
+                    string iconPath = null;
+
+                    // Add button sprite
+                    if (!string.IsNullOrEmpty(buttonSpritePath) && File.Exists(buttonSpritePath))
+                    {
+                        fakeButtonSprites.Add(new Bitmap(buttonSpritePath));
+                    }
+                    else
+                    {
+                        fakeButtonSprites.Add(null);
+                    }
+
+                    // Add button icon
+                    if (!string.IsNullOrEmpty(iconPath) && File.Exists(iconPath))
+                    {
+                        fakeButtonIcons.Add(new Bitmap(iconPath));
+                    }
+                    else
+                    {
+                        fakeButtonIcons.Add(null);
+                    }
+                }
+
+                UIManager.ShowChoiceUI(segment.fakechoices, fakeButtonSprites, fakeButtonIcons, (int)fakeChoiceDurationMs, movieFolder, videoId, segment);
+
+                fakeChoiceDisplayed = true;
             }
 
             if (!choiceDisplayed && segment.Choices != null && segment.Choices.Count > 0 &&
@@ -659,7 +723,7 @@ public static class JsonParser
                             segmentStates = newSegmentStates ?? segmentStates;
 
                             // Merge moments into segments again
-                            MergeMomentsIntoSegments(segments, momentsBySegment);
+                            MergeMomentsIntoSegments(segments, momentsBySegment, videoId);
                         }
                     }
 
@@ -673,8 +737,7 @@ public static class JsonParser
                 choiceDisplayed = true;
             }
 
-            //KeyForm.InitializeKeyPressWindow(mediaPlayer, infoJsonFile, saveFilePath, segment);
-            HandleKeyPress(mediaPlayer, infoJsonFile, saveFilePath, segment);
+            KeyForm.InitializeKeyPressWindow(mediaPlayer, infoJsonFile, saveFilePath, segment);
         }
 
         // Check segment groups for the next segment
@@ -840,56 +903,6 @@ public static class JsonParser
         {
             Console.WriteLine($"Error downloading sprite from {url}: {ex.Message}");
             return null;
-        }
-    }
-
-    private static void HandleKeyPress(MediaPlayer mediaPlayer, string infoJsonFile, string saveFilePath, Segment currentSegment)
-    {
-        if (!Console.KeyAvailable) return;
-
-        var key = Console.ReadKey(intercept: true).Key;
-
-        switch (key)
-        {
-            case ConsoleKey.Spacebar:
-                if (mediaPlayer.IsPlaying)
-                {
-                    mediaPlayer.Pause();
-                    Console.WriteLine("Paused. Press Spacebar to resume.");
-                }
-                else
-                {
-                    mediaPlayer.Play();
-                    Console.WriteLine("Resumed. Press Spacebar to pause.");
-                }
-                break;
-
-            case ConsoleKey.L:
-                Console.WriteLine("Switching audio track...");
-                AudioManager.ListAndSelectAudioTrack(mediaPlayer, mediaPlayer.Media);
-                break;
-
-            case ConsoleKey.S:
-                Console.WriteLine("Switching subtitles...");
-                SubtitleManager.ListAndSelectSubtitleTrack(mediaPlayer, mediaPlayer.Media);
-                break;
-
-            case ConsoleKey.C:
-                Console.WriteLine("Checking preconditions...");
-                PreconditionChecker.CheckPreconditions(infoJsonFile, saveFilePath);
-                break;
-
-            case ConsoleKey.RightArrow:
-                SkipTime(mediaPlayer, currentSegment, 10000);
-                break;
-
-            case ConsoleKey.LeftArrow:
-                SkipTime(mediaPlayer, currentSegment, -10000);
-                break;
-
-            default:
-                // No action for other keys
-                break;
         }
     }
 

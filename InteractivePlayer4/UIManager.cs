@@ -2105,7 +2105,7 @@ public static class UIManager
                         heightFactor = 0.2;
                         break;
                     case "80988062":
-                        heightFactor = 0.24;
+                        heightFactor = 0.20;
                         break;
                     case "81271335":
                         if (segment.LayoutType == "l1")
@@ -2118,7 +2118,7 @@ public static class UIManager
                         }
                         break;
                     case "81131714":
-                        heightFactor = 0.24;
+                        heightFactor = 0.20;
                         break;
                     case "80151644":
                         heightFactor = 0.3;
