@@ -30,8 +30,8 @@ To install an Interactive, all you need is the internal video. In the install me
 
 * Minecraft Story Mode (Ep.1-5)
 * Black Mirror: Bandersnatch
-* Buddy Thunderstruck: The Maybe Pile
 * Cat Burglar
+* Buddy Thunderstruck: The Maybe Pile
 * Headspace: Unwind Your Mind 
 * Escape the Undertaker 
 * Carmen Sandiego: To Steal or Not to Steal 
