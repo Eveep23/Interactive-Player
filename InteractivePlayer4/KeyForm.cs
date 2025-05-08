@@ -1,8 +1,9 @@
-using System;
-using System.Windows.Forms;
 using LibVLCSharp.Shared;
+using System;
+using System.Collections.Generic;
 using System.Drawing;
 using System.IO;
+using System.Windows.Forms;
 
 public static class KeyForm
 {
@@ -10,7 +11,7 @@ public static class KeyForm
 
     private static System.Threading.Thread keyPressThread;
 
-    public static void InitializeKeyPressWindow(MediaPlayer mediaPlayer, string infoJsonFile, string saveFilePath, Segment currentSegment)
+    public static void InitializeKeyPressWindow(MediaPlayer mediaPlayer, string infoJsonFile, string saveFilePath, Segment currentSegment, Dictionary<string, Segment> segments)
     {
         if (keyPressForm != null && !keyPressForm.IsDisposed)
         {
@@ -25,7 +26,7 @@ public static class KeyForm
 
         keyPressForm = new Form
         {
-            Text = "Key Listener",
+            Text = "Interactive Player",
             Width = 400,
             Height = 250,
             ShowInTaskbar = true,
@@ -106,7 +107,7 @@ public static class KeyForm
         };
         skipBackButton.Click += (sender, e) =>
         {
-            SkipTime(mediaPlayer, currentSegment, -10000);
+            SkipTime(mediaPlayer, ref currentSegment, segments, - 10000);
         };
 
         // Create a button for Pause/Play
@@ -203,7 +204,7 @@ public static class KeyForm
         };
         skipForwardButton.Click += (sender, e) =>
         {
-            SkipTime(mediaPlayer, currentSegment, 10000);
+            SkipTime(mediaPlayer, ref currentSegment, segments, 10000);
         };
 
         FlowLayoutPanel buttonLayout = new FlowLayoutPanel
@@ -233,7 +234,19 @@ public static class KeyForm
         keyPressForm.KeyPreview = true;
         keyPressForm.KeyDown += (sender, e) =>
         {
-            HandleKeyPress(e.KeyCode, mediaPlayer, infoJsonFile, saveFilePath, currentSegment);
+            HandleKeyPress(e.KeyCode, mediaPlayer, infoJsonFile, saveFilePath, currentSegment, segments);
+        };
+
+        keyPressForm.FormClosed += (sender, e) =>
+        {
+            mediaPlayer?.Dispose();
+
+            foreach (Form form in Application.OpenForms)
+            {
+                form.Close();
+            }
+
+            Application.Exit();
         };
 
         if (keyPressThread == null || !keyPressThread.IsAlive)
@@ -248,7 +261,7 @@ public static class KeyForm
     }
 
 
-    private static void HandleKeyPress(Keys key, MediaPlayer mediaPlayer, string infoJsonFile, string saveFilePath, Segment currentSegment)
+    private static void HandleKeyPress(Keys key, MediaPlayer mediaPlayer, string infoJsonFile, string saveFilePath, Segment currentSegment, Dictionary<string, Segment> segments)
     {
         switch (key)
         {
@@ -281,11 +294,11 @@ public static class KeyForm
                 break;
             */
             case Keys.Right:
-                SkipTime(mediaPlayer, currentSegment, 10000);
+                SkipTime(mediaPlayer, ref currentSegment, segments, 10000);
                 break;
 
             case Keys.Left:
-                SkipTime(mediaPlayer, currentSegment, -10000);
+                SkipTime(mediaPlayer, ref currentSegment, segments, - 10000);
                 break;
 
             default:
@@ -294,10 +307,27 @@ public static class KeyForm
         }
     }
 
-    private static void SkipTime(MediaPlayer mediaPlayer, Segment currentSegment, int offsetMs)
+    private static void SkipTime(MediaPlayer mediaPlayer, ref Segment currentSegment, Dictionary<string, Segment> segments, int offsetMs)
     {
         long newTime = mediaPlayer.Time + offsetMs;
 
+        // Ensure the new time is within the bounds of the video
+        if (newTime < 0)
+        {
+            newTime = 0;
+        }
+
+        // Find the segment that corresponds to the new time
+        foreach (var segment in segments.Values)
+        {
+            if (newTime >= segment.StartTimeMs && newTime <= segment.EndTimeMs)
+            {
+                currentSegment = segment;
+                break;
+            }
+        }
+
+        // Ensure the new time is within the bounds of the current segment
         if (newTime < currentSegment.StartTimeMs)
         {
             newTime = currentSegment.StartTimeMs;
@@ -307,6 +337,7 @@ public static class KeyForm
             newTime = currentSegment.EndTimeMs;
         }
 
+        // Prevent skipping into choice points
         if (currentSegment.Choices != null && currentSegment.Choices.Count > 0)
         {
             if (newTime >= currentSegment.ChoiceDisplayTimeMs && newTime <= currentSegment.HideChoiceTimeMs)
@@ -316,7 +347,16 @@ public static class KeyForm
             }
         }
 
+        if (currentSegment.fakechoices != null && currentSegment.fakechoices.Count > 0)
+        {
+            if (newTime >= currentSegment.fakeChoiceDisplayTimeMs && newTime <= currentSegment.fakeHideChoiceTimeMs)
+            {
+                Console.WriteLine("Cannot skip into a fake choice point.");
+                return;
+            }
+        }
+
         mediaPlayer.Time = newTime;
-        Console.WriteLine($"Skipped to {mediaPlayer.Time} ms.");
+        Console.WriteLine($"Skipped to {mediaPlayer.Time} ms in segment {currentSegment.Id}.");
     }
 }

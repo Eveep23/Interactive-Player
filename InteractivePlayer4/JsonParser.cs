@@ -265,22 +265,29 @@ public static class JsonParser
         }
 
         // Apply segment state changes
-        if (segmentStates.TryGetValue(segment.Id, out List<SegmentState> states))
+        if (segmentStates != null && !string.IsNullOrEmpty(segment.Id))
         {
-            foreach (var state in states)
+            if (segmentStates.TryGetValue(segment.Id, out List<SegmentState> states))
             {
-                if (string.IsNullOrEmpty(state.PreconditionId) || PreconditionChecker.CheckPrecondition(state.PreconditionId, localGlobalState, localPersistentState, infoJsonFile))
+                foreach (var state in states)
                 {
-                    if (state.Data.Persistent != null)
+                    if (string.IsNullOrEmpty(state.PreconditionId) || PreconditionChecker.CheckPrecondition(state.PreconditionId, localGlobalState, localPersistentState, infoJsonFile))
                     {
-                        foreach (var kvp in state.Data.Persistent)
+                        if (state.Data.Persistent != null)
                         {
-                            localPersistentState[kvp.Key] = kvp.Value;
-                            Console.WriteLine($"Persistent state changed: {kvp.Key} = {kvp.Value}");
+                            foreach (var kvp in state.Data.Persistent)
+                            {
+                                localPersistentState[kvp.Key] = kvp.Value;
+                                Console.WriteLine($"Persistent state changed: {kvp.Key} = {kvp.Value}");
+                            }
                         }
                     }
                 }
             }
+        }
+        else
+        {
+            Console.WriteLine($"Segment state not found for segment ID: {segment?.Id ?? "null"}");
         }
 
         // Apply segment impressionData changes
@@ -727,6 +734,10 @@ public static class JsonParser
                         }
                     }
 
+                    if (videoId == "80988062" && segment.Choices != null && segment.Choices.Any(choice => choice.Text?.Equals("GO BACK", StringComparison.OrdinalIgnoreCase) == true))
+                    {
+                        break;
+                    }
 
                     if (videoId == "10000001" || videoId == "10000003" || videoId == "81251335" || videoId == "80994695" || videoId == "80135585" || videoId == "81328829" || videoId == "80227804" || videoId == "80227805" || videoId == "80227800" || videoId == "80227801" || videoId == "80227802" || videoId == "80227803" || videoId == "80227699" || videoId == "80227698" || videoId == "81319137" || videoId == "81205738" || videoId == "81205737" || videoId == "80227815" || videoId == "81250260" || videoId == "81250261" || videoId == "81250262" || videoId == "81250263" || videoId == "81250264" || videoId == "81250265" || videoId == "81250266" || videoId == "81250267")
                     {
@@ -737,11 +748,11 @@ public static class JsonParser
                 choiceDisplayed = true;
             }
 
-            KeyForm.InitializeKeyPressWindow(mediaPlayer, infoJsonFile, saveFilePath, segment);
+            KeyForm.InitializeKeyPressWindow(mediaPlayer, infoJsonFile, saveFilePath, segment, segments);
         }
 
         // Check segment groups for the next segment
-        if (segmentGroups.TryGetValue(segment.Id, out List<SegmentGroup> group))
+        if (!string.IsNullOrEmpty(segment?.Id) && segmentGroups.TryGetValue(segment.Id, out List<SegmentGroup> group))
         {
             foreach (var item in group)
             {
@@ -751,6 +762,10 @@ public static class JsonParser
                     break;
                 }
             }
+        }
+        else
+        {
+            Console.WriteLine($"Segment ID is null or not found in segmentGroups. Segment: {segment?.Id ?? "null"}");
         }
 
         // Handle segment group (sg) if nextSegment is a segment group and no SegmentId is listed

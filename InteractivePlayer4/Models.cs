@@ -25,6 +25,7 @@ public class Settings
     public string AudioOutput { get; set; }
     public bool CustomStoryChangingNotification { get; set; }
     public bool OptimizeInteractives { get; set; }
+    public bool EnableConsole { get; set; }
 }
 public class Segment
 {

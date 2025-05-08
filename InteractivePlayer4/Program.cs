@@ -1,18 +1,38 @@
-﻿using System;
+﻿using LibVLCSharp.Shared;
+using Newtonsoft.Json;
+using Newtonsoft.Json.Linq;
+using System;
 using System.Collections.Generic;
 using System.IO;
 using System.Linq;
-using LibVLCSharp.Shared;
-using Newtonsoft.Json;
-using Newtonsoft.Json.Linq;
-using System.Windows.Forms;
+using System.Runtime.InteropServices;
 using System.Threading;
+using System.Windows.Forms;
 
 class Program
 {
     static void Main(string[] args)
     {
         Core.Initialize();
+
+        string configFilePath = Path.Combine(Directory.GetCurrentDirectory(), "config.json");
+        Settings settings = File.Exists(configFilePath)
+            ? JsonConvert.DeserializeObject<Settings>(File.ReadAllText(configFilePath))
+            : new Settings { EnableConsole = true }; // Default to true if the setting is missing
+
+        // Show or hide the console window based on the setting
+        if (settings.EnableConsole)
+        {
+            AllocConsole(); // Allocate a console window
+        }
+        else
+        {
+            IntPtr consoleWindow = GetConsoleWindow();
+            if (consoleWindow != IntPtr.Zero)
+            {
+                FreeConsole(); // Free the console window if it exists
+            }
+        }
 
         string movieFolder = null;
 
@@ -190,4 +210,19 @@ class Program
 
         return duration;
     }
+
+    [DllImport("kernel32.dll", SetLastError = true)]
+    private static extern bool AllocConsole();
+
+    [DllImport("kernel32.dll", SetLastError = true)]
+    private static extern bool FreeConsole();
+
+    [DllImport("kernel32.dll")]
+    private static extern IntPtr GetConsoleWindow();
+
+    [DllImport("user32.dll")]
+    private static extern bool ShowWindow(IntPtr hWnd, int nCmdShow);
+
+    private const int SW_HIDE = 0;
+    private const int SW_SHOW = 5;
 }

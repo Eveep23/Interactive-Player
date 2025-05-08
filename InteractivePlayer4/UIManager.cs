@@ -232,9 +232,16 @@ public static class UIManager
             MaximizeBox = false,
             MinimizeBox = false,
             TopMost = true,
+            ShowInTaskbar = false,
             Width = formWidth,
             Height = 450,
             Opacity = 0
+        };
+
+        choiceForm.Load += (sender, e) =>
+        {
+            int exStyle = GetWindowLong(choiceForm.Handle, GWL_EXSTYLE);
+            SetWindowLong(choiceForm.Handle, GWL_EXSTYLE, exStyle | WS_EX_TOOLWINDOW);
         };
 
         AlignWithVideoPlayer(choiceForm, videoId, segment);
@@ -472,7 +479,7 @@ public static class UIManager
                     UseVisualStyleBackColor = false,
                     TabStop = false,
                     Font = new Font("Arial", (float)(videoId == "10000001" ? 28 * scaleFactor : 22 * scaleFactor), videoId == "10000001" ? FontStyle.Regular : FontStyle.Bold),
-                    ForeColor = (videoId == "81328829") ? Color.Black : // Set text color to black for Headspace
+                    ForeColor = (videoId == "81328829") ? Color.Black :
                                 (new[] { "80227804", "80227805", "80227800", "80227801", "80227802", "80227803", "80227699", "80227698" }.Contains(videoId)) ? ColorTranslator.FromHtml("#27170a") :
                                 (videoId == "81131714" ? ColorTranslator.FromHtml("#dc007f") : Color.White),
                     TextAlign = (new[] { "81004016", "81205738", "81108751", "80151644", "80227804", "80227805", "80227800", "80227801", "80227802", "80227803", "80227699", "80227698", "81319137" }.Contains(videoId)) ? ContentAlignment.MiddleLeft : ContentAlignment.MiddleCenter,
@@ -590,6 +597,11 @@ public static class UIManager
                         {
                             var selectPlayer = new MediaPlayer(new Media(libVLC, selectSoundPath, FromType.FromPath));
                             selectPlayer.Play();
+                        }
+
+                        if (videoId == "80988062" && choices.Any(choice => choice.Text?.Equals("GO BACK", StringComparison.OrdinalIgnoreCase) == true))
+                        {
+                            choiceForm.Close(); // Close the form immediately after a choice is made
                         }
 
                         if (videoId == "10000001" || videoId == "10000003" || videoId == "81251335" || videoId == "80994695" || videoId == "80135585" || videoId == "81328829" || videoId == "81205738" || videoId == "80227804" || videoId == "80227805" || videoId == "80227800" || videoId == "80227801" || videoId == "80227802" || videoId == "80227803" || videoId == "80227699" || videoId == "80227698" || videoId == "81319137" || videoId == "81205737" || videoId == "80227815" || videoId == "81250260" || videoId == "81250261" || videoId == "81250262" || videoId == "81250263" || videoId == "81250264" || videoId == "81250265" || videoId == "81250266" || videoId == "81250267")
@@ -1977,7 +1989,7 @@ public static class UIManager
                 drawingPanel.Invalidate();
 
                 // Handle controller input
-                HandleControllerInput(ref selectedIndex, buttons, buttonSprites, ref inputCaptured, ref selectedSegmentId, choiceForm, selectSoundPath, hoverSoundPath, libVLC, videoId);
+                HandleControllerInput(ref selectedIndex, buttons, buttonSprites, ref inputCaptured, ref selectedSegmentId, choiceForm, selectSoundPath, hoverSoundPath, libVLC, videoId, choices);
 
                 await Task.Delay(16); // Update approximately every 16ms (~60 FPS)
             }
@@ -2285,6 +2297,7 @@ public static class UIManager
 
     private const int GWL_EXSTYLE = -20;
     private const int WS_EX_LAYERED = 0x00080000;
+    private const int WS_EX_TOOLWINDOW = 0x00000080;
 
     private const int GWL_HWNDPARENT = -8;
 
@@ -2312,7 +2325,7 @@ public static class UIManager
             return null;
         }
     }
-    private static void HandleControllerInput(ref int selectedIndex, List<Button> buttons, List<Bitmap> buttonSprites, ref bool inputCaptured, ref string selectedSegmentId, Form choiceForm, string selectSoundPath, string hoverSoundPath, LibVLC libVLC, string videoId)
+    private static void HandleControllerInput(ref int selectedIndex, List<Button> buttons, List<Bitmap> buttonSprites, ref bool inputCaptured, ref string selectedSegmentId, Form choiceForm, string selectSoundPath, string hoverSoundPath, LibVLC libVLC, string videoId, List<Choice> choices)
     {
         var controller = new Controller(UserIndex.One);
         if (!controller.IsConnected)
@@ -2389,6 +2402,11 @@ public static class UIManager
             // Big rumble for selecting a choice
             controller.SetVibration(new Vibration { LeftMotorSpeed = 65535, RightMotorSpeed = 65535 });
             Task.Delay(300).ContinueWith(_ => controller.SetVibration(new Vibration())); // Stop rumble after 300ms
+
+            if (videoId == "80988062" && choices.Any(choice => choice.Text?.Equals("GO BACK", StringComparison.OrdinalIgnoreCase) == true))
+            {
+                choiceForm.Close(); // Close the form immediately after a choice is made
+            }
 
             if (videoId == "10000001" || videoId == "10000003" || videoId == "81251335" || videoId == "80994695" || videoId == "80135585" || videoId == "81328829" || videoId == "81205738" || videoId == "80227804" || videoId == "80227805" || videoId == "80227800" || videoId == "80227801" || videoId == "80227802" || videoId == "80227803" || videoId == "80227699" || videoId == "80227698" || videoId == "81319137" || videoId == "81205737" || videoId == "80227815" || videoId == "81250260" || videoId == "81250261" || videoId == "81250262" || videoId == "81250263" || videoId == "81250264" || videoId == "81250265" || videoId == "81250266" || videoId == "81250267")
             {
