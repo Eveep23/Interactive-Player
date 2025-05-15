@@ -30,8 +30,15 @@ public static class UIManager
             MaximizeBox = false,
             MinimizeBox = false,
             TopMost = true,
+            ShowInTaskbar = false,
             Width = formWidth,
             Height = 200
+        };
+
+        notificationForm.Load += (sender, e) =>
+        {
+            int exStyle = GetWindowLong(notificationForm.Handle, GWL_EXSTYLE);
+            SetWindowLong(notificationForm.Handle, GWL_EXSTYLE, exStyle | WS_EX_TOOLWINDOW);
         };
 
         AlignNotificationWithVideoPlayer(notificationForm, videoId);
@@ -182,19 +189,15 @@ public static class UIManager
         {
             GetWindowRect(videoPlayerHandle, out RECT rect);
 
-            // Find the width and height of the video player window
             int playerWidth = rect.Right - rect.Left;
             int playerHeight = rect.Bottom - rect.Top;
 
-            // Set the notificationForm width to the player width
             notificationForm.Width = playerWidth;
 
-            // Set the notificationForm height to a fixed value
-            notificationForm.Height = (int)(playerHeight * 0.10); // Adjust height factor as needed
+            notificationForm.Height = (int)(playerHeight * 0.10);
 
-            // Center the notification window and align it with the top, adding a top margin
             int centerX = rect.Left;
-            int topY = rect.Top + 30; // Add a top margin of 30 pixels
+            int topY = rect.Top + 30;
 
             notificationForm.Location = new System.Drawing.Point(centerX, topY);
             SetWindowLong(notificationForm.Handle, GWL_HWNDPARENT, videoPlayerHandle);
@@ -321,6 +324,38 @@ public static class UIManager
             };
 
             animationTimer.Start();
+
+            choiceForm.FormClosing += (sender, e) =>
+            {
+                // Only animate if not already at the bottom
+                if (choiceForm.Location.Y == targetY)
+                {
+                    e.Cancel = true; // Cancel the close, we'll close after animation
+                    int closeElapsed = 0;
+                    int closeDuration = 750;
+                    int startY = choiceForm.Location.Y;
+                    int endY = targetY + 750;
+
+                    System.Windows.Forms.Timer closeTimer = new System.Windows.Forms.Timer { Interval = 10 };
+                    closeTimer.Tick += (s, args) =>
+                    {
+                        closeElapsed += closeTimer.Interval;
+                        double closeProgress = Math.Min(1.0, (double)closeElapsed / closeDuration);
+                        double closeEased = EaseInQuad(closeProgress);
+
+                        int newCloseY = (int)(startY + (endY - startY) * closeEased);
+                        choiceForm.Location = new System.Drawing.Point(choiceForm.Location.X, newCloseY);
+
+                        if (closeProgress >= 1.0)
+                        {
+                            closeTimer.Stop();
+                            choiceForm.FormClosing -= null; // Remove handler to avoid recursion
+                            choiceForm.Close(); // Now close for real
+                        }
+                    };
+                    closeTimer.Start();
+                }
+            };
         }
 
         // Load settings
@@ -481,7 +516,7 @@ public static class UIManager
                     Font = new Font("Arial", (float)(videoId == "10000001" ? 28 * scaleFactor : 22 * scaleFactor), videoId == "10000001" ? FontStyle.Regular : FontStyle.Bold),
                     ForeColor = (videoId == "81328829") ? Color.Black :
                                 (new[] { "80227804", "80227805", "80227800", "80227801", "80227802", "80227803", "80227699", "80227698" }.Contains(videoId)) ? ColorTranslator.FromHtml("#27170a") :
-                                (videoId == "81131714" ? ColorTranslator.FromHtml("#dc007f") : Color.White),
+                                (videoId == "81131714" ? ColorTranslator.FromHtml("#7705ad") : Color.White),
                     TextAlign = (new[] { "81004016", "81205738", "81108751", "80151644", "80227804", "80227805", "80227800", "80227801", "80227802", "80227803", "80227699", "80227698", "81319137" }.Contains(videoId)) ? ContentAlignment.MiddleLeft : ContentAlignment.MiddleCenter,
                     Padding = (new[] { "81004016", "81205738", "81108751", "80151644", "80227804", "80227805", "80227800", "80227801", "80227802", "80227803", "80227699", "80227698", "81319137" }.Contains(videoId)) ? new Padding((int)(buttonWidth * 0.4), 0, 0, 0) : new Padding(0)
                 };
@@ -495,7 +530,7 @@ public static class UIManager
                 {
                     if (button.Enabled)
                     {
-                        if (videoId == "10000001")
+                        if (videoId == "10000001" || videoId == "80988062")
                         {
                             EaseIntoFocusedSprite(button, defaultSprite, focusedSprite, 65);
                         }
@@ -503,6 +538,12 @@ public static class UIManager
                         {
                             button.BackgroundImage = new Bitmap(focusedSprite, new Size(buttonWidth, buttonHeight));
                         }
+
+                        if (videoId == "81131714")
+                        {
+                            button.ForeColor = ColorTranslator.FromHtml("#dc007f");
+                        }
+
                         if (File.Exists(hoverSoundPath))
                         {
                             var hoverPlayer = new MediaPlayer(new Media(libVLC, hoverSoundPath, FromType.FromPath));
@@ -521,7 +562,7 @@ public static class UIManager
                 {
                     if (button.Enabled)
                     {
-                        if (videoId == "10000001")
+                        if (videoId == "10000001" || videoId == "80988062")
                         {
                             EaseOutToDefaultSprite(button, defaultSprite, focusedSprite, 65);
                         }
@@ -529,6 +570,12 @@ public static class UIManager
                         {
                             button.BackgroundImage = new Bitmap(defaultSprite, new Size(buttonWidth, buttonHeight));
                         }
+
+                        if (videoId == "81131714")
+                        {
+                            button.ForeColor = ColorTranslator.FromHtml("#7705ad");
+                        }
+
                         tooltipPictureBox.Visible = false; // Hide the tooltip
                     }
                 };
@@ -599,12 +646,7 @@ public static class UIManager
                             selectPlayer.Play();
                         }
 
-                        if (videoId == "80988062" && choices.Any(choice => choice.Text?.Equals("GO BACK", StringComparison.OrdinalIgnoreCase) == true))
-                        {
-                            choiceForm.Close(); // Close the form immediately after a choice is made
-                        }
-
-                        if (videoId == "10000001" || videoId == "10000003" || videoId == "81251335" || videoId == "80994695" || videoId == "80135585" || videoId == "81328829" || videoId == "81205738" || videoId == "80227804" || videoId == "80227805" || videoId == "80227800" || videoId == "80227801" || videoId == "80227802" || videoId == "80227803" || videoId == "80227699" || videoId == "80227698" || videoId == "81319137" || videoId == "81205737" || videoId == "80227815" || videoId == "81250260" || videoId == "81250261" || videoId == "81250262" || videoId == "81250263" || videoId == "81250264" || videoId == "81250265" || videoId == "81250266" || videoId == "81250267")
+                        if (videoId == "80988062" && choices.Any(choice => choice.Text?.Equals("GO BACK", StringComparison.OrdinalIgnoreCase) == true) || videoId == "80988062" && choices.Any(choice => choice.Text?.Equals("EXIT TO CREDITS", StringComparison.OrdinalIgnoreCase) == true) || videoId == "81131714" && segment.LayoutType == "l6" || videoId == "10000001" || videoId == "10000003" || videoId == "81251335" || videoId == "80994695" || videoId == "80135585" || videoId == "81328829" || videoId == "81205738" || videoId == "80227804" || videoId == "80227805" || videoId == "80227800" || videoId == "80227801" || videoId == "80227802" || videoId == "80227803" || videoId == "80227699" || videoId == "80227698" || videoId == "81319137" || videoId == "81205737" || videoId == "80227815" || videoId == "81250260" || videoId == "81250261" || videoId == "81250262" || videoId == "81250263" || videoId == "81250264" || videoId == "81250265" || videoId == "81250266" || videoId == "81250267")
                         {
                             choiceForm.Close(); // Close the form immediately after a choice is made
                         }
@@ -1685,6 +1727,15 @@ public static class UIManager
             timerTopPath = null;
             webPath = null;
         }
+        else if (videoId == "10000003" && segment.LayoutType == "l1")
+        {
+            timerFillPath = FindTexturePath(movieFolder, new[] { "black_timer_fill_2x.png" });
+            timerCapLPath = FindTexturePath(movieFolder, new[] { "black_timer_capL_2x.png" });
+            timerCapRPath = FindTexturePath(movieFolder, new[] { "black_timer_capR_2x.png" });
+            timerBottomPath = FindTexturePath(movieFolder, new[] { "black_timer_bottom_2x.png" });
+            timerTopPath = FindTexturePath(movieFolder, new[] { "black_timer_top_2x.png" });
+            webPath = FindTexturePath(movieFolder, new[] { "black_web_2x.png" });
+        }
         else if (videoId == "81328829" && segment.LayoutType == "l0")
         {
             timerFillPath = FindTexturePath(movieFolder, new[] { "timer_neutral_fill_2x.png" });
@@ -1768,9 +1819,9 @@ public static class UIManager
                 double easedProgress = EaseOutQuad(progress);
                 currentY = (int)(timerBarY + (choiceForm.Height - timerBarY) * (1 - easedProgress));
             }
-            else if (new[] { "80227815", "81250260", "81250261", "81250262", "81250263", "81250264", "81250265", "81250266", "81250267" }.Contains(videoId))
+            else if (new[] { "80227815", "81250260", "81250261", "81250262", "81250263", "81250264", "81250265", "81250266", "81250267", "81175265" }.Contains(videoId))
             {
-                // Calculate the eased Y position for the specified video IDs
+                // Calculate the eased Y position
                 double progress = Math.Min(1.0, (double)stopwatch.ElapsedMilliseconds / 400);
                 double easedProgress = EaseOutQuad(progress);
                 currentY = (int)(timerBarY + (choiceForm.Height - timerBarY) * (1 - easedProgress));
@@ -1966,7 +2017,7 @@ public static class UIManager
             choiceForm.Invoke(new Action(() => choiceForm.Close()));
         });
 
-        if (new[] { "10000001", "80227815", "81250260", "81250261", "81250262", "81250263", "81250264", "81250265", "81250266", "81250267" }.Contains(videoId))
+        if (new[] { "10000001", "80227815", "81250260", "81250261", "81250262", "81250263", "81250264", "81250265", "81250266", "81250267", "80227815", "81175265" }.Contains(videoId))
         {
             Task.Run(async () =>
             {
@@ -1989,7 +2040,7 @@ public static class UIManager
                 drawingPanel.Invalidate();
 
                 // Handle controller input
-                HandleControllerInput(ref selectedIndex, buttons, buttonSprites, ref inputCaptured, ref selectedSegmentId, choiceForm, selectSoundPath, hoverSoundPath, libVLC, videoId, choices);
+                HandleControllerInput(ref selectedIndex, buttons, buttonSprites, ref inputCaptured, ref selectedSegmentId, choiceForm, selectSoundPath, hoverSoundPath, libVLC, videoId, choices, segment);
 
                 await Task.Delay(16); // Update approximately every 16ms (~60 FPS)
             }
@@ -2012,42 +2063,35 @@ public static class UIManager
         visibilityTimer.Start();
 
 
-        if (!(videoId == "81271335" && segment.LayoutType == "l1"))
-        { }
-        else
+        Task.Run(async () =>
         {
-            Task.Run(async () =>
+            while (stopwatch.ElapsedMilliseconds < timeLimitMs)
             {
-                while (stopwatch.ElapsedMilliseconds < timeLimitMs)
+                await Task.Delay(16);
+            }
+
+            if (!inputCaptured)
+            {
+                // If a timeout segment is specified, use it
+                if (segment.TimeoutSegment != null && !string.IsNullOrEmpty(segment.TimeoutSegment.SegmentId))
                 {
-                    await Task.Delay(16);
+                    selectedSegmentId = segment.TimeoutSegment.SegmentId;
+                    Console.WriteLine($"No choice made. Using timeout segment: {selectedSegmentId}");
+                }
+                // Otherwise, use the default choice if available
+                else if (segment.DefaultChoiceIndex.HasValue && segment.DefaultChoiceIndex.Value >= 0 && segment.DefaultChoiceIndex.Value < choices.Count)
+                {
+                    selectedSegmentId = choices[segment.DefaultChoiceIndex.Value].SegmentId;
+                    Console.WriteLine($"No choice made. Defaulting to the specified choice: {selectedSegmentId}");
+                }
+                else
+                {
+                    Console.WriteLine("No choice made. No default choice or timeout segment specified.");
                 }
 
-                if (!inputCaptured)
-                {
-                    // If no choice was made, select the default choice
-                    if (segment.DefaultChoiceIndex.HasValue && segment.DefaultChoiceIndex.Value >= 0 && segment.DefaultChoiceIndex.Value < choices.Count)
-                    {
-                        if (segment.TimeoutSegment != null)
-                        {
-                            selectedSegmentId = IsControllerConnected() ? "Fallback_Tutorial_Controller" : "Fallback_Tutorial_Site";
-                        }
-                        else
-                        {
-                            selectedSegmentId = choices[segment.DefaultChoiceIndex.Value].SegmentId;
-                        }
-
-                        Console.WriteLine($"No choice made. Defaulting to the specified choice.");
-                    }
-                    else
-                    {
-                        Console.WriteLine("No choice made. No default choice specified.");
-                    }
-
-                    choiceForm.Invoke(new Action(() => choiceForm.Close()));
-                }
-            });
-        }
+                choiceForm.Invoke(new Action(() => choiceForm.Close()));
+            }
+        });
 
         choiceForm.ShowDialog();
 
@@ -2109,6 +2153,9 @@ public static class UIManager
                 {
                     case "81004016":
                         heightFactor = 0.24;
+                        break;
+                    case "81481556":
+                        heightFactor = 0.40;
                         break;
                     case "81328829":
                         heightFactor = 0.23;
@@ -2325,7 +2372,7 @@ public static class UIManager
             return null;
         }
     }
-    private static void HandleControllerInput(ref int selectedIndex, List<Button> buttons, List<Bitmap> buttonSprites, ref bool inputCaptured, ref string selectedSegmentId, Form choiceForm, string selectSoundPath, string hoverSoundPath, LibVLC libVLC, string videoId, List<Choice> choices)
+    private static void HandleControllerInput(ref int selectedIndex, List<Button> buttons, List<Bitmap> buttonSprites, ref bool inputCaptured, ref string selectedSegmentId, Form choiceForm, string selectSoundPath, string hoverSoundPath, LibVLC libVLC, string videoId, List<Choice> choices, Segment segment)
     {
         var controller = new Controller(UserIndex.One);
         if (!controller.IsConnected)
@@ -2403,12 +2450,7 @@ public static class UIManager
             controller.SetVibration(new Vibration { LeftMotorSpeed = 65535, RightMotorSpeed = 65535 });
             Task.Delay(300).ContinueWith(_ => controller.SetVibration(new Vibration())); // Stop rumble after 300ms
 
-            if (videoId == "80988062" && choices.Any(choice => choice.Text?.Equals("GO BACK", StringComparison.OrdinalIgnoreCase) == true))
-            {
-                choiceForm.Close(); // Close the form immediately after a choice is made
-            }
-
-            if (videoId == "10000001" || videoId == "10000003" || videoId == "81251335" || videoId == "80994695" || videoId == "80135585" || videoId == "81328829" || videoId == "81205738" || videoId == "80227804" || videoId == "80227805" || videoId == "80227800" || videoId == "80227801" || videoId == "80227802" || videoId == "80227803" || videoId == "80227699" || videoId == "80227698" || videoId == "81319137" || videoId == "81205737" || videoId == "80227815" || videoId == "81250260" || videoId == "81250261" || videoId == "81250262" || videoId == "81250263" || videoId == "81250264" || videoId == "81250265" || videoId == "81250266" || videoId == "81250267")
+            if (videoId == "80988062" && choices.Any(choice => choice.Text?.Equals("GO BACK", StringComparison.OrdinalIgnoreCase) == true) || videoId == "80988062" && choices.Any(choice => choice.Text?.Equals("EXIT TO CREDITS", StringComparison.OrdinalIgnoreCase) == true) || videoId == "81131714" && segment.LayoutType == "l6" || videoId == "10000001" || videoId == "10000003" || videoId == "81251335" || videoId == "80994695" || videoId == "80135585" || videoId == "81328829" || videoId == "81205738" || videoId == "80227804" || videoId == "80227805" || videoId == "80227800" || videoId == "80227801" || videoId == "80227802" || videoId == "80227803" || videoId == "80227699" || videoId == "80227698" || videoId == "81319137" || videoId == "81205737" || videoId == "80227815" || videoId == "81250260" || videoId == "81250261" || videoId == "81250262" || videoId == "81250263" || videoId == "81250264" || videoId == "81250265" || videoId == "81250266" || videoId == "81250267")
             {
                 choiceForm.Close(); // Close the form immediately after a choice is made
             }
@@ -2473,6 +2515,11 @@ public static class UIManager
     private static double EaseOutQuad(double t)
     {
         return t * (2 - t);
+    }
+
+    private static double EaseInQuad(double t)
+    {
+        return t * t;
     }
 
     private static double EaseOutElastic(double t)

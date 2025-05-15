@@ -147,6 +147,11 @@ class Program
             // Start playing the video
             mediaPlayer.Play();
 
+            if (segments.TryGetValue(currentSegment, out Segment seg))
+            {
+                mediaPlayer.Time = seg.StartTimeMs + 22;
+            }
+
             while (!string.IsNullOrEmpty(currentSegment))
             {
                 if (!segments.TryGetValue(currentSegment, out Segment segment))

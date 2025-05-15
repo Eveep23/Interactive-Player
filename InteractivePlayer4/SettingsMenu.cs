@@ -68,7 +68,7 @@ public static class SettingsMenu
             DropDownStyle = ComboBoxStyle.DropDownList,
             Font = new Font("Arial", 14)
         };
-        audioComboBox.Items.AddRange(new string[] { "Czech", "German", "English", "Latin American - Spanish", "European - Spanish", "French", "Hindi", "Hungarian", "Indonesian", "Italian", "Polish", "Brazilian - Portuguese", "European - Portuguese", "Thai", "Turkish", "Ukrainian" });
+        audioComboBox.Items.AddRange(new string[] { "Arabic", "Czech", "German", "English", "Latin American - Spanish", "European - Spanish", "French", "Hindi", "Hungarian", "Indonesian", "Italian", "Polish", "Brazilian - Portuguese", "European - Portuguese", "Thai", "Turkish", "Ukrainian" });
         audioComboBox.SelectedItem = loadedSettings.AudioLanguage;
 
         // Subtitle Language Dropdown
@@ -110,7 +110,7 @@ public static class SettingsMenu
         // Custom Story Changing Notification Checkbox
         CheckBox customStoryChangingNotificationCheckBox = new CheckBox
         {
-            Text = "Custom Story Changing Notification",
+            Text = "Custom Emulator Modifications",
             ForeColor = Color.White,
             AutoSize = true,
             Font = new Font("Arial", 14, FontStyle.Bold),

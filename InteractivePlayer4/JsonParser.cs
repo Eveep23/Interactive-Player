@@ -151,6 +151,29 @@ public static class JsonParser
         {
             if (momentsBySegment.TryGetValue(segment.Id, out List<Moment> moments))
             {
+                foreach (var moment in moments.Where(m => m.Type == "notification:playbackImpression" && m.ImpressionData != null))
+                {
+                    var impressionData = moment.ImpressionData.Data;
+                    if (impressionData != null)
+                    {
+                        if (impressionData.Global != null)
+                        {
+                            foreach (var kvp in impressionData.Global)
+                            {
+                                Console.WriteLine($"Global state changed: {kvp.Key} = {kvp.Value}");
+                            }
+                        }
+
+                        if (impressionData.Persistent != null)
+                        {
+                            foreach (var kvp in impressionData.Persistent)
+                            {
+                                Console.WriteLine($"Persistent state changed: {kvp.Key} = {kvp.Value}");
+                            }
+                        }
+                    }
+                }
+
                 var choiceMoment = moments.Find(m => m.Type == "scene:cs_template");
                 if (choiceMoment != null)
                 {
@@ -233,7 +256,11 @@ public static class JsonParser
 
     public static string HandleSegment(MediaPlayer mediaPlayer, Segment segment, Dictionary<string, Segment> segments, string movieFolder, string videoId, ref Dictionary<string, object> globalState, ref Dictionary<string, object> persistentState, string infoJsonFile, string saveFilePath, Dictionary<string, List<SegmentGroup>> segmentGroups, Dictionary<string, List<SegmentState>> segmentStates, bool isFirstLoad)
     {
-        mediaPlayer.Time = segment.StartTimeMs;
+        /* if (Math.Abs(mediaPlayer.Time - segment.StartTimeMs) > 102)
+        {
+            mediaPlayer.Time = segment.StartTimeMs + 22;
+        } */
+
         string nextSegment = segment.DefaultNext;
         bool choiceDisplayed = false;
         bool fakeChoiceDisplayed = false;
@@ -319,8 +346,10 @@ public static class JsonParser
         // Ensure EndTimeMs has a value
         int endTimeMs = segment.EndTimeMs > 0 ? segment.EndTimeMs : int.MaxValue;
 
-        while (mediaPlayer.Time < endTimeMs - 360)
+        while (mediaPlayer.Time < endTimeMs - 102)
         {
+            KeyForm.InitializeKeyPressWindow(mediaPlayer, infoJsonFile, saveFilePath, segment, segments);
+
             // Display notification if within the specified time range
             if (segment.Notification != null)
             {
@@ -335,7 +364,7 @@ public static class JsonParser
             }
 
             // Handle "fake" choices
-            if (!fakeChoiceDisplayed && segment.fakechoices != null && segment.fakechoices.Count > 0 &&
+            if (videoId == "80988062" && !fakeChoiceDisplayed && segment.fakechoices != null && segment.fakechoices.Count > 0 &&
                 mediaPlayer.Time >= segment.fakeChoiceDisplayTimeMs && mediaPlayer.Time < segment.fakeHideChoiceTimeMs)
             {
                 long fakeChoiceDurationMs = segment.fakeHideChoiceTimeMs - segment.fakeChoiceDisplayTimeMs;
@@ -457,8 +486,6 @@ public static class JsonParser
                 }
                 else
                 {
-                    // Use the regular choices if choiceSets are not present
-                    // Filter out choices with exceptions and those with text "blank"
                     validChoices = segment.Choices.Where(choice =>
                     {
                         if (!string.IsNullOrEmpty(choice.Exception))
@@ -559,6 +586,10 @@ public static class JsonParser
                     }
                 }
 
+                var configFilePath = Path.Combine(AppDomain.CurrentDomain.BaseDirectory, "config.json");
+                var settings = JsonConvert.DeserializeObject<Settings>(File.ReadAllText(configFilePath));
+                bool customStoryChangingNotification = settings?.CustomStoryChangingNotification ?? false;
+
                 // Load button sprites for each valid choice
                 var buttonSprites = new List<Bitmap>();
                 foreach (var choice in validChoices)
@@ -580,6 +611,20 @@ public static class JsonParser
                     if (string.IsNullOrEmpty(buttonSpritePath) || !File.Exists(buttonSpritePath))
                     {
                         buttonSpritePath = defaultButtonTexturePath;
+                    }
+
+                    if (videoId == "80988062" && customStoryChangingNotification && buttonSpritePath != null)
+                    {
+                        string fileName = Path.GetFileName(buttonSpritePath);
+                        if (fileName.Equals("netflix_2x.png", StringComparison.OrdinalIgnoreCase))
+                        {
+                            // Switch to "emulator_2x.png" if the real image is "netflix_2x.png"
+                            string emulatorSpritePath = FindTexturePath(movieFolder, "emulator_2x.png");
+                            if (!string.IsNullOrEmpty(emulatorSpritePath) && File.Exists(emulatorSpritePath))
+                            {
+                                buttonSpritePath = emulatorSpritePath;
+                            }
+                        }
                     }
 
                     // Add the button sprite or null if no texture is found
@@ -734,12 +779,7 @@ public static class JsonParser
                         }
                     }
 
-                    if (videoId == "80988062" && segment.Choices != null && segment.Choices.Any(choice => choice.Text?.Equals("GO BACK", StringComparison.OrdinalIgnoreCase) == true))
-                    {
-                        break;
-                    }
-
-                    if (videoId == "10000001" || videoId == "10000003" || videoId == "81251335" || videoId == "80994695" || videoId == "80135585" || videoId == "81328829" || videoId == "80227804" || videoId == "80227805" || videoId == "80227800" || videoId == "80227801" || videoId == "80227802" || videoId == "80227803" || videoId == "80227699" || videoId == "80227698" || videoId == "81319137" || videoId == "81205738" || videoId == "81205737" || videoId == "80227815" || videoId == "81250260" || videoId == "81250261" || videoId == "81250262" || videoId == "81250263" || videoId == "81250264" || videoId == "81250265" || videoId == "81250266" || videoId == "81250267")
+                    if (videoId == "80988062" && segment.Choices != null && segment.Choices.Any(choice => choice.Text?.Equals("GO BACK", StringComparison.OrdinalIgnoreCase) == true) || videoId == "80988062" && segment.Choices != null && segment.Choices.Any(choice => choice.Text?.Equals("EXIT TO CREDITS", StringComparison.OrdinalIgnoreCase) == true) || videoId == "81131714" && segment.LayoutType == "l6" || videoId == "10000001" || videoId == "10000003" || videoId == "81251335" || videoId == "80994695" || videoId == "80135585" || videoId == "81328829" || videoId == "80227804" || videoId == "80227805" || videoId == "80227800" || videoId == "80227801" || videoId == "80227802" || videoId == "80227803" || videoId == "80227699" || videoId == "80227698" || videoId == "81319137" || videoId == "81205738" || videoId == "81205737" || videoId == "80227815" || videoId == "81250260" || videoId == "81250261" || videoId == "81250262" || videoId == "81250263" || videoId == "81250264" || videoId == "81250265" || videoId == "81250266" || videoId == "81250267")
                     {
                         break; // Break out of the loop and return the selected segment immediately
                     }
@@ -747,9 +787,9 @@ public static class JsonParser
 
                 choiceDisplayed = true;
             }
-
-            KeyForm.InitializeKeyPressWindow(mediaPlayer, infoJsonFile, saveFilePath, segment, segments);
         }
+
+        mediaPlayer.Pause();
 
         // Check segment groups for the next segment
         if (!string.IsNullOrEmpty(segment?.Id) && segmentGroups.TryGetValue(segment.Id, out List<SegmentGroup> group))
@@ -791,6 +831,16 @@ public static class JsonParser
             MessageBox.Show(message, "Episode Required", MessageBoxButtons.OK, MessageBoxIcon.Information, MessageBoxDefaultButton.Button1, MessageBoxOptions.DefaultDesktopOnly);
             return null; // Return null to indicate the current interactive should stop
         }
+
+        if (!string.IsNullOrEmpty(nextSegment) && segments.TryGetValue(nextSegment, out Segment nextSeg))
+        {
+            if (Math.Abs(mediaPlayer.Time - nextSeg.StartTimeMs) > 222)
+            {
+                mediaPlayer.Time = nextSeg.StartTimeMs + 22;
+            }
+        }
+
+        mediaPlayer.Play();
 
         return nextSegment;
     }

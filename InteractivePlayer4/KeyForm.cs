@@ -30,6 +30,7 @@ public static class KeyForm
             Width = 400,
             Height = 250,
             ShowInTaskbar = true,
+            TopMost = true,
             FormBorderStyle = FormBorderStyle.FixedDialog,
             StartPosition = FormStartPosition.CenterScreen,
             Location = new System.Drawing.Point(100, 100),
@@ -307,17 +308,45 @@ public static class KeyForm
         }
     }
 
+    private static DateTime lastSkipTime = DateTime.MinValue;
+    private static readonly TimeSpan skipCooldown = TimeSpan.FromMilliseconds(500);
+
     private static void SkipTime(MediaPlayer mediaPlayer, ref Segment currentSegment, Dictionary<string, Segment> segments, int offsetMs)
     {
+
+        if (DateTime.Now - lastSkipTime < skipCooldown)
+        {
+            Console.WriteLine("Skip action is on cooldown. Please wait.");
+            return;
+        }
+
+        lastSkipTime = DateTime.Now;
+        long currentTime = mediaPlayer.Time;
         long newTime = mediaPlayer.Time + offsetMs;
 
-        // Ensure the new time is within the bounds of the video
+        if (currentSegment.Choices != null && currentSegment.Choices.Count > 0)
+        {
+            if (currentTime >= currentSegment.ChoiceDisplayTimeMs && currentTime <= currentSegment.HideChoiceTimeMs)
+            {
+                Console.WriteLine("Cannot skip while in a choice point.");
+                return;
+            }
+        }
+
+        if (currentSegment.fakechoices != null && currentSegment.fakechoices.Count > 0)
+        {
+            if (currentTime >= currentSegment.fakeChoiceDisplayTimeMs && currentTime <= currentSegment.fakeHideChoiceTimeMs)
+            {
+                Console.WriteLine("Cannot skip while in a choice point.");
+                return;
+            }
+        }
+
         if (newTime < 0)
         {
             newTime = 0;
         }
 
-        // Find the segment that corresponds to the new time
         foreach (var segment in segments.Values)
         {
             if (newTime >= segment.StartTimeMs && newTime <= segment.EndTimeMs)
@@ -327,7 +356,6 @@ public static class KeyForm
             }
         }
 
-        // Ensure the new time is within the bounds of the current segment
         if (newTime < currentSegment.StartTimeMs)
         {
             newTime = currentSegment.StartTimeMs;
@@ -337,7 +365,6 @@ public static class KeyForm
             newTime = currentSegment.EndTimeMs;
         }
 
-        // Prevent skipping into choice points
         if (currentSegment.Choices != null && currentSegment.Choices.Count > 0)
         {
             if (newTime >= currentSegment.ChoiceDisplayTimeMs && newTime <= currentSegment.HideChoiceTimeMs)
