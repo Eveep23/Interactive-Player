@@ -18,19 +18,20 @@ This is an emulator for Netflix's interactive movies and shows!
 
 To install an Interactive, all you need is the internal video. In the install menu (the + in the top left) find the interactive and select that video file!
 
-* You can switch the audio track in settings or when watching an interactive with the "L" key!
+* You can switch the audio track in settings!
 
-* You can switch the subtitle track in settings or when watching an interactive with the "S" key!
+* You can switch the subtitle track in settings!
 
-* You can skip forward and backward 10 seconds in the console!
+* You can skip forward and backward 10 seconds in the Interactive Player control window!
 
-* You can pause the spacebar in the console!
+* You can pause the spacebar in the Interactive Player control window!
 
 # Currently Supported Interactives:
 
 * Minecraft Story Mode (Ep.1-5)
+* Black Mirror: Bandersnatch
 * Cat Burglar
-* Buddy Thunderstruck: The Maybe Pile 
+* Buddy Thunderstruck: The Maybe Pile
 * Headspace: Unwind Your Mind 
 * Escape the Undertaker 
 * Carmen Sandiego: To Steal or Not to Steal 
@@ -39,7 +40,8 @@ To install an Interactive, all you need is the internal video. In the install me
 * Stretch Armstrong: The Breakout 
 * Johnny Test's Ultimate Meatloaf Quest 
 * Spirit Riding Free: Ride Along Adventure 
-* The Last Kids on Earth: Happy Apocalypse to You 
+* The Last Kids on Earth: Happy Apocalypse to You
+* Unbreakable Kimmy Schmidt: Kimmy vs. the Reverend
 * Captain Underpants: Epic Choice-O-Rama 
 * The Boss Baby: Get That Baby 
 * Jurassic World Camp Cretaceous: Hidden Adventure 
