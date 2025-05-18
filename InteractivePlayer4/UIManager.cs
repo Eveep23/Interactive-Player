@@ -223,15 +223,17 @@ public static class UIManager
             Text = "Make a Choice",
             StartPosition = FormStartPosition.Manual,
             FormBorderStyle = FormBorderStyle.None,
-            BackColor = videoId == "80149064" ? Color.FromArgb(15, 15, 15) :
-                       (videoId == "80151644" ? Color.FromArgb(125, 125, 125) :
-                       (videoId == "81004016" || videoId == "80988062" || videoId == "81271335" && segment.LayoutType == "l1" ? Color.Black :
-                       (videoId == "81131714" ? Color.FromArgb(247, 233, 95) :
-                       Color.FromArgb(41, 41, 41)))),
-            TransparencyKey = (videoId == "81004016" || videoId == "80988062" || videoId == "81131714" || videoId == "81271335" && segment.LayoutType == "l1") ? Color.Empty :
-                              (videoId == "80149064" ? Color.FromArgb(15, 15, 15) :
-                              (videoId == "80151644" ? Color.FromArgb(125, 125, 125) :
-                              Color.FromArgb(41, 41, 41))),
+            BackColor = (videoId == "81131714" && segment.LayoutType == "l6") ? Color.Magenta :
+                (videoId == "80149064" ? Color.FromArgb(15, 15, 15) :
+                (videoId == "80151644" ? Color.FromArgb(125, 125, 125) :
+                (videoId == "81004016" || videoId == "80988062" || videoId == "81271335" && segment.LayoutType == "l1" ? Color.Black :
+                (videoId == "81131714" ? Color.FromArgb(247, 233, 95) :
+                Color.FromArgb(41, 41, 41))))),
+            TransparencyKey = (videoId == "81131714" && segment.LayoutType == "l6") ? Color.Magenta :
+                      ((videoId == "81004016" || videoId == "80988062" || videoId == "81131714" || videoId == "81271335" && segment.LayoutType == "l1") ? Color.Empty :
+                      (videoId == "80149064" ? Color.FromArgb(15, 15, 15) :
+                      (videoId == "80151644" ? Color.FromArgb(125, 125, 125) :
+                      Color.FromArgb(41, 41, 41)))),
             MaximizeBox = false,
             MinimizeBox = false,
             TopMost = true,
@@ -424,6 +426,12 @@ public static class UIManager
         string correctSoundPath = FindTexturePath(movieFolder, new[] { "sfx_select_correct.m4a" });
         string incorrectSoundPath = FindTexturePath(movieFolder, new[] { "sfx_select_incorrect.m4a" });
 
+        if (videoId == "81131714" && segment.LayoutType == "l6")
+        {
+            hoverSoundPath = null;
+            selectSoundPath = null;
+        }
+
         // Play appear sound
         if (File.Exists(appearSoundPath))
         {
@@ -503,7 +511,7 @@ public static class UIManager
 
                 var button = new Button
                 {
-                    Text = (segment.LayoutType == "ReubenZone" || segment.LayoutType == "EnderconZone" || segment.LayoutType == "TempleZone" || segment.LayoutType == "Crafting" || segment.LayoutType == "EpisodeEnd" || segment.LayoutType == "RedstoniaZone" || segment.LayoutType == "MCSMThroneZone" || segment.LayoutType == "MCSMTownZone" || segment.LayoutType == "MCSMWoolLand" || segment.LayoutType == "MCSMLabZone" || segment.LayoutType == "MCSMGunZone" || segment.LayoutType == "IvorZone" || videoId == "81271335" && segment.LayoutType == "l1") ? string.Empty : (new[] { "80149064", "80135585", "81054409", "81287545", "81019938", "81260654", "81054415", "81058723", "80227815", "81250260", "81250261", "81250262", "81250263", "81250264", "81250265", "81250266", "81250267" }.Contains(videoId)) ? string.Empty : choices[i].Text,
+                    Text = (videoId == "81131714" && segment.LayoutType == "l6" || segment.LayoutType == "ReubenZone" || segment.LayoutType == "EnderconZone" || segment.LayoutType == "TempleZone" || segment.LayoutType == "Crafting" || segment.LayoutType == "EpisodeEnd" || segment.LayoutType == "RedstoniaZone" || segment.LayoutType == "MCSMThroneZone" || segment.LayoutType == "MCSMTownZone" || segment.LayoutType == "MCSMWoolLand" || segment.LayoutType == "MCSMLabZone" || segment.LayoutType == "MCSMGunZone" || segment.LayoutType == "IvorZone" || videoId == "81271335" && segment.LayoutType == "l1") ? string.Empty : (new[] { "80149064", "80135585", "81054409", "81287545", "81019938", "81260654", "81054415", "81058723", "80227815", "81250260", "81250261", "81250262", "81250263", "81250264", "81250265", "81250266", "81250267" }.Contains(videoId)) ? string.Empty : choices[i].Text,
                     Size = new Size(buttonWidth, buttonHeight),
                     Location = new System.Drawing.Point(0, 0), // Position within the panel
                     BackgroundImage = new Bitmap(defaultSprite, new Size(buttonWidth, buttonHeight)),
@@ -728,6 +736,14 @@ public static class UIManager
                         // Force the form to redraw to reflect the changes
                         choiceForm.Invalidate();
                     };
+                }
+
+                if (videoId == "81131714" && segment.LayoutType == "l6")
+                {
+                    if (choices[i].Text == "SKIP INTRO")
+                    {
+                        buttonPanel.Location = new System.Drawing.Point((int)(choiceForm.Width * 0.8), (int)(choiceForm.Height * 0.1));
+                    }
                 }
 
                 // Minecraft Story Mode Custom Positioning
@@ -1509,7 +1525,11 @@ public static class UIManager
 
         // Adjust the timer bar position to avoid overlapping with the buttons and labels
         int timerBarY;
-        if (segment.LayoutType == "ReubenZone" || segment.LayoutType == "EnderconZone" || segment.LayoutType == "TempleZone" || segment.LayoutType == "MCSMTeamName" || segment.LayoutType == "Crafting" || segment.LayoutType == "EpisodeEnd" || segment.LayoutType == "RedstoniaZone" || segment.LayoutType == "MCSMThroneZone" || segment.LayoutType == "MCSMTownZone" || segment.LayoutType == "MCSMWoolLand" || segment.LayoutType == "MCSMLabZone" || segment.LayoutType == "MCSMGunZone" || segment.LayoutType == "IvorZone")
+        if (new[] { "80988062", "81131714" }.Contains(videoId))
+        {
+            timerBarY = 0;
+        }
+        else if (segment.LayoutType == "ReubenZone" || segment.LayoutType == "EnderconZone" || segment.LayoutType == "TempleZone" || segment.LayoutType == "MCSMTeamName" || segment.LayoutType == "Crafting" || segment.LayoutType == "EpisodeEnd" || segment.LayoutType == "RedstoniaZone" || segment.LayoutType == "MCSMThroneZone" || segment.LayoutType == "MCSMTownZone" || segment.LayoutType == "MCSMWoolLand" || segment.LayoutType == "MCSMLabZone" || segment.LayoutType == "MCSMGunZone" || segment.LayoutType == "IvorZone")
         {
             timerBarY = (int)(choiceForm.Height * 0.88);
         }
@@ -1708,6 +1728,15 @@ public static class UIManager
             timerBottomPath = null;
             timerTopPath = null;
             webPath = isControllerConnected ? FindTexturePath(movieFolder, new[] { "controller_2x.png" }) : FindTexturePath(movieFolder, new[] { "web_2x.png", "device_web_2x.png", "web_2x_v2.png", "web_3x.png", "web_icon_2x.png" });
+        }
+        else if (videoId == "81131714" && segment.LayoutType == "l6")
+        {
+            timerFillPath = null;
+            timerCapLPath = null;
+            timerCapRPath = null;
+            timerBottomPath = null;
+            timerTopPath = null;
+            webPath = null;
         }
         else if (videoId == "81271335" && segment.LayoutType == "l1")
         {
@@ -2005,7 +2034,7 @@ public static class UIManager
             {
                 initialWidth = (int)((double)(1650 * scaleFactor) * (timeLimitMs - stopwatch.ElapsedMilliseconds) / timeLimitMs);
                 drawingPanel.Invalidate();
-                await Task.Delay(16); // Update approximately every 16ms (~60 FPS)
+                await Task.Delay(11); // Update approximately every 16ms (~60 FPS)
             }
 
             if (!inputCaptured && File.Exists(timeoutSoundPath))
@@ -2025,7 +2054,7 @@ public static class UIManager
                 while (stopwatch.ElapsedMilliseconds < duration)
                 {
                     drawingPanel.Invalidate();
-                    await Task.Delay(16); // Update approximately every 16ms (~60 FPS)
+                    await Task.Delay(11); // Update approximately every 16ms (~60 FPS)
                 }
             });
         }
@@ -2177,7 +2206,7 @@ public static class UIManager
                         }
                         break;
                     case "81131714":
-                        heightFactor = 0.20;
+                        heightFactor = 0.18;
                         break;
                     case "80151644":
                         heightFactor = 0.3;

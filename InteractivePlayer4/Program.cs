@@ -144,7 +144,7 @@ class Program
 
         try
         {
-            // Start playing the video
+            // After creating mediaPlayer and before Play()
             mediaPlayer.Play();
 
             if (segments.TryGetValue(currentSegment, out Segment seg))

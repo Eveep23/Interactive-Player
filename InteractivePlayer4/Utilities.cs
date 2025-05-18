@@ -116,7 +116,7 @@ public static class Utilities
 
         Label footerLabel = new Label
         {
-            Text = "Interactive Player 1.6.11 Preview developed by Eveep23",
+            Text = "Interactive Player 1.6.3 Preview developed by Eveep23",
             Font = new Font("Arial", 10, FontStyle.Italic),
             ForeColor = Color.White,
             TextAlign = ContentAlignment.MiddleCenter,
@@ -351,6 +351,12 @@ public static class Utilities
 
                 button.Click += (sender, e) =>
                 {
+                    // Check for update before proceeding
+                    if (CheckAndPromptForUpdate(folder, packsDirectory))
+                    {
+                        return;
+                    }
+
                     if (Directory.GetFiles(folder, "*.mkv").Concat(Directory.GetFiles(folder, "*.mp4")).Any() && Directory.GetFiles(folder, "*.json").Any() ||
                                             Directory.GetFiles(folder, "direct.json").Any())
                     {
@@ -387,6 +393,48 @@ public static class Utilities
         mainPanel.Controls.Add(footerPanel);
 
         return form.ShowDialog() == DialogResult.OK ? SelectedMovieFolder : null;
+    }
+
+    // Add this helper method to Utilities
+    private static bool CheckAndPromptForUpdate(string folder, string packsDirectory)
+    {
+        string folderName = Path.GetFileName(folder);
+        string buildTxtPath = Path.Combine(folder, "build.txt");
+        string packJsonPath = Path.Combine(packsDirectory, folderName + ".json");
+
+        if (File.Exists(buildTxtPath) && File.Exists(packJsonPath))
+        {
+            int currentBuild = 0;
+            int newBuild = 0;
+            try
+            {
+                var buildData = Newtonsoft.Json.Linq.JObject.Parse(File.ReadAllText(buildTxtPath));
+                currentBuild = buildData["build"]?.ToObject<int>() ?? 0;
+            }
+            catch { }
+            try
+            {
+                var packData = Newtonsoft.Json.Linq.JObject.Parse(File.ReadAllText(packJsonPath));
+                newBuild = packData["build"]?.ToObject<int>() ?? 0;
+            }
+            catch { }
+
+            if (newBuild > currentBuild)
+            {
+                var result = MessageBox.Show(
+                    "An update is available for this interactive. Not updating can make an interactive break or even unplayable. Would you like to update now? ",
+                    "Update Available",
+                    MessageBoxButtons.YesNo,
+                    MessageBoxIcon.Question);
+
+                if (result == DialogResult.Yes)
+                {
+                    InteractiveDetailsMenu.ShowInteractiveDetailsMenu(folder);
+                    return true;
+                }
+            }
+        }
+        return false; // No update or user passed
     }
 }
 

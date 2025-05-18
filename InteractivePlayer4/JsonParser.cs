@@ -346,64 +346,69 @@ public static class JsonParser
         // Ensure EndTimeMs has a value
         int endTimeMs = segment.EndTimeMs > 0 ? segment.EndTimeMs : int.MaxValue;
 
+        KeyForm.InitializeKeyPressWindow(mediaPlayer, infoJsonFile, saveFilePath, segment, segments);
+
         while (mediaPlayer.Time < endTimeMs - 102)
         {
-            KeyForm.InitializeKeyPressWindow(mediaPlayer, infoJsonFile, saveFilePath, segment, segments);
-
-            // Display notification if within the specified time range
-            if (segment.Notification != null)
+            if (videoId == "10000001")
             {
-                foreach (var notification in segment.Notification)
+                // Display notification if within the specified time range
+                if (segment.Notification != null)
                 {
-                    if (mediaPlayer.Time >= notification.StartMs && mediaPlayer.Time <= notification.EndMs)
+                    foreach (var notification in segment.Notification)
                     {
-                        int displayDurationMs = notification.EndMs - notification.StartMs;
-                        UIManager.ShowNotificationUI(notification.Text, movieFolder, videoId, displayDurationMs);
+                        if (mediaPlayer.Time >= notification.StartMs && mediaPlayer.Time <= notification.EndMs)
+                        {
+                            int displayDurationMs = notification.EndMs - notification.StartMs;
+                            UIManager.ShowNotificationUI(notification.Text, movieFolder, videoId, displayDurationMs);
+                        }
                     }
                 }
             }
-
-            // Handle "fake" choices
-            if (videoId == "80988062" && !fakeChoiceDisplayed && segment.fakechoices != null && segment.fakechoices.Count > 0 &&
-                mediaPlayer.Time >= segment.fakeChoiceDisplayTimeMs && mediaPlayer.Time < segment.fakeHideChoiceTimeMs)
+            if (videoId == "80988062")
             {
-                long fakeChoiceDurationMs = segment.fakeHideChoiceTimeMs - segment.fakeChoiceDisplayTimeMs;
-
-                Console.WriteLine($"Fake choice point reached for segment {segment.Id}");
-
-                var fakeChoiceTexts = segment.fakechoices.Select(fc => fc.Text).ToList();
-                var fakeButtonSprites = new List<Bitmap>();
-                var fakeButtonIcons = new List<Bitmap>();
-
-                foreach (var fakeChoice in segment.fakechoices)
+                // Handle "fake" choices
+                if (!fakeChoiceDisplayed && segment.fakechoices != null && segment.fakechoices.Count > 0 &&
+                mediaPlayer.Time >= segment.fakeChoiceDisplayTimeMs && mediaPlayer.Time < segment.fakeHideChoiceTimeMs)
                 {
-                    string buttonSpritePath = defaultButtonTexturePath;
-                    string iconPath = null;
+                    long fakeChoiceDurationMs = segment.fakeHideChoiceTimeMs - segment.fakeChoiceDisplayTimeMs;
 
-                    // Add button sprite
-                    if (!string.IsNullOrEmpty(buttonSpritePath) && File.Exists(buttonSpritePath))
+                    Console.WriteLine($"Fake choice point reached for segment {segment.Id}");
+
+                    var fakeChoiceTexts = segment.fakechoices.Select(fc => fc.Text).ToList();
+                    var fakeButtonSprites = new List<Bitmap>();
+                    var fakeButtonIcons = new List<Bitmap>();
+
+                    foreach (var fakeChoice in segment.fakechoices)
                     {
-                        fakeButtonSprites.Add(new Bitmap(buttonSpritePath));
-                    }
-                    else
-                    {
-                        fakeButtonSprites.Add(null);
+                        string buttonSpritePath = defaultButtonTexturePath;
+                        string iconPath = null;
+
+                        // Add button sprite
+                        if (!string.IsNullOrEmpty(buttonSpritePath) && File.Exists(buttonSpritePath))
+                        {
+                            fakeButtonSprites.Add(new Bitmap(buttonSpritePath));
+                        }
+                        else
+                        {
+                            fakeButtonSprites.Add(null);
+                        }
+
+                        // Add button icon
+                        if (!string.IsNullOrEmpty(iconPath) && File.Exists(iconPath))
+                        {
+                            fakeButtonIcons.Add(new Bitmap(iconPath));
+                        }
+                        else
+                        {
+                            fakeButtonIcons.Add(null);
+                        }
                     }
 
-                    // Add button icon
-                    if (!string.IsNullOrEmpty(iconPath) && File.Exists(iconPath))
-                    {
-                        fakeButtonIcons.Add(new Bitmap(iconPath));
-                    }
-                    else
-                    {
-                        fakeButtonIcons.Add(null);
-                    }
+                    UIManager.ShowChoiceUI(segment.fakechoices, fakeButtonSprites, fakeButtonIcons, (int)fakeChoiceDurationMs, movieFolder, videoId, segment);
+
+                    fakeChoiceDisplayed = true;
                 }
-
-                UIManager.ShowChoiceUI(segment.fakechoices, fakeButtonSprites, fakeButtonIcons, (int)fakeChoiceDurationMs, movieFolder, videoId, segment);
-
-                fakeChoiceDisplayed = true;
             }
 
             if (!choiceDisplayed && segment.Choices != null && segment.Choices.Count > 0 &&
@@ -834,9 +839,9 @@ public static class JsonParser
 
         if (!string.IsNullOrEmpty(nextSegment) && segments.TryGetValue(nextSegment, out Segment nextSeg))
         {
-            if (Math.Abs(mediaPlayer.Time - nextSeg.StartTimeMs) > 222)
+            if (Math.Abs(mediaPlayer.Time - nextSeg.StartTimeMs) > 422)
             {
-                mediaPlayer.Time = nextSeg.StartTimeMs + 22;
+                mediaPlayer.Time = nextSeg.StartTimeMs + 25;
             }
         }
 

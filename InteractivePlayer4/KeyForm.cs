@@ -3,13 +3,25 @@ using System;
 using System.Collections.Generic;
 using System.Drawing;
 using System.IO;
+using System.Runtime.InteropServices;
+using System.Threading.Tasks;
 using System.Windows.Forms;
+using static UIManager;
 
 public static class KeyForm
 {
     private static Form keyPressForm;
 
     private static System.Threading.Thread keyPressThread;
+
+    private static int lastVlcLeft = int.MinValue;
+    private static int lastVlcTop = int.MinValue;
+    private static int lastVlcWidth = int.MinValue;
+    private static int lastVlcOffset = int.MinValue;
+
+    private static IntPtr cachedVlcHandle = IntPtr.Zero;
+    private static DateTime lastVlcHandleCheck = DateTime.MinValue;
+    private static readonly TimeSpan vlcHandleCheckInterval = TimeSpan.FromSeconds(5);
 
     public static void InitializeKeyPressWindow(MediaPlayer mediaPlayer, string infoJsonFile, string saveFilePath, Segment currentSegment, Dictionary<string, Segment> segments)
     {
@@ -19,7 +31,6 @@ public static class KeyForm
         }
 
         string currentDirectory = Directory.GetCurrentDirectory();
-        string topBarPath = Path.Combine(currentDirectory, "general", "Top_bar.png");
         string logoPath = Path.Combine(currentDirectory, "general", "Interactive_player_logo.png");
         string buttonUnselectedPath = Path.Combine(currentDirectory, "general", "ButtonUnselected.png");
         string buttonSelectedPath = Path.Combine(currentDirectory, "general", "ButtonSelected.png");
@@ -27,22 +38,18 @@ public static class KeyForm
         keyPressForm = new Form
         {
             Text = "Interactive Player",
-            Width = 400,
-            Height = 250,
-            ShowInTaskbar = true,
+            Width = 1000,
+            Height = 120,
+            ShowInTaskbar = false,
             TopMost = true,
-            FormBorderStyle = FormBorderStyle.FixedDialog,
+            FormBorderStyle = FormBorderStyle.None,
+            MaximizeBox = false,
+            MinimizeBox = false,
+            ControlBox = false,
             StartPosition = FormStartPosition.CenterScreen,
             Location = new System.Drawing.Point(100, 100),
-            BackColor = ColorTranslator.FromHtml("#141414")
-        };
-
-        Panel topBarPanel = new Panel
-        {
-            Dock = DockStyle.Top,
-            Height = 50,
-            BackgroundImage = Image.FromFile(topBarPath),
-            BackgroundImageLayout = ImageLayout.Stretch
+            BackColor = ColorTranslator.FromHtml("#141414"),
+            Icon = Icon.ExtractAssociatedIcon(Application.ExecutablePath)
         };
 
         PictureBox logoPictureBox = new PictureBox
@@ -50,36 +57,36 @@ public static class KeyForm
             Image = Image.FromFile(logoPath),
             SizeMode = PictureBoxSizeMode.Zoom,
             BackColor = Color.Transparent,
-            Width = 190,
-            Height = 50
+            Width = 380,
+            Height = 100
         };
 
-        topBarPanel.Controls.Add(logoPictureBox);
-        logoPictureBox.Location = new Point((topBarPanel.Width - logoPictureBox.Width) / 2, (topBarPanel.Height - logoPictureBox.Height) / 2);
-        topBarPanel.Resize += (sender, e) =>
-        {
-            logoPictureBox.Location = new Point((topBarPanel.Width - logoPictureBox.Width) / 2, (topBarPanel.Height - logoPictureBox.Height) / 2);
-        };
+        logoPictureBox.Location = new Point(
+            (keyPressForm.Width - logoPictureBox.Width) / 2,
+            (keyPressForm.Height - logoPictureBox.Height) / 2
+        );
+        logoPictureBox.Anchor = AnchorStyles.None;
+        keyPressForm.Controls.Add(logoPictureBox);
 
-        keyPressForm.Controls.Add(topBarPanel);
-
-        // Buttons for Skip Back, Pause/Play, and Skip Forward
+        int buttonPanelLeftMargin = 20;
         Panel buttonPanel = new Panel
         {
-            Dock = DockStyle.Fill,
-            BackColor = Color.Transparent
+            Width = 260,
+            Height = 100,
+            BackColor = Color.Transparent,
+            Location = new Point(buttonPanelLeftMargin, (keyPressForm.Height - 100) / 2),
+            Anchor = AnchorStyles.Left
         };
 
-        // Create a button for Skip Back
         Button skipBackButton = new Button
         {
             Width = 80,
             Height = 80,
-            BackgroundImage = Image.FromFile(Path.Combine(currentDirectory, "general", "ButtonUnselected.png")), // Background image
+            BackgroundImage = Image.FromFile(Path.Combine(currentDirectory, "general", "ButtonUnselected.png")),
             BackgroundImageLayout = ImageLayout.Stretch,
             FlatStyle = FlatStyle.Flat,
             TabStop = false,
-            BackColor = Color.Transparent, // Transparent background
+            BackColor = Color.Transparent,
             FlatAppearance = 
             {
                 BorderSize = 0,
@@ -87,8 +94,6 @@ public static class KeyForm
                 MouseOverBackColor = Color.Transparent
             }
         };
-
-        // Draw the icon directly on the button
         skipBackButton.Paint += (sender, e) =>
         {
             Image icon = Image.FromFile(Path.Combine(currentDirectory, "general", "SkipBackground.png"));
@@ -97,7 +102,6 @@ public static class KeyForm
             int iconY = (skipBackButton.Height - iconSize) / 2;
             e.Graphics.DrawImage(icon, iconX, iconY, iconSize, iconSize);
         };
-
         skipBackButton.MouseEnter += (sender, e) =>
         {
             skipBackButton.BackgroundImage = Image.FromFile(Path.Combine(currentDirectory, "general", "ButtonSelected.png"));
@@ -108,21 +112,18 @@ public static class KeyForm
         };
         skipBackButton.Click += (sender, e) =>
         {
-            SkipTime(mediaPlayer, ref currentSegment, segments, - 10000);
+            SkipTime(mediaPlayer, ref currentSegment, segments, -10000);
         };
 
-        // Create a button for Pause/Play
         Button pausePlayButton = new Button
         {
             Width = 80,
             Height = 80,
-            BackgroundImage = mediaPlayer.IsPlaying
-                ? Image.FromFile(Path.Combine(currentDirectory, "general", "ButtonUnselected.png")) // Start with unselected background if playing
-                : Image.FromFile(Path.Combine(currentDirectory, "general", "ButtonUnselected.png")),
+            BackgroundImage = Image.FromFile(Path.Combine(currentDirectory, "general", "ButtonUnselected.png")),
             BackgroundImageLayout = ImageLayout.Stretch,
             FlatStyle = FlatStyle.Flat,
             TabStop = false,
-            BackColor = Color.Transparent, // Transparent background
+            BackColor = Color.Transparent,
             FlatAppearance = 
             {
                 BorderSize = 0,
@@ -130,21 +131,17 @@ public static class KeyForm
                 MouseOverBackColor = Color.Transparent
             }
         };
-
-        // Draw the icon directly on the button
         pausePlayButton.Paint += (sender, e) =>
         {
             string iconPath = mediaPlayer.IsPlaying
-                ? Path.Combine(currentDirectory, "general", "Pause.png") // Show pause icon if playing
-                : Path.Combine(currentDirectory, "general", "Play.png"); // Show play icon if paused
+                ? Path.Combine(currentDirectory, "general", "Pause.png")
+                : Path.Combine(currentDirectory, "general", "Play.png");
             Image icon = Image.FromFile(iconPath);
             int iconSize = 50;
             int iconX = (pausePlayButton.Width - iconSize) / 2;
             int iconY = (pausePlayButton.Height - iconSize) / 2;
             e.Graphics.DrawImage(icon, iconX, iconY, iconSize, iconSize);
         };
-
-        // Handle hover and click events
         pausePlayButton.MouseEnter += (sender, e) =>
         {
             pausePlayButton.BackgroundImage = Image.FromFile(Path.Combine(currentDirectory, "general", "ButtonSelected.png"));
@@ -153,9 +150,18 @@ public static class KeyForm
         {
             pausePlayButton.BackgroundImage = Image.FromFile(Path.Combine(currentDirectory, "general", "ButtonUnselected.png"));
         };
-
         pausePlayButton.Click += (sender, e) =>
         {
+            long currentTime = mediaPlayer.Time;
+            bool inRealChoice = currentSegment.Choices != null && currentSegment.Choices.Count > 0
+                && currentTime >= currentSegment.ChoiceDisplayTimeMs && currentTime <= currentSegment.HideChoiceTimeMs;
+            bool inFakeChoice = currentSegment.fakechoices != null && currentSegment.fakechoices.Count > 0
+                && currentTime >= currentSegment.fakeChoiceDisplayTimeMs && currentTime <= currentSegment.fakeHideChoiceTimeMs;
+            if (inRealChoice || inFakeChoice)
+            {
+                Console.WriteLine("Cannot pause or play during a choice point.");
+                return;
+            }
             if (mediaPlayer.IsPlaying)
             {
                 mediaPlayer.Pause();
@@ -164,7 +170,6 @@ public static class KeyForm
             {
                 mediaPlayer.Play();
             }
-
             pausePlayButton.BackgroundImage = Image.FromFile(Path.Combine(currentDirectory, "general", "ButtonUnselected.png"));
             pausePlayButton.Invalidate();
         };
@@ -185,7 +190,6 @@ public static class KeyForm
                 MouseOverBackColor = Color.Transparent
             }
         };
-
         skipForwardButton.Paint += (sender, e) =>
         {
             Image icon = Image.FromFile(Path.Combine(currentDirectory, "general", "SkipForward.png"));
@@ -194,7 +198,6 @@ public static class KeyForm
             int iconY = (skipForwardButton.Height - iconSize) / 2;
             e.Graphics.DrawImage(icon, iconX, iconY, iconSize, iconSize);
         };
-
         skipForwardButton.MouseEnter += (sender, e) =>
         {
             skipForwardButton.BackgroundImage = Image.FromFile(Path.Combine(currentDirectory, "general", "ButtonSelected.png"));
@@ -208,29 +211,142 @@ public static class KeyForm
             SkipTime(mediaPlayer, ref currentSegment, segments, 10000);
         };
 
-        FlowLayoutPanel buttonLayout = new FlowLayoutPanel
+        int buttonSpacing = 10;
+        pausePlayButton.Location = new Point(0, (buttonPanel.Height - pausePlayButton.Height) / 2);
+        skipBackButton.Location = new Point(pausePlayButton.Right + buttonSpacing, (buttonPanel.Height - skipBackButton.Height) / 2);
+        skipForwardButton.Location = new Point(skipBackButton.Right + buttonSpacing, (buttonPanel.Height - skipForwardButton.Height) / 2);
+
+        buttonPanel.Controls.Add(pausePlayButton);
+        buttonPanel.Controls.Add(skipBackButton);
+        buttonPanel.Controls.Add(skipForwardButton);
+
+        keyPressForm.Controls.Add(buttonPanel);
+
+        string exitButtonIconPath = Path.Combine(currentDirectory, "general", "Exit.png");
+        Button exitButton = new Button
         {
-            FlowDirection = FlowDirection.LeftToRight,
-            WrapContents = false,
-            AutoSize = true,
-            Anchor = AnchorStyles.None
+            Width = 80,
+            Height = 80,
+            BackgroundImage = Image.FromFile(buttonUnselectedPath),
+            BackgroundImageLayout = ImageLayout.Stretch,
+            FlatStyle = FlatStyle.Flat,
+            TabStop = false,
+            BackColor = Color.Transparent,
+            Anchor = AnchorStyles.Top | AnchorStyles.Right,
+        };
+        exitButton.FlatAppearance.BorderSize = 0;
+        exitButton.FlatAppearance.MouseDownBackColor = Color.Transparent;
+        exitButton.FlatAppearance.MouseOverBackColor = Color.Transparent;
+
+        exitButton.Paint += (sender, e) =>
+        {
+            Image icon = Image.FromFile(exitButtonIconPath);
+            int iconSize = 50;
+            int iconX = (exitButton.Width - iconSize) / 2;
+            int iconY = (exitButton.Height - iconSize) / 2;
+            e.Graphics.DrawImage(icon, iconX, iconY, iconSize, iconSize);
+        };
+        exitButton.MouseEnter += (sender, e) =>
+        {
+            exitButton.BackgroundImage = Image.FromFile(buttonSelectedPath);
+        };
+        exitButton.MouseLeave += (sender, e) =>
+        {
+            exitButton.BackgroundImage = Image.FromFile(buttonUnselectedPath);
+        };
+        exitButton.Click += (s, e) =>
+        {
+            mediaPlayer?.Dispose();
+
+            foreach (Form form in Application.OpenForms)
+            {
+                form.Close();
+            }
+
+            Application.Exit();
         };
 
-        // Center the FlowLayoutPanel within the buttonPanel
-        buttonLayout.SizeChanged += (sender, e) =>
+        exitButton.Location = new Point(
+            keyPressForm.Width - exitButton.Width - 20,
+            (keyPressForm.Height - exitButton.Height) / 2
+        );
+
+        string enterFullPath = Path.Combine(currentDirectory, "general", "EnterFull.png");
+        string exitFullPath = Path.Combine(currentDirectory, "general", "ExitFull.png");
+        string fullButtonUnselectedPath = buttonUnselectedPath;
+        string fullButtonSelectedPath = buttonSelectedPath;
+
+        Button fullScreenButton = new Button
         {
-            buttonLayout.Location = new Point(
-                (buttonPanel.ClientSize.Width - buttonLayout.Width) / 2,
-                (buttonPanel.ClientSize.Height - buttonLayout.Height) / 2
+            Width = 80,
+            Height = 80,
+            BackgroundImage = Image.FromFile(fullButtonUnselectedPath),
+            BackgroundImageLayout = ImageLayout.Stretch,
+            FlatStyle = FlatStyle.Flat,
+            TabStop = false,
+            BackColor = Color.Transparent,
+            Anchor = AnchorStyles.Top | AnchorStyles.Right,
+        };
+        fullScreenButton.FlatAppearance.BorderSize = 0;
+        fullScreenButton.FlatAppearance.MouseDownBackColor = Color.Transparent;
+        fullScreenButton.FlatAppearance.MouseOverBackColor = Color.Transparent;
+
+        // Track fullscreen state
+        bool isFullScreen = false;
+
+        fullScreenButton.Paint += (sender, e) =>
+        {
+            string iconPath = isFullScreen ? exitFullPath : enterFullPath;
+            Image icon = Image.FromFile(iconPath);
+            int iconSize = 50;
+            int iconX = (fullScreenButton.Width - iconSize) / 2;
+            int iconY = (fullScreenButton.Height - iconSize) / 2;
+            e.Graphics.DrawImage(icon, iconX, iconY, iconSize, iconSize);
+        };
+        fullScreenButton.MouseEnter += (sender, e) =>
+        {
+            fullScreenButton.BackgroundImage = Image.FromFile(fullButtonSelectedPath);
+        };
+        fullScreenButton.MouseLeave += (sender, e) =>
+        {
+            fullScreenButton.BackgroundImage = Image.FromFile(fullButtonUnselectedPath);
+        };
+        fullScreenButton.Click += async (s, e) =>
+        {
+            mediaPlayer.Fullscreen = !mediaPlayer.Fullscreen;
+            isFullScreen = mediaPlayer.Fullscreen;
+            fullScreenButton.Invalidate();
+
+            await Task.Delay(300);
+            AlignWithVLCWindow();
+        };
+
+        fullScreenButton.Location = new Point(
+            keyPressForm.Width - exitButton.Width - fullScreenButton.Width - 40,
+            (keyPressForm.Height - fullScreenButton.Height) / 2
+        );
+
+        keyPressForm.SizeChanged += (s, e) =>
+        {
+            fullScreenButton.Location = new Point(
+                keyPressForm.Width - exitButton.Width - fullScreenButton.Width - 40,
+                (keyPressForm.Height - fullScreenButton.Height) / 2
+            );
+            exitButton.Location = new Point(
+                keyPressForm.Width - exitButton.Width - 20,
+                (keyPressForm.Height - exitButton.Height) / 2
             );
         };
+        keyPressForm.Controls.Add(fullScreenButton);
 
-        buttonLayout.Controls.Add(skipBackButton);
-        buttonLayout.Controls.Add(pausePlayButton);
-        buttonLayout.Controls.Add(skipForwardButton);
-
-        buttonPanel.Controls.Add(buttonLayout);
-        keyPressForm.Controls.Add(buttonPanel);
+        keyPressForm.SizeChanged += (s, e) =>
+        {
+            exitButton.Location = new Point(
+                keyPressForm.Width - exitButton.Width - 20,
+                (keyPressForm.Height - exitButton.Height) / 2
+            );
+        };
+        keyPressForm.Controls.Add(exitButton);
 
         keyPressForm.KeyPreview = true;
         keyPressForm.KeyDown += (sender, e) =>
@@ -250,10 +366,21 @@ public static class KeyForm
             Application.Exit();
         };
 
+        keyPressForm.Opacity = 0.004;
+
+        AttachOpacityHandlers(keyPressForm, keyPressForm);
+
         if (keyPressThread == null || !keyPressThread.IsAlive)
         {
             keyPressThread = new System.Threading.Thread(() =>
             {
+                // Show the form before aligning
+                keyPressForm.Shown += async (s, e) =>
+                {
+                    await Task.Delay(500);
+                    AlignWithVLCWindow();
+                };
+
                 Application.Run(keyPressForm);
             });
             keyPressThread.SetApartmentState(System.Threading.ApartmentState.STA);
@@ -261,12 +388,133 @@ public static class KeyForm
         }
     }
 
+    private static Timer fadeTimer;
+    private static double targetOpacity = 0.004;
+    private static double fadeStep = 0.08;
+    private static bool fadingIn = false;
+
+    private static void AttachOpacityHandlers(Control control, Form form)
+    {
+        control.MouseEnter += (s, e) => StartFade(form, true);
+        control.MouseLeave += (s, e) =>
+        {
+            if (!form.Bounds.Contains(Cursor.Position))
+                StartFade(form, false);
+        };
+        foreach (Control child in control.Controls)
+        {
+            AttachOpacityHandlers(child, form);
+        }
+    }
+
+    private static void StartFade(Form form, bool fadeIn)
+    {
+        targetOpacity = fadeIn ? 0.93 : 0.004;
+        fadingIn = fadeIn;
+
+        if (fadeTimer == null)
+        {
+            fadeTimer = new Timer();
+            fadeTimer.Interval = 15;
+            fadeTimer.Tick += (s, e) =>
+            {
+                double current = form.Opacity;
+                if (fadingIn)
+                {
+                    if (current < targetOpacity)
+                    {
+                        form.Opacity = Math.Min(targetOpacity, current + fadeStep);
+                    }
+                    else
+                    {
+                        form.Opacity = targetOpacity;
+                        fadeTimer.Stop();
+                    }
+                }
+                else
+                {
+                    if (current > targetOpacity)
+                    {
+                        form.Opacity = Math.Max(targetOpacity, current - fadeStep);
+                    }
+                    else
+                    {
+                        form.Opacity = targetOpacity;
+                        fadeTimer.Stop();
+                    }
+                }
+            };
+        }
+        fadeTimer.Stop();
+        fadeTimer.Start();
+    }
+
+    private static void AlignWithVLCWindow()
+    {
+        if (cachedVlcHandle == IntPtr.Zero || (DateTime.Now - lastVlcHandleCheck) > vlcHandleCheckInterval)
+        {
+            cachedVlcHandle = FindWindow(null, "VLC (Direct3D11 output)");
+            lastVlcHandleCheck = DateTime.Now;
+        }
+
+        if (cachedVlcHandle != IntPtr.Zero)
+        {
+            UIManager.RECT rect;
+            if (GetWindowRect(cachedVlcHandle, out rect))
+            {
+                int vlcWidth = rect.Right - rect.Left;
+                int vlcTop = rect.Top;
+                int offset = 0;
+
+                // Check if VLC is maximized (full-screen)
+                WINDOWPLACEMENT placement = new WINDOWPLACEMENT();
+                placement.length = Marshal.SizeOf(typeof(WINDOWPLACEMENT));
+                if (GetWindowPlacement(cachedVlcHandle, ref placement))
+                {
+                    // 3 = Maximized, 1 = Normal
+                    if (placement.showCmd != 3)
+                    {
+                        offset = 30;
+                    }
+                }
+
+                // Only update if position/size/offset changed
+                if (vlcWidth != lastVlcWidth || rect.Left != lastVlcLeft || vlcTop != lastVlcTop || offset != lastVlcOffset)
+                {
+                    lastVlcWidth = vlcWidth;
+                    lastVlcLeft = rect.Left;
+                    lastVlcTop = vlcTop;
+                    lastVlcOffset = offset;
+
+                    if (keyPressForm != null && !keyPressForm.IsDisposed)
+                    {
+                        keyPressForm.Invoke(new Action(() =>
+                        {
+                            keyPressForm.Width = vlcWidth;
+                            keyPressForm.Left = rect.Left;
+                            keyPressForm.Top = vlcTop + offset;
+                        }));
+                    }
+                }
+            }
+        }
+    }
 
     private static void HandleKeyPress(Keys key, MediaPlayer mediaPlayer, string infoJsonFile, string saveFilePath, Segment currentSegment, Dictionary<string, Segment> segments)
     {
         switch (key)
         {
             case Keys.Space:
+                long currentTime = mediaPlayer.Time;
+                bool inRealChoice = currentSegment.Choices != null && currentSegment.Choices.Count > 0
+                    && currentTime >= currentSegment.ChoiceDisplayTimeMs && currentTime <= currentSegment.HideChoiceTimeMs;
+                bool inFakeChoice = currentSegment.fakechoices != null && currentSegment.fakechoices.Count > 0
+                    && currentTime >= currentSegment.fakeChoiceDisplayTimeMs && currentTime <= currentSegment.fakeHideChoiceTimeMs;
+                if (inRealChoice || inFakeChoice)
+                {
+                    Console.WriteLine("Cannot pause or play during a choice point.");
+                    break;
+                }
                 if (mediaPlayer.IsPlaying)
                 {
                     mediaPlayer.Pause();
@@ -293,6 +541,7 @@ public static class KeyForm
                 Console.WriteLine("Checking preconditions...");
                 PreconditionChecker.CheckPreconditions(infoJsonFile, saveFilePath);
                 break;
+
             */
             case Keys.Right:
                 SkipTime(mediaPlayer, ref currentSegment, segments, 10000);
@@ -313,7 +562,6 @@ public static class KeyForm
 
     private static void SkipTime(MediaPlayer mediaPlayer, ref Segment currentSegment, Dictionary<string, Segment> segments, int offsetMs)
     {
-
         if (DateTime.Now - lastSkipTime < skipCooldown)
         {
             Console.WriteLine("Skip action is on cooldown. Please wait.");
@@ -322,7 +570,7 @@ public static class KeyForm
 
         lastSkipTime = DateTime.Now;
         long currentTime = mediaPlayer.Time;
-        long newTime = mediaPlayer.Time + offsetMs;
+        long newTime = currentTime + offsetMs;
 
         if (currentSegment.Choices != null && currentSegment.Choices.Count > 0)
         {
@@ -386,4 +634,27 @@ public static class KeyForm
         mediaPlayer.Time = newTime;
         Console.WriteLine($"Skipped to {mediaPlayer.Time} ms in segment {currentSegment.Id}.");
     }
+
+    [StructLayout(LayoutKind.Sequential)]
+    private struct WINDOWPLACEMENT
+    {
+        public int length;
+        public int flags;
+        public int showCmd;
+        public System.Drawing.Point ptMinPosition;
+        public System.Drawing.Point ptMaxPosition;
+        public RECT rcNormalPosition;
+    }
+
+    [DllImport("user32.dll")]
+    private static extern bool GetWindowPlacement(IntPtr hWnd, ref WINDOWPLACEMENT lpwndpl);
+
+    [DllImport("user32.dll")]
+    private static extern bool GetWindowRect(IntPtr hWnd, out RECT lpRect);
+
+    [DllImport("user32.dll", SetLastError = true)]
+    private static extern IntPtr FindWindow(string lpClassName, string lpWindowName);
+
+    [DllImport("user32.dll", SetLastError = true)]
+    private static extern bool PostMessage(IntPtr hWnd, uint Msg, IntPtr wParam, IntPtr lParam);
 }
