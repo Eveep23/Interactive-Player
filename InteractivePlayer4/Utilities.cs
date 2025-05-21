@@ -116,7 +116,7 @@ public static class Utilities
 
         Label footerLabel = new Label
         {
-            Text = "Interactive Player 1.6.3 Preview developed by Eveep23",
+            Text = "Interactive Player 1.6.4 Preview developed by Eveep23",
             Font = new Font("Arial", 10, FontStyle.Italic),
             ForeColor = Color.White,
             TextAlign = ContentAlignment.MiddleCenter,
@@ -184,7 +184,7 @@ public static class Utilities
         {
             var folderName = Path.GetFileName(folder);
             return folderCategories.TryGetValue(folderName, out var category) ? category : "Uncategorized";
-        }).OrderBy(g => g.Key);
+        }).OrderBy(g => g.Key, new NaturalStringComparer());
 
         foreach (var group in groupedFolders)
         {
@@ -435,6 +435,41 @@ public static class Utilities
             }
         }
         return false; // No update or user passed
+    }
+}
+
+public class NaturalStringComparer : IComparer<string>
+{
+    public int Compare(string a, string b)
+    {
+        if (a == b) return 0;
+        if (a == null) return -1;
+        if (b == null) return 1;
+
+        int i = 0, j = 0;
+        while (i < a.Length && j < b.Length)
+        {
+            if (char.IsDigit(a[i]) && char.IsDigit(b[j]))
+            {
+                long numA = 0, numB = 0;
+                int startI = i, startJ = j;
+                while (i < a.Length && char.IsDigit(a[i])) i++;
+                while (j < b.Length && char.IsDigit(b[j])) j++;
+                long.TryParse(a.Substring(startI, i - startI), out numA);
+                long.TryParse(b.Substring(startJ, j - startJ), out numB);
+                if (numA != numB)
+                    return numA.CompareTo(numB);
+            }
+            else
+            {
+                int cmp = a[i].CompareTo(b[j]);
+                if (cmp != 0)
+                    return cmp;
+                i++;
+                j++;
+            }
+        }
+        return a.Length.CompareTo(b.Length);
     }
 }
 

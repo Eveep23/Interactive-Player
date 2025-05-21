@@ -172,6 +172,10 @@ public static class InstallInteractives
                 {
                     correspondingFolder = Path.Combine(currentDirectory, "YvW", fileNameWithoutExtension);
                 }
+                else if (fileNameWithoutExtension.StartsWith("Trivia Quest E"))
+                {
+                    correspondingFolder = Path.Combine(currentDirectory, "TQ", fileNameWithoutExtension);
+                }
                 else
                 {
                     correspondingFolder = Path.Combine(currentDirectory, fileNameWithoutExtension);
@@ -190,6 +194,11 @@ public static class InstallInteractives
                     isInstalled = Directory.Exists(correspondingFolder) && Directory.GetFiles(correspondingFolder, "*.json").Any();
                 }
                 else if (fileNameWithoutExtension.StartsWith("You vs Wild EP"))
+                {
+                    // Check if there are any JSON files in the folder
+                    isInstalled = Directory.Exists(correspondingFolder) && Directory.GetFiles(correspondingFolder, "*.json").Any();
+                }
+                else if (fileNameWithoutExtension.StartsWith("Trivia Quest E"))
                 {
                     // Check if there are any JSON files in the folder
                     isInstalled = Directory.Exists(correspondingFolder) && Directory.GetFiles(correspondingFolder, "*.json").Any();

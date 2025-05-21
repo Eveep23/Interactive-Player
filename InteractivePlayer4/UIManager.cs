@@ -207,9 +207,119 @@ public static class UIManager
     private static bool soundPlayed = false;
     private static int correctAnswersCount = 0;
 
-    public static string ShowChoiceUI(List<Choice> choices, List<Bitmap> buttonSprites, List<Bitmap> buttonIcons, int timeLimitMs, string movieFolder, string videoId, Segment segment)
+    public static void ShowTutorialWindow(string headerText, string bodyText, int tutorialDurationMs)
+    {
+        int baseWidth = 700;
+        int baseHeight = 100;
+
+        double scaleFactor = 1.0;
+        int formWidth = baseWidth;
+        int formHeight = baseHeight;
+        int vlcX = 0, vlcY = 0;
+
+        IntPtr vlcHandle = FindWindow(null, "VLC (Direct3D11 output)");
+        if (vlcHandle != IntPtr.Zero && GetWindowRect(vlcHandle, out RECT rect))
+        {
+            int playerWidth = rect.Right - rect.Left;
+            int playerHeight = rect.Bottom - rect.Top;
+            scaleFactor = Math.Max(0.5, Math.Min(2.0, playerWidth / (double)baseWidth));
+            formWidth = (int)(baseWidth * scaleFactor);
+            formHeight = (int)(baseHeight * scaleFactor);
+            vlcX = rect.Left;
+            vlcY = rect.Bottom - formHeight - (int)(32 * scaleFactor);
+        }
+
+        Form tutorialForm = new Form
+        {
+            FormBorderStyle = FormBorderStyle.None,
+            ShowInTaskbar = false,
+            TopMost = true,
+            StartPosition = FormStartPosition.Manual,
+            BackColor = Color.FromArgb(41, 41, 41),
+            TransparencyKey = Color.FromArgb(41, 41, 41),
+            Width = formWidth,
+            Height = formHeight,
+            MaximizeBox = false,
+            MinimizeBox = false,
+            Opacity = 0
+        };
+
+        string cursorIconPath = Path.Combine(Directory.GetCurrentDirectory(), "general", "Cursor_icon.png");
+        int iconSize = (int)(100 * scaleFactor);
+        PictureBox cursorPictureBox = new PictureBox
+        {
+            Image = File.Exists(cursorIconPath) ? Image.FromFile(cursorIconPath) : null,
+            SizeMode = PictureBoxSizeMode.Zoom,
+            Size = new Size(iconSize, iconSize),
+            BackColor = Color.Transparent,
+            Location = new Point((int)(16 * scaleFactor), (formHeight - iconSize) / 2)
+        };
+
+        int textAreaLeft = (int)(iconSize + 32 * scaleFactor);
+        int textAreaWidth = formWidth - textAreaLeft - (int)(16 * scaleFactor);
+
+        Label headerLabel = new ShadowLabel
+        {
+            Text = headerText,
+            Font = new Font("Arial", (float)(20 * scaleFactor), FontStyle.Bold),
+            ForeColor = Color.White,
+            BackColor = Color.Transparent,
+            AutoSize = false,
+            Width = textAreaWidth,
+            Height = (int)(36 * scaleFactor),
+            Location = new Point(textAreaLeft, (int)(24 * scaleFactor)),
+            TextAlign = ContentAlignment.MiddleLeft,
+            Padding = new Padding(0)
+        };
+
+        Label bodyLabel = new ShadowLabel
+        {
+            Text = bodyText,
+            Font = new Font("Arial", (float)(14 * scaleFactor), FontStyle.Regular),
+            ForeColor = Color.WhiteSmoke,
+            BackColor = Color.Transparent,
+            AutoSize = false,
+            Width = textAreaWidth,
+            Height = (int)(formHeight - headerLabel.Bottom - (12 * scaleFactor)),
+            Location = new Point(textAreaLeft, headerLabel.Bottom + (int)(6 * scaleFactor)),
+            TextAlign = ContentAlignment.TopLeft,
+            Padding = new Padding(0)
+        };
+
+        tutorialForm.Controls.Add(cursorPictureBox);
+        tutorialForm.Controls.Add(headerLabel);
+        tutorialForm.Controls.Add(bodyLabel);
+
+        if (vlcHandle != IntPtr.Zero)
+        {
+            tutorialForm.Location = new Point(vlcX + (int)(24 * scaleFactor), vlcY);
+        }
+        else
+        {
+            tutorialForm.StartPosition = FormStartPosition.CenterScreen;
+        }
+
+        System.Threading.Thread t = new System.Threading.Thread(() =>
+        {
+            tutorialForm.Shown += async (s, e) =>
+            {
+                await Task.Delay(tutorialDurationMs);
+                if (tutorialForm.IsHandleCreated)
+                {
+                    tutorialForm.Invoke(new Action(() => tutorialForm.Close()));
+                }
+            };
+            Application.Run(tutorialForm);
+        });
+        t.IsBackground = true;
+        t.SetApartmentState(System.Threading.ApartmentState.STA);
+        t.Start();
+    }
+
+    public static (string segmentId, string choiceId) ShowChoiceUI(List<Choice> choices, List<Bitmap> buttonSprites, List<Bitmap> buttonIcons, int timeLimitMs, string movieFolder, string videoId, Segment segment, string headerText = null)
     {
         string selectedSegmentId = null;
+        string selectedChoiceId = null;
         bool inputCaptured = false;
 
         correctAnswersCount = 0;
@@ -301,7 +411,7 @@ public static class UIManager
             }
         }
 
-        if (new[] { "81131714", "81004016", "80988062", "81271335", "10000003" }.Contains(videoId))
+        if (new[] { "81131714", "81481556", "81004016", "80988062", "81271335", "10000003" }.Contains(videoId))
         {
             int targetY = choiceForm.Location.Y;
             choiceForm.Location = new System.Drawing.Point(choiceForm.Location.X, targetY + 750);
@@ -367,7 +477,7 @@ public static class UIManager
         double scaleFactor = (double)choiceForm.Width / formWidth;
 
         // Apply additional scaling for specific video ID
-        if (videoId == "10000001" || videoId == "10000003" || videoId == "81251335" || videoId == "81271335" || videoId == "81287545" || videoId == "80149064" || videoId == "81260654" || videoId == "80994695" || videoId == "81328829" || videoId == "81058723" || videoId == "81054409" || videoId == "81108751" || videoId == "81004016" || videoId == "80988062" || videoId == "81131714" || videoId == "81205738" || videoId == "80227804" || videoId == "80227805" || videoId == "80227800" || videoId == "80227801" || videoId == "80227802" || videoId == "80227803" || videoId == "80227699" || videoId == "80227698" || videoId == "81319137" || videoId == "81205737" || videoId == "81054415" || videoId == "81175265" || videoId == "81019938" || videoId == "80227815" || videoId == "81250260" || videoId == "81250261" || videoId == "81250262" || videoId == "81250263" || videoId == "81250264" || videoId == "81250265" || videoId == "81250266" || videoId == "81250267")
+        if (videoId == "10000001" || videoId == "10000003" || videoId == "81481556" || videoId == "81251335" || videoId == "81271335" || videoId == "81287545" || videoId == "80149064" || videoId == "81260654" || videoId == "80994695" || videoId == "81328829" || videoId == "81058723" || videoId == "81054409" || videoId == "81108751" || videoId == "81004016" || videoId == "80988062" || videoId == "81131714" || videoId == "81205738" || videoId == "80227804" || videoId == "80227805" || videoId == "80227800" || videoId == "80227801" || videoId == "80227802" || videoId == "80227803" || videoId == "80227699" || videoId == "80227698" || videoId == "81319137" || videoId == "81205737" || videoId == "81054415" || videoId == "81175265" || videoId == "81019938" || videoId == "80227815" || videoId == "81250260" || videoId == "81250261" || videoId == "81250262" || videoId == "81250263" || videoId == "81250264" || videoId == "81250265" || videoId == "81250266" || videoId == "81250267")
         {
             scaleFactor *= 0.75;
         }
@@ -410,6 +520,35 @@ public static class UIManager
                 headerPanel.Location = new Point(0, 0);
 
                 buttonTopMargin += headerPanel.Height;
+            }
+        }
+
+        if (!string.IsNullOrEmpty(headerText) && videoId == "81481556" && segment.LayoutType == "l2")
+        {
+            var headerLabel = new ShadowLabel
+            {
+                Text = headerText,
+                AutoSize = false,
+                Width = choiceForm.Width,
+                Height = 70,
+                Font = new Font("Arial", 35, FontStyle.Bold),
+                ForeColor = Color.White,
+                BackColor = Color.Transparent,
+                TextAlign = ContentAlignment.MiddleCenter,
+                Padding = new Padding(10, 10, 10, 10),
+                ShadowColor = Color.Black,
+                ShadowOffset = 2
+            };
+            headerLabel.Location = new Point(0, (int)(choiceForm.Height * 0.69));
+            headerLabel.Anchor = AnchorStyles.Top | AnchorStyles.Left | AnchorStyles.Right;
+            choiceForm.Controls.Add(headerLabel);
+            headerLabel.BringToFront();
+
+            using (var g = choiceForm.CreateGraphics())
+            {
+                SizeF textSize = g.MeasureString(headerLabel.Text, headerLabel.Font);
+                headerLabel.Width = (int)textSize.Width + headerLabel.Padding.Left + headerLabel.Padding.Right;
+                headerLabel.Left = (choiceForm.Width - headerLabel.Width) / 2;
             }
         }
 
@@ -487,11 +626,24 @@ public static class UIManager
             var spriteSheet = buttonSprites[i];
             if (spriteSheet != null)
             {
-                Bitmap defaultSprite = ExtractSprite(spriteSheet, 0);
-                Bitmap focusedSprite = ExtractSprite(spriteSheet, 1);
-                Bitmap selectedSprite = ExtractSprite(spriteSheet, 2);
-
-                if (videoId == "81271335" && segment.LayoutType == "l1")
+                Bitmap defaultSprite, focusedSprite, selectedSprite, correctSprite = null, incorrectSprite = null;
+                if (videoId == "81481556" && segment.LayoutType == "l2")
+                {
+                    defaultSprite = ExtractSprite(spriteSheet, 1, 6);
+                    focusedSprite = ExtractSprite(spriteSheet, 2, 6);
+                    selectedSprite = ExtractSprite(spriteSheet, 3, 6);
+                    correctSprite = ExtractSprite(spriteSheet, 4, 6);
+                    incorrectSprite = ExtractSprite(spriteSheet, 5, 6);
+                }
+                else if (videoId == "81481556" && segment.LayoutType == "l0")
+                {
+                    defaultSprite = ExtractSprite(spriteSheet, 1, 6);
+                    focusedSprite = ExtractSprite(spriteSheet, 2, 6);
+                    selectedSprite = ExtractSprite(spriteSheet, 3, 6);
+                    correctSprite = ExtractSprite(spriteSheet, 4, 6);
+                    incorrectSprite = ExtractSprite(spriteSheet, 5, 6);
+                }
+                else if (videoId == "81271335" && segment.LayoutType == "l1")
                 {
                     // For videoId 81271335, use the single sprite directly
                     defaultSprite = spriteSheet;
@@ -522,7 +674,8 @@ public static class UIManager
                     UseVisualStyleBackColor = false,
                     TabStop = false,
                     Font = new Font("Arial", (float)(videoId == "10000001" ? 28 * scaleFactor : 22 * scaleFactor), videoId == "10000001" ? FontStyle.Regular : FontStyle.Bold),
-                    ForeColor = (videoId == "81328829") ? Color.Black :
+                    ForeColor = (videoId == "81481556") ? Color.Black :
+                                (videoId == "81328829") ? Color.Black :
                                 (new[] { "80227804", "80227805", "80227800", "80227801", "80227802", "80227803", "80227699", "80227698" }.Contains(videoId)) ? ColorTranslator.FromHtml("#27170a") :
                                 (videoId == "81131714" ? ColorTranslator.FromHtml("#7705ad") : Color.White),
                     TextAlign = (new[] { "81004016", "81205738", "81108751", "80151644", "80227804", "80227805", "80227800", "80227801", "80227802", "80227803", "80227699", "80227698", "81319137" }.Contains(videoId)) ? ContentAlignment.MiddleLeft : ContentAlignment.MiddleCenter,
@@ -607,10 +760,42 @@ public static class UIManager
                     if (!inputCaptured)
                     {
                         selectedSegmentId = (string)((Button)sender).Tag;
+                        var clickedButton = (Button)sender;
+                        int clickedIndex = buttons.IndexOf(clickedButton);
+                        if (clickedIndex >= 0 && clickedIndex < choices.Count)
+                        {
+                            selectedChoiceId = choices[clickedIndex].Id;
+                        }
                         inputCaptured = true;
 
-                        button.BackgroundImage = new Bitmap(selectedSprite, new Size(buttonWidth, buttonHeight));
+                        if (videoId == "81481556" && segment.LayoutType == "l2" && segment.CorrectIndex.HasValue)
+                        {
+                            if (clickedIndex == segment.CorrectIndex.Value)
+                            {
+                                button.BackgroundImage = new Bitmap(correctSprite, new Size(buttonWidth, buttonHeight));
+                            }
+                            else
+                            {
+                                button.BackgroundImage = new Bitmap(incorrectSprite, new Size(buttonWidth, buttonHeight));
+                                var correctButton = buttons[segment.CorrectIndex.Value];
+                                correctButton.BackgroundImage = new Bitmap(ExtractSprite(buttonSprites[segment.CorrectIndex.Value], 0, 6), new Size(buttonWidths[segment.CorrectIndex.Value], buttonHeight));
+                            }
+                        }
+                        else
+                        {
+                            button.BackgroundImage = new Bitmap(selectedSprite, new Size(buttonWidth, buttonHeight));
+                        }
                         button.Enabled = false;
+
+                        if (videoId == "81481556" && segment.LayoutType == "l2" && segment.CorrectIndex.HasValue)
+                        {
+                            string soundPath = (clickedIndex == segment.CorrectIndex.Value) ? correctSoundPath : incorrectSoundPath;
+                            if (!string.IsNullOrEmpty(soundPath) && File.Exists(soundPath))
+                            {
+                                var soundPlayer = new MediaPlayer(new Media(libVLC, soundPath, FromType.FromPath));
+                                soundPlayer.Play();
+                            }
+                        }
 
                         if (videoId == "81271335" && segment.LayoutType == "l1")
                         { 
@@ -654,9 +839,20 @@ public static class UIManager
                             selectPlayer.Play();
                         }
 
-                        if (videoId == "80988062" && choices.Any(choice => choice.Text?.Equals("GO BACK", StringComparison.OrdinalIgnoreCase) == true) || videoId == "80988062" && choices.Any(choice => choice.Text?.Equals("EXIT TO CREDITS", StringComparison.OrdinalIgnoreCase) == true) || videoId == "81131714" && segment.LayoutType == "l6" || videoId == "10000001" || videoId == "10000003" || videoId == "81251335" || videoId == "80994695" || videoId == "80135585" || videoId == "81328829" || videoId == "81205738" || videoId == "80227804" || videoId == "80227805" || videoId == "80227800" || videoId == "80227801" || videoId == "80227802" || videoId == "80227803" || videoId == "80227699" || videoId == "80227698" || videoId == "81319137" || videoId == "81205737" || videoId == "80227815" || videoId == "81250260" || videoId == "81250261" || videoId == "81250262" || videoId == "81250263" || videoId == "81250264" || videoId == "81250265" || videoId == "81250266" || videoId == "81250267")
+                        if (videoId == "80988062" && choices.Any(choice => choice.Text?.Equals("GO BACK", StringComparison.OrdinalIgnoreCase) == true) || videoId == "81481556" && segment.LayoutType == "l1" || videoId == "81481556" && segment.LayoutType == "l0" || videoId == "80988062" && choices.Any(choice => choice.Text?.Equals("EXIT TO CREDITS", StringComparison.OrdinalIgnoreCase) == true) || videoId == "81131714" && choices.Any(choice => choice.Text?.Equals("EXIT TO CREDITS", StringComparison.OrdinalIgnoreCase) == true) || videoId == "81131714" && segment.LayoutType == "l6" || videoId == "10000001" || videoId == "10000003" || videoId == "81251335" || videoId == "80994695" || videoId == "80135585" || videoId == "81328829" || videoId == "81205738" || videoId == "80227804" || videoId == "80227805" || videoId == "80227800" || videoId == "80227801" || videoId == "80227802" || videoId == "80227803" || videoId == "80227699" || videoId == "80227698" || videoId == "81319137" || videoId == "81205737" || videoId == "80227815" || videoId == "81250260" || videoId == "81250261" || videoId == "81250262" || videoId == "81250263" || videoId == "81250264" || videoId == "81250265" || videoId == "81250266" || videoId == "81250267")
                         {
                             choiceForm.Close(); // Close the form immediately after a choice is made
+                        }
+                        else if (videoId == "81481556" && segment.LayoutType == "l2")
+                        {
+                            // Delay closing the form by about 2 seconds (2000 ms)
+                            Task.Delay(2000).ContinueWith(_ =>
+                            {
+                                if (choiceForm.IsHandleCreated)
+                                {
+                                    choiceForm.Invoke(new Action(() => choiceForm.Close()));
+                                }
+                            });
                         }
                         else
                         {
@@ -746,6 +942,36 @@ public static class UIManager
                     }
                 }
 
+                if (videoId == "81481556" && segment.LayoutType == "l2")
+                {
+                    int col = i % 2;
+                    int row = i / 2;
+                    double[] colFactors = { 0.10, 0.50 };
+                    double[] rowFactors = { 0.74, 0.83 };
+                    if (i < 4)
+                    {
+                        buttonPanel.Location = new System.Drawing.Point(
+                            (int)(choiceForm.Width * colFactors[col]),
+                            (int)(choiceForm.Height * rowFactors[row])
+                        );
+                    }
+                }
+
+                if (videoId == "81481556" && segment.LayoutType == "l1")
+                {
+                    int col = i % 2;
+                    int row = i / 2;
+                    double[] colFactors = { 0.22, 0.49 };
+                    double[] rowFactors = { 0.74, 0.83 };
+                    if (i < 4)
+                    {
+                        buttonPanel.Location = new System.Drawing.Point(
+                            (int)(choiceForm.Width * colFactors[col]),
+                            (int)(choiceForm.Height * rowFactors[row])
+                        );
+                    }
+                }
+
                 // Minecraft Story Mode Custom Positioning
                 // Custom positioning for "MCSMTeamName"
                 if (segment.LayoutType == "MCSMTeamName")
@@ -762,7 +988,7 @@ public static class UIManager
                     {
                         buttonPanel.Location = new System.Drawing.Point((int)(choiceForm.Width * 0.51), (int)(choiceForm.Height * 0.71));
                     }
-                    if (choices[i].Text == "TNT launcher")
+                    else if (choices[i].Text == "TNT launcher")
                     {
                         buttonPanel.Location = new System.Drawing.Point((int)(choiceForm.Width * 0.15), (int)(choiceForm.Height * 0.71));
                     }
@@ -795,7 +1021,7 @@ public static class UIManager
                     {
                         buttonPanel.Location = new System.Drawing.Point((int)(choiceForm.Width * 0.10), (int)(choiceForm.Height * 0.15));
                     }
-                    if (choices[i].Text == "Craft Anvil")
+                    else if (choices[i].Text == "Craft Anvil")
                     {
                         buttonPanel.Location = new System.Drawing.Point((int)(choiceForm.Width * 0.10), (int)(choiceForm.Height * 0.15));
                     }
@@ -1529,6 +1755,14 @@ public static class UIManager
         {
             timerBarY = 0;
         }
+        else if (videoId == "81481556" && segment.LayoutType == "l2")
+        {
+            timerBarY = (int)(choiceForm.Height * 0.93);
+        }
+        else if (videoId == "81481556" && segment.LayoutType == "l1")
+        {
+            timerBarY = (int)(choiceForm.Height * 0.93);
+        }
         else if (segment.LayoutType == "ReubenZone" || segment.LayoutType == "EnderconZone" || segment.LayoutType == "TempleZone" || segment.LayoutType == "MCSMTeamName" || segment.LayoutType == "Crafting" || segment.LayoutType == "EpisodeEnd" || segment.LayoutType == "RedstoniaZone" || segment.LayoutType == "MCSMThroneZone" || segment.LayoutType == "MCSMTownZone" || segment.LayoutType == "MCSMWoolLand" || segment.LayoutType == "MCSMLabZone" || segment.LayoutType == "MCSMGunZone" || segment.LayoutType == "IvorZone")
         {
             timerBarY = (int)(choiceForm.Height * 0.88);
@@ -2138,7 +2372,7 @@ public static class UIManager
             }
         }
 
-        return selectedSegmentId;
+        return (selectedSegmentId, selectedChoiceId);
     }
 
     private static Settings LoadSettings()
@@ -2184,7 +2418,11 @@ public static class UIManager
                         heightFactor = 0.24;
                         break;
                     case "81481556":
-                        heightFactor = 0.40;
+                        heightFactor = 1;
+                        if (segment.LayoutType == "l0")
+                        {
+                            heightFactor = 0.25;
+                        }
                         break;
                     case "81328829":
                         heightFactor = 0.23;
@@ -2380,13 +2618,11 @@ public static class UIManager
     private const int LWA_COLORKEY = 0x00000001;
     private const int LWA_ALPHA = 0x00000002;
 
-    private static Bitmap ExtractSprite(Bitmap spriteSheet, int rowIndex)
+    private static Bitmap ExtractSprite(Bitmap spriteSheet, int rowIndex, int rowCount = 3)
     {
         if (spriteSheet == null) return null;
-
-        int spriteHeight = spriteSheet.Height / 3;
+        int spriteHeight = spriteSheet.Height / rowCount;
         Rectangle spriteRect = new Rectangle(0, rowIndex * spriteHeight, spriteSheet.Width, spriteHeight);
-
         return spriteSheet.Clone(spriteRect, spriteSheet.PixelFormat);
     }
 
@@ -2479,7 +2715,7 @@ public static class UIManager
             controller.SetVibration(new Vibration { LeftMotorSpeed = 65535, RightMotorSpeed = 65535 });
             Task.Delay(300).ContinueWith(_ => controller.SetVibration(new Vibration())); // Stop rumble after 300ms
 
-            if (videoId == "80988062" && choices.Any(choice => choice.Text?.Equals("GO BACK", StringComparison.OrdinalIgnoreCase) == true) || videoId == "80988062" && choices.Any(choice => choice.Text?.Equals("EXIT TO CREDITS", StringComparison.OrdinalIgnoreCase) == true) || videoId == "81131714" && segment.LayoutType == "l6" || videoId == "10000001" || videoId == "10000003" || videoId == "81251335" || videoId == "80994695" || videoId == "80135585" || videoId == "81328829" || videoId == "81205738" || videoId == "80227804" || videoId == "80227805" || videoId == "80227800" || videoId == "80227801" || videoId == "80227802" || videoId == "80227803" || videoId == "80227699" || videoId == "80227698" || videoId == "81319137" || videoId == "81205737" || videoId == "80227815" || videoId == "81250260" || videoId == "81250261" || videoId == "81250262" || videoId == "81250263" || videoId == "81250264" || videoId == "81250265" || videoId == "81250266" || videoId == "81250267")
+            if (videoId == "80988062" && choices.Any(choice => choice.Text?.Equals("GO BACK", StringComparison.OrdinalIgnoreCase) == true) || videoId == "80988062" && choices.Any(choice => choice.Text?.Equals("EXIT TO CREDITS", StringComparison.OrdinalIgnoreCase) == true) || videoId == "81131714" && choices.Any(choice => choice.Text?.Equals("EXIT TO CREDITS", StringComparison.OrdinalIgnoreCase) == true) || videoId == "81131714" && segment.LayoutType == "l6" || videoId == "10000001" || videoId == "10000003" || videoId == "81251335" || videoId == "80994695" || videoId == "80135585" || videoId == "81328829" || videoId == "81205738" || videoId == "80227804" || videoId == "80227805" || videoId == "80227800" || videoId == "80227801" || videoId == "80227802" || videoId == "80227803" || videoId == "80227699" || videoId == "80227698" || videoId == "81319137" || videoId == "81205737" || videoId == "80227815" || videoId == "81250260" || videoId == "81250261" || videoId == "81250262" || videoId == "81250263" || videoId == "81250264" || videoId == "81250265" || videoId == "81250266" || videoId == "81250267")
             {
                 choiceForm.Close(); // Close the form immediately after a choice is made
             }
@@ -2557,6 +2793,26 @@ public static class UIManager
         return Math.Pow(2, -10 * t) * Math.Sin((t - p / 4) * (2 * Math.PI) / p) + 1;
     }
 
+    public class ShadowLabel : Label
+    {
+        public Color ShadowColor { get; set; } = Color.Black;
+        public int ShadowOffset { get; set; } = 2;
+
+        protected override void OnPaint(PaintEventArgs e)
+        {
+            using (SolidBrush shadowBrush = new SolidBrush(ShadowColor))
+            using (SolidBrush textBrush = new SolidBrush(this.ForeColor))
+            {
+                // Draw shadow
+                var shadowLocation = new PointF(this.ShadowOffset, this.ShadowOffset);
+                e.Graphics.DrawString(this.Text, this.Font, shadowBrush, shadowLocation);
+
+                // Draw main text
+                var textLocation = new PointF(0, 0);
+                e.Graphics.DrawString(this.Text, this.Font, textBrush, textLocation);
+            }
+        }
+    }
 
     private static Bitmap BlendSprites(Bitmap sprite1, Bitmap sprite2, double progress)
     {

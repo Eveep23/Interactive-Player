@@ -319,6 +319,7 @@ public static class KeyForm
 
             await Task.Delay(300);
             AlignWithVLCWindow();
+            keyPressForm.BringToFront();
         };
 
         fullScreenButton.Location = new Point(
@@ -377,8 +378,9 @@ public static class KeyForm
                 // Show the form before aligning
                 keyPressForm.Shown += async (s, e) =>
                 {
-                    await Task.Delay(500);
+                    await Task.Delay(750);
                     AlignWithVLCWindow();
+                    keyPressForm.BringToFront();
                 };
 
                 Application.Run(keyPressForm);
@@ -536,12 +538,11 @@ public static class KeyForm
                 Console.WriteLine("Switching subtitles...");
                 SubtitleManager.ListAndSelectSubtitleTrack(mediaPlayer, mediaPlayer.Media);
                 break;
-
+            
             case Keys.C:
                 Console.WriteLine("Checking preconditions...");
                 PreconditionChecker.CheckPreconditions(infoJsonFile, saveFilePath);
                 break;
-
             */
             case Keys.Right:
                 SkipTime(mediaPlayer, ref currentSegment, segments, 10000);
@@ -558,7 +559,7 @@ public static class KeyForm
     }
 
     private static DateTime lastSkipTime = DateTime.MinValue;
-    private static readonly TimeSpan skipCooldown = TimeSpan.FromMilliseconds(500);
+    private static readonly TimeSpan skipCooldown = TimeSpan.FromMilliseconds(400);
 
     private static void SkipTime(MediaPlayer mediaPlayer, ref Segment currentSegment, Dictionary<string, Segment> segments, int offsetMs)
     {

@@ -6,63 +6,7 @@ using Newtonsoft.Json.Linq;
 
 public static class PreconditionChecker
 {
-    public static void CheckPreconditions(string infoPath, string savePath)
-    {
-        // Load JSON files
-        JObject infoJson = JObject.Parse(File.ReadAllText(infoPath));
-        JObject saveJson = JObject.Parse(File.ReadAllText(savePath));
-
-        // Extract states
-        var globalState = saveJson["GlobalState"] as JObject;
-        var persistentState = saveJson["PersistentState"] as JObject;
-
-        // Extract preconditions
-        var value = infoJson["jsonGraph"]?["videos"]?.First?.First?["interactiveVideoMoments"]?["value"] as JObject;
-        var preconditions = value?["preconditions"] as JObject;
-
-        if (preconditions == null)
-        {
-            Console.WriteLine("Preconditions not found in the provided info.json file.");
-            return;
-        }
-
-        Console.WriteLine("Preconditions:\n");
-
-        // Dictionary to store precondition results
-        var preconditionResults = new Dictionary<string, int>();
-
-        // Evaluate and store preconditions that act as states (like sums) first
-        foreach (var precondition in preconditions)
-        {
-            string preconditionId = precondition.Key;
-            var preconditionLogic = precondition.Value;
-
-            if (preconditionLogic[0].ToString() == "sum")
-            {
-                int result = EvaluateSum(preconditionLogic.Skip(1), persistentState, globalState, preconditionResults, infoPath);
-                preconditionResults[preconditionId] = result;
-            }
-        }
-
-        // Iterate through preconditions and evaluate them
-        foreach (var precondition in preconditions)
-        {
-            string preconditionId = precondition.Key;
-            var preconditionLogic = precondition.Value;
-
-            bool result = EvaluatePrecondition(preconditionLogic, persistentState, globalState, preconditionResults, infoPath);
-
-            if (preconditionLogic[0].ToString() == "sum")
-            {
-                Console.WriteLine($"{preconditionId}: {preconditionResults[preconditionId]}");
-            }
-            else
-            {
-                Console.WriteLine($"{preconditionId}: {(result ? "Met" : "Not Met")}");
-            }
-        }
-    }
-
+    
     public static bool CheckPrecondition(string preconditionId, Dictionary<string, object> globalState, Dictionary<string, object> persistentState, string infoJsonFile)
     {
         if (string.IsNullOrEmpty(preconditionId))
@@ -469,45 +413,56 @@ public static class PreconditionChecker
             }
             else if (path.Type == JTokenType.Array)
             {
-                string stateType = path[0].ToString();
-                string key = path[1].ToString();
+                var arr = (JArray)path;
+                if (arr.Count == 0)
+                    continue;
 
-                JToken actualValue = null;
-                if (stateType == "persistentState")
+                string stateType = arr[0].ToString();
+
+                if (stateType == "persistentState" || stateType == "globalState")
                 {
-                    actualValue = persistentState?[key];
-                }
-                else if (stateType == "globalState")
-                {
-                    actualValue = globalState?[key];
+                    string key = arr[1].ToString();
+                    JToken actualValue = stateType == "persistentState" ? persistentState?[key] : globalState?[key];
+                    if (actualValue != null && actualValue.Type == JTokenType.Integer)
+                        sum += (int)actualValue;
                 }
                 else if (stateType == "precondition")
                 {
-                    if (!preconditionResults.TryGetValue(key, out int preconditionValue))
+                    string preconditionKey = arr[1].ToString();
+                    if (!preconditionResults.TryGetValue(preconditionKey, out int preconditionValue))
                     {
-                        // Evaluate the precondition if it hasn't been evaluated yet
                         var preconditions = LoadPreconditionsFromInfoJson(infoJsonFile);
-                        if (preconditions != null && preconditions.TryGetValue(key, out var preconditionLogic))
+                        if (preconditions != null && preconditions.TryGetValue(preconditionKey, out var preconditionLogic))
                         {
-                            bool result = EvaluatePrecondition(preconditionLogic, persistentState, globalState, preconditionResults, infoJsonFile);
-                            preconditionValue = result ? 1 : 0; // Assuming precondition result is boolean
-                            preconditionResults[key] = preconditionValue;
+                            // Recursively evaluate the referenced precondition (can be sum, mult, etc.)
+                            if (preconditionLogic[0].ToString() == "sum")
+                                preconditionValue = EvaluateSum(preconditionLogic.Skip(1), persistentState, globalState, preconditionResults, infoJsonFile);
+                            else if (preconditionLogic[0].ToString() == "mult")
+                                preconditionValue = EvaluateMultiplication(preconditionLogic.Skip(1), persistentState, globalState, preconditionResults, infoJsonFile);
+                            else
+                                preconditionValue = EvaluatePrecondition(preconditionLogic, persistentState, globalState, preconditionResults, infoJsonFile) ? 1 : 0;
+                            preconditionResults[preconditionKey] = preconditionValue;
                         }
                         else
                         {
-                            throw new ArgumentException($"Unknown precondition: {key}");
+                            throw new ArgumentException($"Unknown precondition: {preconditionKey}");
                         }
                     }
                     sum += preconditionValue;
                 }
+                else if (stateType == "sum")
+                {
+                    // Nested sum
+                    sum += EvaluateSum(arr.Skip(1), persistentState, globalState, preconditionResults, infoJsonFile);
+                }
+                else if (stateType == "mult")
+                {
+                    // Nested multiplication
+                    sum += EvaluateMultiplication(arr.Skip(1), persistentState, globalState, preconditionResults, infoJsonFile);
+                }
                 else
                 {
                     throw new ArgumentException($"Unknown state type: {stateType}");
-                }
-
-                if (actualValue != null && actualValue.Type == JTokenType.Integer)
-                {
-                    sum += (int)actualValue;
                 }
             }
             else

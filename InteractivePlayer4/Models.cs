@@ -48,6 +48,9 @@ public class Segment
     public List<List<Choice>> ChoiceSets { get; set; }
     public List<int> AnswerSequence { get; set; }
     public HeaderImage HeaderImage { get; set; }
+    public string HeaderText { get; set; }
+    public int? CorrectIndex { get; set; }
+    public Moment TutorialMoment { get; set; }
 }
 
 public class Notification
@@ -77,6 +80,7 @@ public class Choice
     public string Exception { get; set; }
     public List<Override> Overrides { get; set; }
     public DefaultChoice Default { get; set; }
+    public string PreconditionId { get; set; }
 }
 
 public class DefaultChoice
@@ -154,7 +158,13 @@ public class Moment
     public List<List<Choice>> ChoiceSets { get; set; }
     public List<int> AnswerSequence { get; set; }
     public HeaderImage HeaderImage { get; set; }
+    public string HeaderText { get; set; }
     public string id { get; set; }
+    public int? CorrectIndex { get; set; }
+    public int? StartMs { get; set; }
+    public int? EndMs { get; set; }
+    public string BodyText { get; set; }
+    public ImageData image { get; set; }
 }
 public class HeaderImage
 {
