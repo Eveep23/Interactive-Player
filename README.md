@@ -43,7 +43,8 @@ To install an Interactive, all you need is the internal video. In the install me
 * The Last Kids on Earth: Happy Apocalypse to You
 * Unbreakable Kimmy Schmidt: Kimmy vs. the Reverend
 * Captain Underpants: Epic Choice-O-Rama 
-* The Boss Baby: Get That Baby 
+* The Boss Baby: Get That Baby
+* Trivia Quest (Ep.1-30)
 * Jurassic World Camp Cretaceous: Hidden Adventure 
 * Animals on the Loose: A You vs Wild Movie 
 * You vs Wild: Out Cold
