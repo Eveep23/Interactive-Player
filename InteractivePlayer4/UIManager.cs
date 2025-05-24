@@ -207,8 +207,18 @@ public static class UIManager
     private static bool soundPlayed = false;
     private static int correctAnswersCount = 0;
 
-    public static void ShowTutorialWindow(string headerText, string bodyText, int tutorialDurationMs)
+    public static void ShowTutorialWindow(string headerText, string bodyText, int tutorialDurationMs, string videoId)
     {
+        if (videoId == "81271335" || videoId == "81481556")
+        {
+            return;
+        }
+
+        if (headerText == "Get ready to click!" && IsControllerConnected())
+        {
+            headerText = "Get ready to press!";
+        }
+
         int baseWidth = 700;
         int baseHeight = 100;
 
@@ -244,7 +254,25 @@ public static class UIManager
             Opacity = 0
         };
 
-        string cursorIconPath = Path.Combine(Directory.GetCurrentDirectory(), "general", "Cursor_icon.png");
+        string audioPath = Path.Combine(Directory.GetCurrentDirectory(), "general", "reengagement_notification.m4a");
+        MediaPlayer tutorialPlayer = null;
+        if (File.Exists(audioPath))
+        {
+            Core.Initialize();
+            var libVLC = new LibVLC();
+            tutorialPlayer = new MediaPlayer(new Media(libVLC, audioPath, FromType.FromPath));
+            tutorialPlayer.Play();
+        }
+
+        string cursorIconPath;
+        if (IsControllerConnected())
+        {
+            cursorIconPath = Path.Combine(Directory.GetCurrentDirectory(), "general", "Controller_icon.png");
+        }
+        else
+        {
+            cursorIconPath = Path.Combine(Directory.GetCurrentDirectory(), "general", "Cursor_icon.png");
+        }
         int iconSize = (int)(100 * scaleFactor);
         PictureBox cursorPictureBox = new PictureBox
         {
@@ -299,10 +327,50 @@ public static class UIManager
             tutorialForm.StartPosition = FormStartPosition.CenterScreen;
         }
 
+        // Fade out
+        bool isFadingOut = false;
+        tutorialForm.FormClosing += (s, e) =>
+        {
+            if (!isFadingOut && tutorialForm.Opacity > 0)
+            {
+                e.Cancel = true;
+                isFadingOut = true;
+                var fadeOutTimer = new System.Windows.Forms.Timer { Interval = 15 };
+                fadeOutTimer.Tick += (sender, args) =>
+                {
+                    if (tutorialForm.Opacity > 0)
+                    {
+                        tutorialForm.Opacity = Math.Max(0, tutorialForm.Opacity - 0.05);
+                    }
+                    else
+                    {
+                        fadeOutTimer.Stop();
+                        tutorialForm.Close();
+                    }
+                };
+                fadeOutTimer.Start();
+            }
+        };
+
         System.Threading.Thread t = new System.Threading.Thread(() =>
         {
             tutorialForm.Shown += async (s, e) =>
             {
+                // Fade in
+                var fadeTimer = new System.Windows.Forms.Timer { Interval = 15 };
+                fadeTimer.Tick += (sender, args) =>
+                {
+                    if (tutorialForm.Opacity < 1.0)
+                    {
+                        tutorialForm.Opacity = Math.Min(1.0, tutorialForm.Opacity + 0.05);
+                    }
+                    else
+                    {
+                        fadeTimer.Stop();
+                    }
+                };
+                fadeTimer.Start();
+
                 await Task.Delay(tutorialDurationMs);
                 if (tutorialForm.IsHandleCreated)
                 {
@@ -530,14 +598,14 @@ public static class UIManager
                 Text = headerText,
                 AutoSize = false,
                 Width = choiceForm.Width,
-                Height = 70,
-                Font = new Font("Arial", 35, FontStyle.Bold),
+                Height = (int)(70 * scaleFactor),
+                Font = new Font("Arial", (float)(35 * scaleFactor), FontStyle.Bold),
                 ForeColor = Color.White,
                 BackColor = Color.Transparent,
                 TextAlign = ContentAlignment.MiddleCenter,
-                Padding = new Padding(10, 10, 10, 10),
+                Padding = new Padding((int)(10 * scaleFactor)),
                 ShadowColor = Color.Black,
-                ShadowOffset = 2
+                ShadowOffset = (int)(2 * scaleFactor)
             };
             headerLabel.Location = new Point(0, (int)(choiceForm.Height * 0.69));
             headerLabel.Anchor = AnchorStyles.Top | AnchorStyles.Left | AnchorStyles.Right;
@@ -645,14 +713,12 @@ public static class UIManager
                 }
                 else if (videoId == "81271335" && segment.LayoutType == "l1")
                 {
-                    // For videoId 81271335, use the single sprite directly
                     defaultSprite = spriteSheet;
                     focusedSprite = spriteSheet;
                     selectedSprite = spriteSheet;
                 }
                 else
                 {
-                    // For other videoIds, split the sprite sheet into rows
                     defaultSprite = ExtractSprite(spriteSheet, 0);
                     focusedSprite = ExtractSprite(spriteSheet, 1);
                     selectedSprite = ExtractSprite(spriteSheet, 2);
@@ -864,8 +930,7 @@ public static class UIManager
                             else
                             {
                                 choiceForm.ActiveControl = null;
-                            }
-                                
+                            } 
                         }
                     }
                 };
@@ -1797,6 +1862,20 @@ public static class UIManager
         var controller = new Controller(UserIndex.One);
         bool isControllerConnected = controller.IsConnected;
 
+        /*
+        int staggerStage = 0; // 0: first pair, 1: second pair, 2: third pair
+        bool staggerReady = true;
+        Stopwatch staggerTimer = new Stopwatch();
+
+        /*
+        if (videoId == "81271335" && segment.LayoutType == "l1" && isControllerConnected)
+        {
+            staggerStage = 0;
+            staggerReady = true;
+            staggerTimer.Reset();
+        }
+
+        /*
         // If Cat Burglar and a controller is connected, show a message and restart the program
         if (videoId == "81271335" && isControllerConnected)
         {
@@ -1813,6 +1892,7 @@ public static class UIManager
                 Environment.Exit(0); 
             }
         }
+        */
 
         if (videoId == "81271335" && segment.LayoutType == "l1")
         {
@@ -2293,30 +2373,88 @@ public static class UIManager
             });
         }
 
-        Task.Run(async () =>
+        if (videoId == "81271335" && segment.LayoutType == "l1" && isControllerConnected)
         {
-            int selectedIndex = 0; // Initialize selected index for controller input
+            int staggerStage = 0; // 0: first pair, 1: second pair, 2: third pair
+            bool staggerReady = true;
+            Stopwatch staggerTimer = new Stopwatch();
 
-            while (stopwatch.ElapsedMilliseconds < timeLimitMs)
+            Task.Run(async () =>
             {
-                initialWidth = (int)((double)(1650 * scaleFactor) * (timeLimitMs - stopwatch.ElapsedMilliseconds) / timeLimitMs);
-                drawingPanel.Invalidate();
+                while (stopwatch.ElapsedMilliseconds < timeLimitMs)
+                {
+                    drawingPanel.Invalidate();
 
-                // Handle controller input
-                HandleControllerInput(ref selectedIndex, buttons, buttonSprites, ref inputCaptured, ref selectedSegmentId, choiceForm, selectSoundPath, hoverSoundPath, libVLC, videoId, choices, segment);
+                    if (!controller.IsConnected) break;
+                    var state = controller.GetState();
+                    var gamepad = state.Gamepad;
 
-                await Task.Delay(16); // Update approximately every 16ms (~60 FPS)
-            }
+                    // Only allow input if ready
+                    if (staggerReady)
+                    {
+                        int baseIndex = staggerStage * 2;
+                        if (baseIndex + 1 < buttons.Count)
+                        {
+                            if (gamepad.Buttons.HasFlag(GamepadButtonFlags.DPadLeft) || gamepad.LeftThumbX < -5000)
+                            {
+                                // Simulate click on left button of current pair
+                                buttons[baseIndex].PerformClick();
+                                staggerReady = false;
+                                staggerTimer.Restart();
+                            }
+                            else if (gamepad.Buttons.HasFlag(GamepadButtonFlags.DPadRight) || gamepad.LeftThumbX > 5000)
+                            {
+                                // Simulate click on right button of current pair
+                                buttons[baseIndex + 1].PerformClick();
+                                staggerReady = false;
+                                staggerTimer.Restart();
+                            }
+                        }
+                    }
+                    else
+                    {
+                        // Wait for 1 second before next stage
+                        if (staggerTimer.ElapsedMilliseconds >= 1000)
+                        {
+                            staggerStage++;
+                            staggerReady = true;
+                            staggerTimer.Reset();
+                        }
+                    }
 
-            if (!inputCaptured && File.Exists(timeoutSoundPath))
+                    // End after third stage
+                    if (staggerStage > 2) break;
+
+                    await Task.Delay(16);
+                }
+            });
+        }
+        else
+        {
+            Task.Run(async () =>
             {
-                var timeoutPlayer = new MediaPlayer(new Media(libVLC, timeoutSoundPath, FromType.FromPath));
-                timeoutPlayer.Play();
-            }
+                int selectedIndex = (segment.DefaultChoiceIndex.HasValue && segment.DefaultChoiceIndex.Value >= 0 && segment.DefaultChoiceIndex.Value < choices.Count) ? segment.DefaultChoiceIndex.Value : 0; // Initialize selected index for controller input
 
-            choiceForm.Invoke(new Action(() => choiceForm.Close()));
-        });
+                while (stopwatch.ElapsedMilliseconds < timeLimitMs)
+                {
+                    initialWidth = (int)((double)(1650 * scaleFactor) * (timeLimitMs - stopwatch.ElapsedMilliseconds) / timeLimitMs);
+                    drawingPanel.Invalidate();
 
+                    // Handle controller input
+                    HandleControllerInput(ref selectedIndex, buttons, buttonSprites, ref inputCaptured, ref selectedSegmentId, choiceForm, selectSoundPath, hoverSoundPath, libVLC, videoId, choices, segment, movieFolder);
+
+                    await Task.Delay(16); // Update approximately every 16ms (~60 FPS)
+                }
+
+                if (!inputCaptured && File.Exists(timeoutSoundPath))
+                {
+                    var timeoutPlayer = new MediaPlayer(new Media(libVLC, timeoutSoundPath, FromType.FromPath));
+                    timeoutPlayer.Play();
+                }
+
+                choiceForm.Invoke(new Action(() => choiceForm.Close()));
+            });
+        }
         System.Windows.Forms.Timer visibilityTimer = new System.Windows.Forms.Timer { Interval = 15 };
         visibilityTimer.Tick += (sender, e) =>
         {
@@ -2324,7 +2462,6 @@ public static class UIManager
             visibilityTimer.Stop(); // Stop the timer
         };
         visibilityTimer.Start();
-
 
         Task.Run(async () =>
         {
@@ -2637,7 +2774,7 @@ public static class UIManager
             return null;
         }
     }
-    private static void HandleControllerInput(ref int selectedIndex, List<Button> buttons, List<Bitmap> buttonSprites, ref bool inputCaptured, ref string selectedSegmentId, Form choiceForm, string selectSoundPath, string hoverSoundPath, LibVLC libVLC, string videoId, List<Choice> choices, Segment segment)
+    private static void HandleControllerInput(ref int selectedIndex, List<Button> buttons, List<Bitmap> buttonSprites, ref bool inputCaptured, ref string selectedSegmentId, Form choiceForm, string selectSoundPath, string hoverSoundPath, LibVLC libVLC, string videoId, List<Choice> choices, Segment segment, string movieFolder)
     {
         var controller = new Controller(UserIndex.One);
         if (!controller.IsConnected)
@@ -2651,17 +2788,48 @@ public static class UIManager
         int previousIndex = selectedIndex;
         bool moved = false;
 
+        bool is2x2Grid = videoId == "81481556" && ((segment.LayoutType == "l2" && buttons.Count == 4) || (segment.LayoutType == "l1" && buttons.Count == 4));
+        int col = selectedIndex % 2;
+        int row = selectedIndex / 2;
+
         // Handle D-Pad, left joystick, right joystick, and bumper input
         if (!inputCaptured)
         {
+            // Left/Right
             if (gamepad.Buttons.HasFlag(GamepadButtonFlags.DPadLeft) || gamepad.LeftThumbX < -5000 || gamepad.RightThumbX < -5000 || gamepad.Buttons.HasFlag(GamepadButtonFlags.LeftShoulder))
             {
-                selectedIndex = Math.Max(0, selectedIndex - 1);
+                if (is2x2Grid)
+                {
+                    if (col > 0)
+                        selectedIndex = row * 2 + (col - 1);
+                }
+                else
+                    selectedIndex = Math.Max(0, selectedIndex - 1);
                 moved = true;
             }
             else if (gamepad.Buttons.HasFlag(GamepadButtonFlags.DPadRight) || gamepad.LeftThumbX > 5000 || gamepad.RightThumbX > 5000 || gamepad.Buttons.HasFlag(GamepadButtonFlags.RightShoulder))
             {
-                selectedIndex = Math.Min(buttons.Count - 1, selectedIndex + 1);
+                if (is2x2Grid)
+                {
+                    if (col < 1)
+                        selectedIndex = row * 2 + (col + 1);
+                }
+                else
+                    selectedIndex = Math.Min(buttons.Count - 1, selectedIndex + 1);
+                moved = true;
+            }
+
+            // Up/Down for 2x2 grid
+            else if (is2x2Grid && (gamepad.Buttons.HasFlag(GamepadButtonFlags.DPadUp) || gamepad.LeftThumbY > 5000 || gamepad.RightThumbY > 5000))
+            {
+                if (row > 0)
+                    selectedIndex = (row - 1) * 2 + col;
+                moved = true;
+            }
+            else if (is2x2Grid && (gamepad.Buttons.HasFlag(GamepadButtonFlags.DPadDown) || gamepad.LeftThumbY < -5000 || gamepad.RightThumbY < -5000))
+            {
+                if (row < 1)
+                    selectedIndex = (row + 1) * 2 + col;
                 moved = true;
             }
 
@@ -2671,8 +2839,6 @@ public static class UIManager
                 // Small rumble for moving to a choice
                 controller.SetVibration(new Vibration { LeftMotorSpeed = 2000, RightMotorSpeed = 2000 });
                 Task.Delay(100).ContinueWith(_ => controller.SetVibration(new Vibration())); // Stop rumble after 100ms
-
-                // Add delay to slow down the movement
                 Task.Delay(200).Wait();
                 if (File.Exists(hoverSoundPath))
                 {
@@ -2684,7 +2850,29 @@ public static class UIManager
             // Highlight the selected button
             for (int i = 0; i < buttons.Count; i++)
             {
-                buttons[i].BackgroundImage = i == selectedIndex ? new Bitmap(ExtractSprite(buttonSprites[i], 1), buttons[i].Size) : new Bitmap(ExtractSprite(buttonSprites[i], 0), buttons[i].Size);
+                Bitmap focusedSprite = null;
+                Bitmap defaultSprite = null;
+
+                if (videoId == "81481556" && (segment.LayoutType == "l2" || segment.LayoutType == "l0"))
+                {
+                    defaultSprite = ExtractSprite(buttonSprites[i], 1, 6);
+                    focusedSprite = ExtractSprite(buttonSprites[i], 2, 6);
+                }
+                else if (videoId == "81271335" && segment.LayoutType == "l1")
+                {
+                    // Use the full sprite for all states
+                    defaultSprite = buttonSprites[i];
+                    focusedSprite = buttonSprites[i];
+                }
+                else
+                {
+                    defaultSprite = ExtractSprite(buttonSprites[i], 0);
+                    focusedSprite = ExtractSprite(buttonSprites[i], 1);
+                }
+
+                buttons[i].BackgroundImage = i == selectedIndex
+                    ? new Bitmap(focusedSprite, buttons[i].Size)
+                    : new Bitmap(defaultSprite, buttons[i].Size);
             }
         }
 
@@ -2694,9 +2882,73 @@ public static class UIManager
             selectedSegmentId = (string)buttons[selectedIndex].Tag;
             inputCaptured = true;
 
-            buttons[selectedIndex].BackgroundImage = new Bitmap(ExtractSprite(buttonSprites[selectedIndex], 2), buttons[selectedIndex].Size);
-            buttons[selectedIndex].Enabled = false;
+            Bitmap selectedSprite = null;
+            Bitmap correctSprite = null;
+            Bitmap incorrectSprite = null;
 
+            bool handledSpecial = false;
+            if (videoId == "81481556" && segment.LayoutType == "l2" && segment.CorrectIndex.HasValue)
+            {
+                // Get sprites
+                selectedSprite = ExtractSprite(buttonSprites[selectedIndex], 3, 6);
+                correctSprite = ExtractSprite(buttonSprites[selectedIndex], 4, 6);
+                incorrectSprite = ExtractSprite(buttonSprites[selectedIndex], 5, 6);
+
+                if (selectedIndex == segment.CorrectIndex.Value)
+                {
+                    buttons[selectedIndex].BackgroundImage = new Bitmap(correctSprite, buttons[selectedIndex].Size);
+                    // Play correct sound
+                    string correctSoundPath = FindTexturePath(movieFolder, "sfx_select_correct.m4a");
+                    if (!string.IsNullOrEmpty(correctSoundPath) && File.Exists(correctSoundPath))
+                    {
+                        var soundPlayer = new MediaPlayer(new Media(libVLC, correctSoundPath, FromType.FromPath));
+                        soundPlayer.Play();
+                    }
+                }
+                else
+                {
+                    buttons[selectedIndex].BackgroundImage = new Bitmap(incorrectSprite, buttons[selectedIndex].Size);
+                    // Show correct button as correct
+                    var correctButton = buttons[segment.CorrectIndex.Value];
+                    var correctBtnSprite = ExtractSprite(buttonSprites[segment.CorrectIndex.Value], 4, 6);
+                    correctButton.BackgroundImage = new Bitmap(correctBtnSprite, correctButton.Size);
+
+                    // Play incorrect sound
+                    string incorrectSoundPath = FindTexturePath(movieFolder, "sfx_select_incorrect.m4a");
+                    if (!string.IsNullOrEmpty(incorrectSoundPath) && File.Exists(incorrectSoundPath))
+                    {
+                        var soundPlayer = new MediaPlayer(new Media(libVLC, incorrectSoundPath, FromType.FromPath));
+                        soundPlayer.Play();
+                    }
+                }
+                handledSpecial = true;
+            }
+
+            if (!handledSpecial)
+            {
+                // Default selection sprite
+                if (videoId == "81481556" && (segment.LayoutType == "l2" || segment.LayoutType == "l0"))
+                {
+                    selectedSprite = ExtractSprite(buttonSprites[selectedIndex], 3, 6);
+                }
+                else if (videoId == "81271335" && segment.LayoutType == "l1")
+                {
+                    selectedSprite = buttonSprites[selectedIndex];
+                }
+                else
+                {
+                    selectedSprite = ExtractSprite(buttonSprites[selectedIndex], 2);
+                }
+                buttons[selectedIndex].BackgroundImage = new Bitmap(selectedSprite, buttons[selectedIndex].Size);
+
+                if (File.Exists(selectSoundPath))
+                {
+                    var selectPlayer = new MediaPlayer(new Media(libVLC, selectSoundPath, FromType.FromPath));
+                    selectPlayer.Play();
+                }
+            }
+
+            buttons[selectedIndex].Enabled = false;
             foreach (var btn in buttons)
             {
                 if (btn != buttons[selectedIndex])
@@ -2705,23 +2957,36 @@ public static class UIManager
                 }
             }
 
-            if (File.Exists(selectSoundPath))
-            {
-                var selectPlayer = new MediaPlayer(new Media(libVLC, selectSoundPath, FromType.FromPath));
-                selectPlayer.Play();
-            }
-
             // Big rumble for selecting a choice
             controller.SetVibration(new Vibration { LeftMotorSpeed = 65535, RightMotorSpeed = 65535 });
             Task.Delay(300).ContinueWith(_ => controller.SetVibration(new Vibration())); // Stop rumble after 300ms
 
-            if (videoId == "80988062" && choices.Any(choice => choice.Text?.Equals("GO BACK", StringComparison.OrdinalIgnoreCase) == true) || videoId == "80988062" && choices.Any(choice => choice.Text?.Equals("EXIT TO CREDITS", StringComparison.OrdinalIgnoreCase) == true) || videoId == "81131714" && choices.Any(choice => choice.Text?.Equals("EXIT TO CREDITS", StringComparison.OrdinalIgnoreCase) == true) || videoId == "81131714" && segment.LayoutType == "l6" || videoId == "10000001" || videoId == "10000003" || videoId == "81251335" || videoId == "80994695" || videoId == "80135585" || videoId == "81328829" || videoId == "81205738" || videoId == "80227804" || videoId == "80227805" || videoId == "80227800" || videoId == "80227801" || videoId == "80227802" || videoId == "80227803" || videoId == "80227699" || videoId == "80227698" || videoId == "81319137" || videoId == "81205737" || videoId == "80227815" || videoId == "81250260" || videoId == "81250261" || videoId == "81250262" || videoId == "81250263" || videoId == "81250264" || videoId == "81250265" || videoId == "81250266" || videoId == "81250267")
+            if (videoId == "81481556" && segment.LayoutType == "l1" || videoId == "80988062" && choices.Any(choice => choice.Text?.Equals("GO BACK", StringComparison.OrdinalIgnoreCase) == true) || videoId == "80988062" && choices.Any(choice => choice.Text?.Equals("EXIT TO CREDITS", StringComparison.OrdinalIgnoreCase) == true) || videoId == "81131714" && choices.Any(choice => choice.Text?.Equals("EXIT TO CREDITS", StringComparison.OrdinalIgnoreCase) == true) || videoId == "81131714" && segment.LayoutType == "l6" || videoId == "10000001" || videoId == "10000003" || videoId == "81251335" || videoId == "80994695" || videoId == "80135585" || videoId == "81328829" || videoId == "81205738" || videoId == "80227804" || videoId == "80227805" || videoId == "80227800" || videoId == "80227801" || videoId == "80227802" || videoId == "80227803" || videoId == "80227699" || videoId == "80227698" || videoId == "81319137" || videoId == "81205737" || videoId == "80227815" || videoId == "81250260" || videoId == "81250261" || videoId == "81250262" || videoId == "81250263" || videoId == "81250264" || videoId == "81250265" || videoId == "81250266" || videoId == "81250267")
             {
                 choiceForm.Close(); // Close the form immediately after a choice is made
             }
+            else if (videoId == "81481556" && segment.LayoutType == "l2")
+            {
+                // Delay closing the form by about 2 seconds (2000 ms)
+                Task.Delay(2000).ContinueWith(_ =>
+                {
+                    if (choiceForm.IsHandleCreated)
+                    {
+                        choiceForm.Invoke(new Action(() => choiceForm.Close()));
+                    }
+                });
+            }
             else
             {
-                choiceForm.ActiveControl = null;
+                if (videoId == "81271335" && segment.LayoutType == "l1")
+                {
+                    inputCaptured = false;
+                    //button.Enabled = true;
+                }
+                else
+                {
+                    choiceForm.ActiveControl = null;
+                }
             }
         }
     }

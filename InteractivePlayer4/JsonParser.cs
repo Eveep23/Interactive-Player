@@ -272,7 +272,7 @@ public static class JsonParser
         string nextSegment = segment.DefaultNext;
         bool choiceDisplayed = false;
         bool fakeChoiceDisplayed = false;
-        //bool tutorialDisplayed = false;
+        bool tutorialDisplayed = false;
 
         string defaultButtonTexturePath = FindDefaultButtonTexture(movieFolder, segment.Choices ?? new List<Choice>());
 
@@ -357,7 +357,7 @@ public static class JsonParser
 
         KeyForm.InitializeKeyPressWindow(mediaPlayer, infoJsonFile, saveFilePath, segment, segments);
 
-        while (mediaPlayer.Time < endTimeMs - 102)
+        while (mediaPlayer.Time < endTimeMs - 105)
         {
             if (videoId == "10000001")
             {
@@ -420,18 +420,18 @@ public static class JsonParser
                     fakeChoiceDisplayed = true;
                 }
             }
-            /*
+            
             var tut = segment.TutorialMoment;
             if (!tutorialDisplayed && segment.TutorialMoment != null &&
-                mediaPlayer.Time >= tut.EndMs)
+                mediaPlayer.Time >= tut.StartMs)
             {
                 int tutorialDurationMs = (tut.EndMs ?? 0) - (tut.StartMs ?? 0);
 
-                UIManager.ShowTutorialWindow(tut.HeaderText, tut.BodyText, tutorialDurationMs);
+                UIManager.ShowTutorialWindow(tut.HeaderText, tut.BodyText, tutorialDurationMs, videoId);
 
                 tutorialDisplayed = true;
             }
-            */
+            
             if (!choiceDisplayed && segment.Choices != null && segment.Choices.Count > 0 &&
                 mediaPlayer.Time >= segment.ChoiceDisplayTimeMs)
             {
@@ -831,6 +831,14 @@ public static class JsonParser
 
                 choiceDisplayed = true;
             }
+            
+            if (mediaPlayer.Time >= endTimeMs - 105)
+            {
+                mediaPlayer.Pause();
+                break;
+            }
+            
+            Thread.Sleep(5);
         }
 
         mediaPlayer.Pause();

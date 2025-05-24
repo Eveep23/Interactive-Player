@@ -8,11 +8,28 @@ using System.Linq;
 using System.Runtime.InteropServices;
 using System.Threading;
 using System.Windows.Forms;
+using DiscordRPC;
 
 class Program
 {
+    public static DiscordRpcClient discordClient;
+
     static void Main(string[] args)
     {
+        discordClient = new DiscordRpcClient("1374146925128847370");
+        discordClient.Initialize();
+
+        discordClient.SetPresence(new RichPresence()
+        {
+            Details = "Browsing Interactives",
+            State = "Idle",
+            Assets = new Assets()
+            {
+                LargeImageKey = "logo",
+                LargeImageText = "Interactive Player"
+            }
+        });
+
         Core.Initialize();
 
         string configFilePath = Path.Combine(Directory.GetCurrentDirectory(), "config.json");
@@ -55,6 +72,17 @@ class Program
                 return;
             }
         }
+
+        discordClient.SetPresence(new RichPresence()
+        {
+            Details = "Playing an Interactive",
+            State = Path.GetFileName(movieFolder),
+            Assets = new Assets()
+            {
+                LargeImageKey = "logo",
+                LargeImageText = "Interactive Player"
+            }
+        });
 
         // Set paths for JSON files and save file
         string videoFile = GetVideoFilePath(movieFolder);
@@ -175,6 +203,7 @@ class Program
         {
             mediaPlayer.Dispose();
             libVLC.Dispose();
+            discordClient.Dispose();
         }
     }
 
