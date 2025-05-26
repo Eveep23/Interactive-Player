@@ -843,6 +843,19 @@ public static class JsonParser
 
         mediaPlayer.Pause();
 
+        if (videoId == "81271335" && segment?.Id == "Ident-Head")
+        {
+            var controller = new SharpDX.XInput.Controller(SharpDX.XInput.UserIndex.One);
+            if (controller.IsConnected)
+            {
+                nextSegment = "s02";
+            }
+            else
+            {
+                nextSegment = "s04";
+            }
+        }
+
         // Check segment groups for the next segment
         if (!string.IsNullOrEmpty(segment?.Id) && segmentGroups.TryGetValue(segment.Id, out List<SegmentGroup> group))
         {

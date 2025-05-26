@@ -479,67 +479,76 @@ public static class UIManager
             }
         }
 
+        // Load settings
+        var settings = LoadSettings();
+
         if (new[] { "81131714", "81481556", "81004016", "80988062", "81271335", "10000003" }.Contains(videoId))
         {
             int targetY = choiceForm.Location.Y;
-            choiceForm.Location = new System.Drawing.Point(choiceForm.Location.X, targetY + 750);
 
-            System.Windows.Forms.Timer animationTimer = new System.Windows.Forms.Timer { Interval = 10 };
-            int elapsed = 0;
-            int duration = 750; // Duration in milliseconds
-
-            animationTimer.Tick += (sender, e) =>
+            if (settings.DisableWindowAnimations)
             {
-                elapsed += animationTimer.Interval;
-                double progress = Math.Min(1.0, (double)elapsed / duration);
-                double easedProgress = EaseOutQuad(progress);
-
-                int newY = (int)(targetY + 750 * (1 - easedProgress));
-                choiceForm.Location = new System.Drawing.Point(choiceForm.Location.X, newY);
-
-                if (progress >= 1.0)
-                {
-                    animationTimer.Stop();
-                }
-            };
-
-            animationTimer.Start();
-
-            choiceForm.FormClosing += (sender, e) =>
+                choiceForm.Location = new System.Drawing.Point(choiceForm.Location.X, targetY);
+            }
+            else
             {
-                // Only animate if not already at the bottom
-                if (choiceForm.Location.Y == targetY)
-                {
-                    e.Cancel = true; // Cancel the close, we'll close after animation
-                    int closeElapsed = 0;
-                    int closeDuration = 750;
-                    int startY = choiceForm.Location.Y;
-                    int endY = targetY + 750;
+                choiceForm.Location = new System.Drawing.Point(choiceForm.Location.X, targetY + 750);
 
-                    System.Windows.Forms.Timer closeTimer = new System.Windows.Forms.Timer { Interval = 10 };
-                    closeTimer.Tick += (s, args) =>
+                System.Windows.Forms.Timer animationTimer = new System.Windows.Forms.Timer { Interval = 10 };
+                int elapsed = 0;
+                int duration = 750; // Duration in milliseconds
+
+                animationTimer.Tick += (sender, e) =>
+                {
+                    elapsed += animationTimer.Interval;
+                    double progress = Math.Min(1.0, (double)elapsed / duration);
+                    double easedProgress = EaseOutQuad(progress);
+
+                    int newY = (int)(targetY + 750 * (1 - easedProgress));
+                    choiceForm.Location = new System.Drawing.Point(choiceForm.Location.X, newY);
+
+                    if (progress >= 1.0)
                     {
-                        closeElapsed += closeTimer.Interval;
-                        double closeProgress = Math.Min(1.0, (double)closeElapsed / closeDuration);
-                        double closeEased = EaseInQuad(closeProgress);
+                    animationTimer.Stop();
+                    }
+                };
 
-                        int newCloseY = (int)(startY + (endY - startY) * closeEased);
-                        choiceForm.Location = new System.Drawing.Point(choiceForm.Location.X, newCloseY);
+                animationTimer.Start();
 
-                        if (closeProgress >= 1.0)
+                choiceForm.FormClosing += (sender, e) =>
+                {
+                    // Only animate if not already at the bottom
+                    if (choiceForm.Location.Y == targetY)
+                    {
+                        e.Cancel = true; // Cancel the close, we'll close after animation
+                        int closeElapsed = 0;
+                        int closeDuration = 750;
+                        int startY = choiceForm.Location.Y;
+                        int endY = targetY + 750;
+
+                        System.Windows.Forms.Timer closeTimer = new System.Windows.Forms.Timer { Interval = 10 };
+                        closeTimer.Tick += (s, args) =>
                         {
-                            closeTimer.Stop();
-                            choiceForm.FormClosing -= null; // Remove handler to avoid recursion
-                            choiceForm.Close(); // Now close for real
-                        }
-                    };
-                    closeTimer.Start();
-                }
-            };
-        }
+                            closeElapsed += closeTimer.Interval;
+                            double closeProgress = Math.Min(1.0, (double)closeElapsed / closeDuration);
+                            double closeEased = EaseInQuad(closeProgress);
 
-        // Load settings
-        var settings = LoadSettings();
+                            int newCloseY = (int)(startY + (endY - startY) * closeEased);
+                            choiceForm.Location = new System.Drawing.Point(choiceForm.Location.X, newCloseY);
+
+                            if (closeProgress >= 1.0)
+                            {
+                                closeTimer.Stop();
+                                choiceForm.FormClosing -= null; // Remove handler to avoid recursion
+                                choiceForm.Close(); // Now close for real
+                            }
+                        };
+
+                        closeTimer.Start();
+                    }
+                };
+            }
+        }
 
         // Calculate scaling factor based on the resized form
         double scaleFactor = (double)choiceForm.Width / formWidth;

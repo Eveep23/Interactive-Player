@@ -131,6 +131,18 @@ public static class SettingsMenu
             RightToLeft = RightToLeft.Yes
         };
 
+        // "Disable Window Animations" Checkbox
+        CheckBox disableWindowAnimationsCheckBox = new CheckBox
+        {
+            Text = "Disable Window Animations",
+            ForeColor = Color.White,
+            AutoSize = true,
+            Font = new Font("Arial", 14, FontStyle.Bold),
+            Checked = loadedSettings.DisableWindowAnimations,
+            TextAlign = ContentAlignment.MiddleRight,
+            RightToLeft = RightToLeft.Yes
+        };
+
         // Social Media Logos
         PictureBox youtubePictureBox = new PictureBox
         {
@@ -167,7 +179,8 @@ public static class SettingsMenu
                 SubtitleLanguage = subtitleComboBox.SelectedItem.ToString(),
                 CustomStoryChangingNotification = customStoryChangingNotificationCheckBox.Checked,
                 OptimizeInteractives = optimizeInteractivesCheckBox.Checked,
-                AudioOutput = audioOutputComboBox.SelectedItem.ToString()
+                AudioOutput = audioOutputComboBox.SelectedItem.ToString(),
+                DisableWindowAnimations = disableWindowAnimationsCheckBox.Checked
             };
             SaveSettings(settings);
             settingsForm.Close();
@@ -201,11 +214,13 @@ public static class SettingsMenu
 
         optimizeInteractivesCheckBox.Location = new Point(centerX - optimizeInteractivesCheckBox.Width / 2, 440);
 
+        disableWindowAnimationsCheckBox.Location = new Point(centerX - disableWindowAnimationsCheckBox.Width / 2, 490);
+
         // Position social media logos
         int logoStartX = centerX - youtubePictureBox.Width / 2;
-        youtubePictureBox.Location = new Point(logoStartX, 490);
-        discordPictureBox.Location = new Point(logoStartX + youtubePictureBox.Width + 20, 490);
-        githubPictureBox.Location = new Point(logoStartX + youtubePictureBox.Width + discordPictureBox.Width + 40, 490);
+        youtubePictureBox.Location = new Point(logoStartX, 540);
+        discordPictureBox.Location = new Point(logoStartX + youtubePictureBox.Width + 20, 540);
+        githubPictureBox.Location = new Point(logoStartX + youtubePictureBox.Width + discordPictureBox.Width + 40, 540);
 
         settingsForm.Controls.Add(audioLabel);
         settingsForm.Controls.Add(audioComboBox);
@@ -215,6 +230,7 @@ public static class SettingsMenu
         settingsForm.Controls.Add(audioOutputComboBox);
         settingsForm.Controls.Add(customStoryChangingNotificationCheckBox);
         settingsForm.Controls.Add(optimizeInteractivesCheckBox);
+        settingsForm.Controls.Add(disableWindowAnimationsCheckBox);
         settingsForm.Controls.Add(youtubePictureBox);
         settingsForm.Controls.Add(discordPictureBox);
         settingsForm.Controls.Add(githubPictureBox);
@@ -234,7 +250,8 @@ public static class SettingsMenu
             AudioLanguage = "English",
             SubtitleLanguage = "Disabled",
             CustomStoryChangingNotification = true,
-            OptimizeInteractives = true
+            OptimizeInteractives = true,
+            DisableWindowAnimations = false
         };
     }
 

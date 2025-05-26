@@ -189,6 +189,7 @@ class Program
                 }
 
                 Console.WriteLine($"Now playing segment: {segment.Id}");
+
                 currentSegment = JsonParser.HandleSegment(mediaPlayer, segment, segments, movieFolder, videoId, ref globalState, ref persistentState, infoJsonFile, saveFilePath, segmentGroups, segmentStates, isFirstLoad);
 
                 SaveManager.SaveProgress(saveFilePath, currentSegment, globalState, persistentState);

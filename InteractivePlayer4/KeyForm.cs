@@ -14,6 +14,8 @@ public static class KeyForm
 
     private static System.Threading.Thread keyPressThread;
 
+    private static Timer keepOnTopTimer;
+
     private static int lastVlcLeft = int.MinValue;
     private static int lastVlcTop = int.MinValue;
     private static int lastVlcWidth = int.MinValue;
@@ -320,6 +322,7 @@ public static class KeyForm
             await Task.Delay(300);
             AlignWithVLCWindow();
             keyPressForm.BringToFront();
+            ForceTopMost(keyPressForm);
         };
 
         fullScreenButton.Location = new Point(
@@ -381,6 +384,14 @@ public static class KeyForm
                     await Task.Delay(750);
                     AlignWithVLCWindow();
                     keyPressForm.BringToFront();
+                    ForceTopMost(keyPressForm);
+
+                    StartKeepOnTopTimer();
+                };
+
+                keyPressForm.FormClosed += (s, e) =>
+                {
+                    StopKeepOnTopTimer();
                 };
 
                 Application.Run(keyPressForm);
@@ -573,6 +584,12 @@ public static class KeyForm
         long currentTime = mediaPlayer.Time;
         long newTime = currentTime + offsetMs;
 
+        if (offsetMs < 0 && newTime < currentSegment.StartTimeMs)
+        {
+            Console.WriteLine("Cannot skip before the start of the current segment.");
+            return;
+        }
+
         if (currentSegment.Choices != null && currentSegment.Choices.Count > 0)
         {
             if (currentTime >= currentSegment.ChoiceDisplayTimeMs && currentTime <= currentSegment.HideChoiceTimeMs)
@@ -636,6 +653,35 @@ public static class KeyForm
         Console.WriteLine($"Skipped to {mediaPlayer.Time} ms in segment {currentSegment.Id}.");
     }
 
+    private static void StartKeepOnTopTimer()
+    {
+        if (keepOnTopTimer == null)
+        {
+            keepOnTopTimer = new System.Windows.Forms.Timer();
+            keepOnTopTimer.Interval = 5000;
+            keepOnTopTimer.Tick += (s, e) =>
+            {
+                if (keyPressForm != null && !keyPressForm.IsDisposed && keyPressForm.Visible)
+                {
+                    AlignWithVLCWindow();
+                    keyPressForm.BringToFront();
+                    ForceTopMost(keyPressForm);
+                }
+            };
+        }
+        keepOnTopTimer.Start();
+    }
+
+    private static void StopKeepOnTopTimer()
+    {
+        if (keepOnTopTimer != null)
+        {
+            keepOnTopTimer.Stop();
+            keepOnTopTimer.Dispose();
+            keepOnTopTimer = null;
+        }
+    }
+
     [StructLayout(LayoutKind.Sequential)]
     private struct WINDOWPLACEMENT
     {
@@ -658,4 +704,17 @@ public static class KeyForm
 
     [DllImport("user32.dll", SetLastError = true)]
     private static extern bool PostMessage(IntPtr hWnd, uint Msg, IntPtr wParam, IntPtr lParam);
+
+    [DllImport("user32.dll")]
+    private static extern bool SetWindowPos(IntPtr hWnd, IntPtr hWndInsertAfter, int X, int Y, int cx, int cy, uint uFlags);
+
+    private static readonly IntPtr HWND_TOPMOST = new IntPtr(-1);
+    private const uint SWP_NOSIZE = 0x0001;
+    private const uint SWP_NOMOVE = 0x0002;
+    private const uint SWP_SHOWWINDOW = 0x0040;
+
+    private static void ForceTopMost(Form form)
+    {
+        SetWindowPos(form.Handle, HWND_TOPMOST, 0, 0, 0, 0, SWP_NOMOVE | SWP_NOSIZE | SWP_SHOWWINDOW);
+    }
 }
