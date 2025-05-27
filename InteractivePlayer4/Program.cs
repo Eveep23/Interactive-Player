@@ -96,22 +96,6 @@ class Program
             return;
         }
 
-        // Randomly select the initial info JSON file if the movie folder is "Cat Burglar"
-        if (movieFolder.EndsWith("Cat Burglar", StringComparison.OrdinalIgnoreCase))
-        {
-            var random = new Random();
-            int randomIndex = random.Next(1, 10); // Randomly select between 1 and 9
-            infoJsonFile = Path.Combine(movieFolder, randomIndex == 1 ? "info.json" : $"info{randomIndex}.json");
-
-            if (!File.Exists(infoJsonFile))
-            {
-                Console.WriteLine($"Error: Selected info JSON file '{infoJsonFile}' does not exist.");
-                return;
-            }
-
-            Console.WriteLine($"Randomly selected initial info JSON: {infoJsonFile}");
-        }
-
         // Load save file if it exists
         string currentSegment = SaveManager.LoadSaveFile(saveFilePath);
         bool isFirstLoad = currentSegment == null;

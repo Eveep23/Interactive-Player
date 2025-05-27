@@ -427,7 +427,7 @@ public static class JsonParser
             {
                 int tutorialDurationMs = (tut.EndMs ?? 0) - (tut.StartMs ?? 0);
 
-                UIManager.ShowTutorialWindow(tut.HeaderText, tut.BodyText, tutorialDurationMs, videoId);
+                UIManager.ShowTutorialWindow(tut.HeaderText, tut.BodyText, tutorialDurationMs, videoId, movieFolder);
 
                 tutorialDisplayed = true;
             }
@@ -789,40 +789,6 @@ public static class JsonParser
                         }
                     }
 
-                    // Special handling for Cat Burglar
-                    if (movieFolder.EndsWith("Cat Burglar", StringComparison.OrdinalIgnoreCase) &&
-                        (chosenOption?.Text?.Equals("PLAY AGAIN", StringComparison.OrdinalIgnoreCase) == true ||
-                         chosenOption?.Text?.Equals("TRY AGAIN", StringComparison.OrdinalIgnoreCase) == true))
-                    {
-                        // Get all info JSON files in the movie folder
-                        var infoFiles = Directory.GetFiles(movieFolder, "info*.json");
-
-                        if (infoFiles.Length > 0)
-                        {
-                            // Select a random info JSON file
-                            var random = new Random();
-                            string nextInfoFilePath = infoFiles[random.Next(infoFiles.Length)];
-
-                            // Update the global infoJsonFile variable to the new file
-                            infoJsonFile = nextInfoFilePath;
-                            Console.WriteLine($"Switched to random info JSON: {infoJsonFile}");
-
-                            // Reload moments and states from the new info JSON
-                            var (newMomentsBySegment, newVideoId, newGlobalState, newPersistentState, newSegmentGroups, newSegmentStates) =
-                                ParseMoments(infoJsonFile);
-
-                            var (momentsBySegment, _, _, _, _, _) = ParseMoments(infoJsonFile);
-
-                            // Update the current state with the new data
-                            momentsBySegment = newMomentsBySegment ?? momentsBySegment;
-                            segmentGroups = newSegmentGroups ?? segmentGroups;
-                            segmentStates = newSegmentStates ?? segmentStates;
-
-                            // Merge moments into segments again
-                            MergeMomentsIntoSegments(segments, momentsBySegment, videoId);
-                        }
-                    }
-
                     if (videoId == "81131714" && segment.Choices != null && segment.Choices.Any(choice => choice.Text?.Equals("EXIT TO CREDITS", StringComparison.OrdinalIgnoreCase) == true) || videoId == "81131714" && segment.LayoutType == "l69" && chosenOption.Id == "SkipAhead" || videoId == "80988062" && segment.Choices != null && segment.Choices.Any(choice => choice.Text?.Equals("GO BACK", StringComparison.OrdinalIgnoreCase) == true) || videoId == "80988062" && segment.Choices != null && segment.Choices.Any(choice => choice.Text?.Equals("EXIT TO CREDITS", StringComparison.OrdinalIgnoreCase) == true) || videoId == "81131714" && segment.LayoutType == "l6" || videoId == "81481556"|| videoId == "10000001" || videoId == "10000003" || videoId == "81251335" || videoId == "80994695" || videoId == "80135585" || videoId == "81328829" || videoId == "80227804" || videoId == "80227805" || videoId == "80227800" || videoId == "80227801" || videoId == "80227802" || videoId == "80227803" || videoId == "80227699" || videoId == "80227698" || videoId == "81319137" || videoId == "81205738" || videoId == "81205737" || videoId == "80227815" || videoId == "81250260" || videoId == "81250261" || videoId == "81250262" || videoId == "81250263" || videoId == "81250264" || videoId == "81250265" || videoId == "81250266" || videoId == "81250267")
                     {
                         break; // Break out of the loop and return the selected segment immediately
@@ -868,14 +834,15 @@ public static class JsonParser
                 }
             }
         }
-        /*else
-        {
-            Console.WriteLine($"Segment ID is null or not found in segmentGroups. Segment: {segment?.Id ?? "null"}");
-        }
-        */
+
         // Handle segment group (sg) if nextSegment is a segment group and no SegmentId is listed
         while (!segments.ContainsKey(nextSegment) && segmentGroups.TryGetValue(nextSegment, out List<SegmentGroup> nextGroup))
         {
+            if (videoId == "81271335" && (nextSegment == "sL1" || nextSegment == "sL2" || nextSegment == "sL3" || nextSegment == "sL4" || segment.Id == "sL5" || nextSegment == "sL6" || nextSegment == "sL1_Cutdown" || nextSegment == "sL2_Cutdown" || nextSegment == "sL3_Cutdown" || nextSegment == "sL4_Cutdown" || nextSegment == "sL5_Cutdown" || nextSegment == "sL6_Cutdown" || nextSegment == "sVariantRetry"))
+            {
+                nextGroup = ShuffleInGroupsOfFour(nextGroup);
+            }
+
             foreach (var item in nextGroup)
             {
                 if (item.Precondition == null || PreconditionChecker.CheckPrecondition(item.Precondition, localGlobalState, localPersistentState, infoJsonFile))
@@ -926,6 +893,28 @@ public static class JsonParser
         mediaPlayer.Play();
 
         return nextSegment;
+    }
+
+    private static List<SegmentGroup> ShuffleInGroupsOfFour(List<SegmentGroup> input)
+    {
+        if (input == null || input.Count <= 1)
+            return input;
+
+        var rnd = new Random();
+        var result = new List<SegmentGroup>(input.Count);
+
+        for (int i = 0; i < input.Count; i += 4)
+        {
+            int groupSize = Math.Min(4, input.Count - i);
+            var chunk = input.GetRange(i, groupSize);
+            if (chunk.Count > 1)
+            {
+                chunk = chunk.OrderBy(x => rnd.Next()).ToList();
+            }
+            result.AddRange(chunk);
+        }
+
+        return result;
     }
 
     // Method to load initial states from the info JSON

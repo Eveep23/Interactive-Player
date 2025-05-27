@@ -207,9 +207,9 @@ public static class UIManager
     private static bool soundPlayed = false;
     private static int correctAnswersCount = 0;
 
-    public static void ShowTutorialWindow(string headerText, string bodyText, int tutorialDurationMs, string videoId)
+    public static void ShowTutorialWindow(string headerText, string bodyText, int tutorialDurationMs, string videoId, string movieFolder)
     {
-        if (videoId == "81271335" || videoId == "81481556")
+        if (videoId == "81481556")
         {
             return;
         }
@@ -235,8 +235,17 @@ public static class UIManager
             scaleFactor = Math.Max(0.5, Math.Min(2.0, playerWidth / (double)baseWidth));
             formWidth = (int)(baseWidth * scaleFactor);
             formHeight = (int)(baseHeight * scaleFactor);
-            vlcX = rect.Left;
-            vlcY = rect.Bottom - formHeight - (int)(32 * scaleFactor);
+
+            if (videoId == "81271335")
+            {
+                vlcX = rect.Left;
+                vlcY = rect.Top + (int)(24 * scaleFactor);
+            }
+            else
+            {
+                vlcX = rect.Left;
+                vlcY = rect.Bottom - formHeight - (int)(32 * scaleFactor);
+            }
         }
 
         Form tutorialForm = new Form
@@ -253,74 +262,204 @@ public static class UIManager
             MinimizeBox = false,
             Opacity = 0
         };
-
-        string audioPath = Path.Combine(Directory.GetCurrentDirectory(), "general", "reengagement_notification.m4a");
-        MediaPlayer tutorialPlayer = null;
-        if (File.Exists(audioPath))
+        if (videoId == "81271335")
         {
-            Core.Initialize();
-            var libVLC = new LibVLC();
-            tutorialPlayer = new MediaPlayer(new Media(libVLC, audioPath, FromType.FromPath));
-            tutorialPlayer.Play();
-        }
+            scaleFactor *= 0.37;
 
-        string cursorIconPath;
-        if (IsControllerConnected())
-        {
-            cursorIconPath = Path.Combine(Directory.GetCurrentDirectory(), "general", "Controller_icon.png");
+            string liveIndicatorsPath = FindTexturePath(movieFolder, "live_indicators_2x_v2.png");
+            if (!string.IsNullOrEmpty(liveIndicatorsPath) && File.Exists(liveIndicatorsPath))
+            {
+                Bitmap liveIndicatorsSheet = new Bitmap(liveIndicatorsPath);
+                int spriteCount = 4;
+                int spriteHeight = liveIndicatorsSheet.Height / spriteCount;
+                Bitmap spriteDead = liveIndicatorsSheet.Clone(new Rectangle(0, 0, liveIndicatorsSheet.Width, spriteHeight), liveIndicatorsSheet.PixelFormat);
+                Bitmap sprite2 = liveIndicatorsSheet.Clone(new Rectangle(0, 1 * spriteHeight, liveIndicatorsSheet.Width, spriteHeight), liveIndicatorsSheet.PixelFormat);
+                Bitmap sprite3 = liveIndicatorsSheet.Clone(new Rectangle(0, 2 * spriteHeight, liveIndicatorsSheet.Width, spriteHeight), liveIndicatorsSheet.PixelFormat);
+                Bitmap sprite4 = liveIndicatorsSheet.Clone(new Rectangle(0, 3 * spriteHeight, liveIndicatorsSheet.Width, spriteHeight), liveIndicatorsSheet.PixelFormat);
+
+                int indicatorSpacing = (int)(16 * scaleFactor);
+                int indicatorWidth = (int)(liveIndicatorsSheet.Width * scaleFactor);
+                int indicatorHeight = (int)(spriteHeight * scaleFactor);
+
+                int startX = (int)(100 * scaleFactor);
+                int y = (int)(10 * scaleFactor);
+
+                string saveFilePath = Path.Combine(movieFolder, "save.json");
+                var saveData = SaveManager.LoadSaveData(saveFilePath);
+                var globalState = saveData?.GlobalState ?? new Dictionary<string, object>();
+                var persistentState = saveData?.PersistentState ?? new Dictionary<string, object>();
+                string infoJsonFile = Path.Combine(movieFolder, "info.json");
+                int livesRemaining = PreconditionChecker.GetPreconditionValue("livesRemaining", globalState, persistentState, infoJsonFile) - 1;
+
+                PictureBox[] indicators = new PictureBox[3];
+                for (int i = 0; i < 3; i++)
+                {
+                    indicators[i] = new PictureBox
+                    {
+                        SizeMode = PictureBoxSizeMode.Zoom,
+                        Size = new Size(indicatorWidth, indicatorHeight),
+                        BackColor = Color.Transparent,
+                        Location = new Point(startX + i * (indicatorWidth + indicatorSpacing), y)
+                    };
+                    tutorialForm.Controls.Add(indicators[i]);
+                    indicators[i].BringToFront();
+                }
+                int displayLives = Math.Min(livesRemaining + 1, 3);
+                Action<int> updateIndicators = (lives) =>
+                {
+                    for (int i = 0; i < 3; i++)
+                    {
+                        Bitmap newImage;
+                        if (lives == 3)
+                        {
+                            newImage = sprite4;
+                        }
+                        else if (lives == 2)
+                        {
+                            newImage = (i < 1) ? spriteDead : sprite3;
+                        }
+                        else if (lives == 1)
+                        {
+                            newImage = (i < 2) ? spriteDead : sprite2;
+                        }
+                        else
+                        {
+                            newImage = spriteDead;
+                        }
+
+                        // Detect if this indicator just changed to dead
+                        bool wasAlive = indicators[i].Image != null && indicators[i].Image != spriteDead;
+                        bool nowDead = newImage == spriteDead;
+
+                        indicators[i].Image = newImage;
+
+                        if (wasAlive && nowDead)
+                        {
+                            var pb = indicators[i];
+                            var originalSize = pb.Size;
+                            var originalLocation = pb.Location;
+                            int animDuration = 180; // ms
+                            int animSteps = 12;
+                            int step = 0;
+                            System.Windows.Forms.Timer bounceTimer = new System.Windows.Forms.Timer { Interval = animDuration / animSteps };
+                            bounceTimer.Tick += (s, e) =>
+                            {
+                                step++;
+                                double animT = step / (double)animSteps;
+                                double scaleY = 1.0 + 0.35 * Math.Sin(Math.PI * animT); // 1.0 -> 1.35 -> 1.0
+                                double scaleX = 1.0 - 0.15 * Math.Sin(Math.PI * animT); // 1.0 -> 0.85 -> 1.0
+
+                                int newW = (int)(originalSize.Width * scaleX);
+                                int newH = (int)(originalSize.Height * scaleY);
+                                pb.Size = new Size(newW, newH);
+                                pb.Location = new Point(
+                                    originalLocation.X + (originalSize.Width - newW) / 2,
+                                    originalLocation.Y + (originalSize.Height - newH) / 2
+                                );
+
+                                if (step >= animSteps)
+                                {
+                                    bounceTimer.Stop();
+                                    pb.Size = originalSize;
+                                    pb.Location = originalLocation;
+                                }
+                            };
+                            bounceTimer.Start();
+                        }
+                    }
+                };
+
+                updateIndicators(displayLives);
+
+                tutorialForm.Shown += (s, e) =>
+                {
+                    var liveTimer = new System.Windows.Forms.Timer { Interval = 2000 };
+                    liveTimer.Tick += (sender2, e2) =>
+                    {
+                        liveTimer.Stop();
+                        updateIndicators(livesRemaining);
+                    };
+                    liveTimer.Start();
+                };
+            }
         }
         else
         {
-            cursorIconPath = Path.Combine(Directory.GetCurrentDirectory(), "general", "Cursor_icon.png");
+            string audioPath = Path.Combine(Directory.GetCurrentDirectory(), "general", "reengagement_notification.m4a");
+            MediaPlayer tutorialPlayer = null;
+            if (File.Exists(audioPath))
+            {
+                Core.Initialize();
+                var libVLC = new LibVLC();
+                tutorialPlayer = new MediaPlayer(new Media(libVLC, audioPath, FromType.FromPath));
+                tutorialPlayer.Play();
+            }
+
+            string cursorIconPath;
+            if (IsControllerConnected())
+            {
+                cursorIconPath = Path.Combine(Directory.GetCurrentDirectory(), "general", "Controller_icon.png");
+            }
+            else
+            {
+                cursorIconPath = Path.Combine(Directory.GetCurrentDirectory(), "general", "Cursor_icon.png");
+            }
+            int iconSize = (int)(100 * scaleFactor);
+            PictureBox cursorPictureBox = new PictureBox
+            {
+                Image = File.Exists(cursorIconPath) ? Image.FromFile(cursorIconPath) : null,
+                SizeMode = PictureBoxSizeMode.Zoom,
+                Size = new Size(iconSize, iconSize),
+                BackColor = Color.Transparent,
+                Location = new Point((int)(16 * scaleFactor), (formHeight - iconSize) / 2)
+            };
+
+            int textAreaLeft = (int)(iconSize + 32 * scaleFactor);
+            int textAreaWidth = formWidth - textAreaLeft - (int)(16 * scaleFactor);
+
+            Label headerLabel = new ShadowLabel
+            {
+                Text = headerText,
+                Font = new Font("Arial", (float)(20 * scaleFactor), FontStyle.Bold),
+                ForeColor = Color.White,
+                BackColor = Color.Transparent,
+                AutoSize = false,
+                Width = textAreaWidth,
+                Height = (int)(36 * scaleFactor),
+                Location = new Point(textAreaLeft, (int)(24 * scaleFactor)),
+                TextAlign = ContentAlignment.MiddleLeft,
+                Padding = new Padding(0)
+            };
+
+            Label bodyLabel = new ShadowLabel
+            {
+                Text = bodyText,
+                Font = new Font("Arial", (float)(14 * scaleFactor), FontStyle.Regular),
+                ForeColor = Color.WhiteSmoke,
+                BackColor = Color.Transparent,
+                AutoSize = false,
+                Width = textAreaWidth,
+                Height = (int)(formHeight - headerLabel.Bottom - (12 * scaleFactor)),
+                Location = new Point(textAreaLeft, headerLabel.Bottom + (int)(6 * scaleFactor)),
+                TextAlign = ContentAlignment.TopLeft,
+                Padding = new Padding(0)
+            };
+
+            tutorialForm.Controls.Add(cursorPictureBox);
+            tutorialForm.Controls.Add(headerLabel);
+            tutorialForm.Controls.Add(bodyLabel);
         }
-        int iconSize = (int)(100 * scaleFactor);
-        PictureBox cursorPictureBox = new PictureBox
-        {
-            Image = File.Exists(cursorIconPath) ? Image.FromFile(cursorIconPath) : null,
-            SizeMode = PictureBoxSizeMode.Zoom,
-            Size = new Size(iconSize, iconSize),
-            BackColor = Color.Transparent,
-            Location = new Point((int)(16 * scaleFactor), (formHeight - iconSize) / 2)
-        };
-
-        int textAreaLeft = (int)(iconSize + 32 * scaleFactor);
-        int textAreaWidth = formWidth - textAreaLeft - (int)(16 * scaleFactor);
-
-        Label headerLabel = new ShadowLabel
-        {
-            Text = headerText,
-            Font = new Font("Arial", (float)(20 * scaleFactor), FontStyle.Bold),
-            ForeColor = Color.White,
-            BackColor = Color.Transparent,
-            AutoSize = false,
-            Width = textAreaWidth,
-            Height = (int)(36 * scaleFactor),
-            Location = new Point(textAreaLeft, (int)(24 * scaleFactor)),
-            TextAlign = ContentAlignment.MiddleLeft,
-            Padding = new Padding(0)
-        };
-
-        Label bodyLabel = new ShadowLabel
-        {
-            Text = bodyText,
-            Font = new Font("Arial", (float)(14 * scaleFactor), FontStyle.Regular),
-            ForeColor = Color.WhiteSmoke,
-            BackColor = Color.Transparent,
-            AutoSize = false,
-            Width = textAreaWidth,
-            Height = (int)(formHeight - headerLabel.Bottom - (12 * scaleFactor)),
-            Location = new Point(textAreaLeft, headerLabel.Bottom + (int)(6 * scaleFactor)),
-            TextAlign = ContentAlignment.TopLeft,
-            Padding = new Padding(0)
-        };
-
-        tutorialForm.Controls.Add(cursorPictureBox);
-        tutorialForm.Controls.Add(headerLabel);
-        tutorialForm.Controls.Add(bodyLabel);
 
         if (vlcHandle != IntPtr.Zero)
         {
-            tutorialForm.Location = new Point(vlcX + (int)(24 * scaleFactor), vlcY);
+            if (videoId == "81271335")
+            {
+                tutorialForm.Location = new Point(vlcX, vlcY);
+            }
+            else
+            {
+                tutorialForm.Location = new Point(vlcX + (int)(24 * scaleFactor), vlcY);
+            }  
         }
         else
         {
@@ -431,43 +570,21 @@ public static class UIManager
 
         if (videoId == "81271335" && segment.LayoutType == "l1")
         {
-            // Load the persistent state from the save file
-            string saveFilePath = Path.Combine(movieFolder, "save.json");
-            var saveData = SaveManager.LoadSaveData(saveFilePath);
-
-            int p_qs = 1; // Default to 1 if not found
-            if (saveData?.PersistentState != null && saveData.PersistentState.TryGetValue("p_qs", out var p_qsValue))
+            string backgroundFileName = "lvl1_2x.png"; // Default
+            if (segment != null && !string.IsNullOrEmpty(segment.Id))
             {
-                if (int.TryParse(p_qsValue.ToString(), out int parsedValue))
-                {
-                    p_qs = parsedValue;
-                }
-            }
-
-            string backgroundFileName;
-            switch (p_qs)
-            {
-                case 0:
+                if (segment.Id.StartsWith("s1"))
                     backgroundFileName = "lvl1_2x.png";
-                    break;
-                case 1:
+                else if (segment.Id.StartsWith("s2"))
                     backgroundFileName = "lvl2_2x.png";
-                    break;
-                case 2:
+                else if (segment.Id.StartsWith("s3"))
                     backgroundFileName = "lvl3_2x.png";
-                    break;
-                case 3:
+                else if (segment.Id.StartsWith("s4"))
                     backgroundFileName = "lvl4_2x.png";
-                    break;
-                case 4:
+                else if (segment.Id.StartsWith("s5"))
                     backgroundFileName = "lvl5_2x.png";
-                    break;
-                case 5:
+                else if (segment.Id.StartsWith("s6"))
                     backgroundFileName = "lvl6_2x.png";
-                    break;
-                default:
-                    backgroundFileName = "lvl1_2x.png"; 
-                    break;
             }
 
             // Find the background path

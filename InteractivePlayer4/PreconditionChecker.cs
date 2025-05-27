@@ -6,7 +6,61 @@ using Newtonsoft.Json.Linq;
 
 public static class PreconditionChecker
 {
-    
+    public static int GetPreconditionValue(string preconditionId, Dictionary<string, object> globalState, Dictionary<string, object> persistentState, string infoJsonFile)
+    {
+        foreach (var key in new[] {
+    "p_1b_f", "p_1c_f", "p_1e_f", "p_1h_f",
+    "p_2b_f", "p_2c_f", "p_2d_f", "p_2e_f",
+    "p_3a_f", "p_3d_f", "p_3e_f", "p_3f_f",
+    "p_4a_f", "p_4e_f", "p_4f_f", "p_4g_f",
+    "p_5a_f", "p_5b_f", "p_5c_f", "p_5d_f",
+    "p_6a_f", "p_6b_f", "p_6c_f", "p_6d_f"
+})
+{
+    if (persistentState.TryGetValue(key, out var value))
+        Console.WriteLine($"{key}: {value}");
+    else
+        Console.WriteLine($"{key}: (missing)");
+}
+        
+        if (preconditionId == "livesLost")
+        {
+            // List of persistentState keys to sum
+            string[] keys = {
+                "p_1b_f", "p_1c_f", "p_1e_f", "p_1h_f",
+                "p_2b_f", "p_2c_f", "p_2d_f", "p_2e_f",
+                "p_3a_f", "p_3d_f", "p_3e_f", "p_3f_f",
+                "p_4a_f", "p_4e_f", "p_4f_f", "p_4g_f",
+                "p_5a_f", "p_5b_f", "p_5c_f", "p_5d_f",
+                "p_6a_f", "p_6b_f", "p_6c_f", "p_6d_f"
+            };
+            int sum = 0;
+            foreach (var key in keys)
+            {
+                if (persistentState.TryGetValue(key, out var value))
+                {
+                    if (value is int intValue)
+                        sum += intValue;
+                    else if (value is long longValue)
+                        sum += (int)longValue;
+                    else if (value is string strValue && int.TryParse(strValue, out int parsed))
+                        sum += parsed;
+                }
+            }
+            return sum;
+        }
+        else if (preconditionId == "livesRemaining")
+        {
+            // livesRemaining = (livesLost - 3) * -1 = 3 - livesLost
+            int livesLost = GetPreconditionValue("livesLost", globalState, persistentState, infoJsonFile);
+            return 3 - livesLost;
+        }
+        else
+        {
+            return 0;
+        }
+    }
+
     public static bool CheckPrecondition(string preconditionId, Dictionary<string, object> globalState, Dictionary<string, object> persistentState, string infoJsonFile)
     {
         if (string.IsNullOrEmpty(preconditionId))

@@ -408,7 +408,12 @@ public static class KeyForm
 
     private static void AttachOpacityHandlers(Control control, Form form)
     {
-        control.MouseEnter += (s, e) => StartFade(form, true);
+        control.MouseEnter += (s, e) =>
+        {
+            keyPressForm.BringToFront();
+            ForceTopMost(keyPressForm);
+            StartFade(form, true);
+        };
         control.MouseLeave += (s, e) =>
         {
             if (!form.Bounds.Contains(Cursor.Position))
