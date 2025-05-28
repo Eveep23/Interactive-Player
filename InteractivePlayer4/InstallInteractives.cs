@@ -57,8 +57,7 @@ public static class InstallInteractives
 
         backPictureBox.Click += (sender, e) =>
         {
-            Application.Restart();
-            Environment.Exit(0);
+            form.Close();
         };
 
         topBarPanel.Controls.Add(logoPictureBox);
