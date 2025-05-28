@@ -161,7 +161,7 @@ class Program
 
             if (segments.TryGetValue(currentSegment, out Segment seg))
             {
-                mediaPlayer.Time = seg.StartTimeMs + 22;
+                mediaPlayer.Time = seg.StartTimeMs + 105;
             }
 
             while (!string.IsNullOrEmpty(currentSegment))

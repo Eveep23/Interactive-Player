@@ -264,11 +264,6 @@ public static class JsonParser
 
     public static string HandleSegment(MediaPlayer mediaPlayer, Segment segment, Dictionary<string, Segment> segments, string movieFolder, string videoId, ref Dictionary<string, object> globalState, ref Dictionary<string, object> persistentState, string infoJsonFile, string saveFilePath, Dictionary<string, List<SegmentGroup>> segmentGroups, Dictionary<string, List<SegmentState>> segmentStates, bool isFirstLoad)
     {
-        /* if (Math.Abs(mediaPlayer.Time - segment.StartTimeMs) > 102)
-        {
-            mediaPlayer.Time = segment.StartTimeMs + 22;
-        } */
-
         string nextSegment = segment.DefaultNext;
         bool choiceDisplayed = false;
         bool fakeChoiceDisplayed = false;
@@ -359,6 +354,19 @@ public static class JsonParser
 
         while (mediaPlayer.Time < endTimeMs - 105)
         {
+            bool noChoicesOrDone = (segment.Choices == null || segment.Choices.Count == 0) || choiceDisplayed;
+            bool noChoiceSetsOrDone = (segment.ChoiceSets == null || segment.ChoiceSets.Count == 0) || choiceDisplayed;
+            bool noTutorialOrDone = segment.TutorialMoment == null || tutorialDisplayed;
+            bool noFakeChoicesOrDone = (segment.fakechoices == null || segment.fakechoices.Count == 0) || fakeChoiceDisplayed;
+            bool noNotificationsOrDone = segment.Notification == null || segment.Notification.Count == 0 ||
+                segment.Notification.All(n => mediaPlayer.Time > n.EndMs);
+
+            if (noChoicesOrDone && noChoiceSetsOrDone && noTutorialOrDone && noFakeChoicesOrDone && noNotificationsOrDone)
+            {
+                Console.WriteLine($"Breaking due to nothing left to evaluate");
+                break;
+            }
+
             if (videoId == "10000001")
             {
                 // Display notification if within the specified time range
@@ -501,7 +509,6 @@ public static class JsonParser
                         {
                             segment.HeaderImage = null;
                         }
-
                     }
                 }
 
@@ -788,26 +795,15 @@ public static class JsonParser
                             }
                         }
                     }
-
-                    if (videoId == "81131714" && segment.Choices != null && segment.Choices.Any(choice => choice.Text?.Equals("EXIT TO CREDITS", StringComparison.OrdinalIgnoreCase) == true) || videoId == "81131714" && segment.LayoutType == "l69" && chosenOption.Id == "SkipAhead" || videoId == "80988062" && segment.Choices != null && segment.Choices.Any(choice => choice.Text?.Equals("GO BACK", StringComparison.OrdinalIgnoreCase) == true) || videoId == "80988062" && segment.Choices != null && segment.Choices.Any(choice => choice.Text?.Equals("EXIT TO CREDITS", StringComparison.OrdinalIgnoreCase) == true) || videoId == "81131714" && segment.LayoutType == "l6" || videoId == "81481556"|| videoId == "10000001" || videoId == "10000003" || videoId == "81251335" || videoId == "80994695" || videoId == "80135585" || videoId == "81328829" || videoId == "80227804" || videoId == "80227805" || videoId == "80227800" || videoId == "80227801" || videoId == "80227802" || videoId == "80227803" || videoId == "80227699" || videoId == "80227698" || videoId == "81319137" || videoId == "81205738" || videoId == "81205737" || videoId == "80227815" || videoId == "81250260" || videoId == "81250261" || videoId == "81250262" || videoId == "81250263" || videoId == "81250264" || videoId == "81250265" || videoId == "81250266" || videoId == "81250267")
-                    {
-                        break; // Break out of the loop and return the selected segment immediately
-                    }
                 }
 
                 choiceDisplayed = true;
-            }
-            
-            if (mediaPlayer.Time >= endTimeMs - 105)
-            {
-                mediaPlayer.Pause();
                 break;
             }
-            
             Thread.Sleep(5);
         }
 
-        mediaPlayer.Pause();
+        //mediaPlayer.Pause();
 
         if (videoId == "81271335" && segment?.Id == "Ident-Head")
         {
@@ -882,11 +878,33 @@ public static class JsonParser
             return null;
         }
 
+        if (videoId == "81131714" && segment.Choices != null && segment.Choices.Any(choice => choice.Text?.Equals("EXIT TO CREDITS", StringComparison.OrdinalIgnoreCase) == true) || videoId == "81131714" && segment.LayoutType == "l69" && segment.Id == "SkipAhead" || videoId == "80988062" && segment.Choices != null && segment.Choices.Any(choice => choice.Text?.Equals("GO BACK", StringComparison.OrdinalIgnoreCase) == true) || videoId == "80988062" && segment.Choices != null && segment.Choices.Any(choice => choice.Text?.Equals("EXIT TO CREDITS", StringComparison.OrdinalIgnoreCase) == true) || videoId == "81131714" && segment.LayoutType == "l6" || videoId == "81481556" || videoId == "10000001" || videoId == "10000003" || videoId == "81251335" || videoId == "80994695" || videoId == "80135585" || videoId == "81328829" || videoId == "80227804" || videoId == "80227805" || videoId == "80227800" || videoId == "80227801" || videoId == "80227802" || videoId == "80227803" || videoId == "80227699" || videoId == "80227698" || videoId == "81319137" || videoId == "81205738" || videoId == "81205737" || videoId == "80227815" || videoId == "81250260" || videoId == "81250261" || videoId == "81250262" || videoId == "81250263" || videoId == "81250264" || videoId == "81250265" || videoId == "81250266" || videoId == "81250267")
+        {
+            Console.WriteLine("Skipped the wait");
+        }
+        else
+        {
+            while (mediaPlayer.Time < endTimeMs - 105)
+            {
+                Thread.SpinWait(20);
+            }
+        }
+
+        /*
+        int waitMs = endTimeMs - 185 - (int)mediaPlayer.Time;
+        if (waitMs > 0)
+        {
+            Thread.Sleep(waitMs);
+        }
+        */
+
+        mediaPlayer.Pause();
+
         if (!string.IsNullOrEmpty(nextSegment) && segments.TryGetValue(nextSegment, out Segment nextSeg))
         {
             if (Math.Abs(mediaPlayer.Time - nextSeg.StartTimeMs) > 422)
             {
-                mediaPlayer.Time = nextSeg.StartTimeMs + 25;
+                mediaPlayer.Time = nextSeg.StartTimeMs + 105;
             }
         }
 

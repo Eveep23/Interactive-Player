@@ -599,74 +599,6 @@ public static class UIManager
         // Load settings
         var settings = LoadSettings();
 
-        if (new[] { "81131714", "81481556", "81004016", "80988062", "81271335", "10000003" }.Contains(videoId))
-        {
-            int targetY = choiceForm.Location.Y;
-
-            if (settings.DisableWindowAnimations)
-            {
-                choiceForm.Location = new System.Drawing.Point(choiceForm.Location.X, targetY);
-            }
-            else
-            {
-                choiceForm.Location = new System.Drawing.Point(choiceForm.Location.X, targetY + 750);
-
-                System.Windows.Forms.Timer animationTimer = new System.Windows.Forms.Timer { Interval = 10 };
-                int elapsed = 0;
-                int duration = 750; // Duration in milliseconds
-
-                animationTimer.Tick += (sender, e) =>
-                {
-                    elapsed += animationTimer.Interval;
-                    double progress = Math.Min(1.0, (double)elapsed / duration);
-                    double easedProgress = EaseOutQuad(progress);
-
-                    int newY = (int)(targetY + 750 * (1 - easedProgress));
-                    choiceForm.Location = new System.Drawing.Point(choiceForm.Location.X, newY);
-
-                    if (progress >= 1.0)
-                    {
-                    animationTimer.Stop();
-                    }
-                };
-
-                animationTimer.Start();
-
-                choiceForm.FormClosing += (sender, e) =>
-                {
-                    // Only animate if not already at the bottom
-                    if (choiceForm.Location.Y == targetY)
-                    {
-                        e.Cancel = true; // Cancel the close, we'll close after animation
-                        int closeElapsed = 0;
-                        int closeDuration = 750;
-                        int startY = choiceForm.Location.Y;
-                        int endY = targetY + 750;
-
-                        System.Windows.Forms.Timer closeTimer = new System.Windows.Forms.Timer { Interval = 10 };
-                        closeTimer.Tick += (s, args) =>
-                        {
-                            closeElapsed += closeTimer.Interval;
-                            double closeProgress = Math.Min(1.0, (double)closeElapsed / closeDuration);
-                            double closeEased = EaseInQuad(closeProgress);
-
-                            int newCloseY = (int)(startY + (endY - startY) * closeEased);
-                            choiceForm.Location = new System.Drawing.Point(choiceForm.Location.X, newCloseY);
-
-                            if (closeProgress >= 1.0)
-                            {
-                                closeTimer.Stop();
-                                choiceForm.FormClosing -= null; // Remove handler to avoid recursion
-                                choiceForm.Close(); // Now close for real
-                            }
-                        };
-
-                        closeTimer.Start();
-                    }
-                };
-            }
-        }
-
         // Calculate scaling factor based on the resized form
         double scaleFactor = (double)choiceForm.Width / formWidth;
 
@@ -1898,7 +1830,7 @@ public static class UIManager
 
                 currentX += buttonWidth + spacing;
             }
-        }
+        }        
 
         if (new[] { "80227815", "81250260", "81250261", "81250262", "81250263", "81250264", "81250265", "81250266", "81250267" }.Contains(videoId))
         {
@@ -1987,38 +1919,6 @@ public static class UIManager
         // Check if a controller is connected
         var controller = new Controller(UserIndex.One);
         bool isControllerConnected = controller.IsConnected;
-
-        /*
-        int staggerStage = 0; // 0: first pair, 1: second pair, 2: third pair
-        bool staggerReady = true;
-        Stopwatch staggerTimer = new Stopwatch();
-
-        /*
-        if (videoId == "81271335" && segment.LayoutType == "l1" && isControllerConnected)
-        {
-            staggerStage = 0;
-            staggerReady = true;
-            staggerTimer.Reset();
-        }
-
-        /*
-        // If Cat Burglar and a controller is connected, show a message and restart the program
-        if (videoId == "81271335" && isControllerConnected)
-        {
-            var result = MessageBox.Show(
-                "Cat Burglar isn't currently compatible with a gamepad controller, please disconnect the gamepad controller",
-                "Controller Not Supported",
-                MessageBoxButtons.OK,
-                MessageBoxIcon.Warning
-            );
-
-            if (result == DialogResult.OK)
-            {
-                Application.Restart();
-                Environment.Exit(0); 
-            }
-        }
-        */
 
         if (videoId == "81271335" && segment.LayoutType == "l1")
         {
@@ -2321,7 +2221,6 @@ public static class UIManager
             {
                 if (timerFillSprite != null)
                 {
-
                     int totalRows = 20; // Total rows in the sprite
                     int usedRows = 19;  // Rows used for countdown
                     int frameHeight = timerFillSprite.Height / totalRows;
@@ -2581,6 +2480,363 @@ public static class UIManager
                 choiceForm.Invoke(new Action(() => choiceForm.Close()));
             });
         }
+
+        if (new[] { "81131714", "81481556", "81004016", "80988062", "81271335", "10000003" }.Contains(videoId))
+        {
+            int targetY = choiceForm.Location.Y;
+
+            if (settings.DisableWindowAnimations)
+            {
+                choiceForm.Location = new System.Drawing.Point(choiceForm.Location.X, targetY);
+            }
+            else
+            {
+                if (videoId == "81271335" && segment.LayoutType == "l1")
+                {
+                    choiceForm.Location = new System.Drawing.Point(choiceForm.Location.X, targetY);
+
+                    var originalLocation = choiceForm.Location;
+                    choiceForm.Location = new Point(-10000, -10000);
+                    choiceForm.Show();
+                    choiceForm.Refresh();
+                    Application.DoEvents();
+
+                    Bitmap formBitmap = new Bitmap(choiceForm.Width, choiceForm.Height, PixelFormat.Format32bppArgb);
+                    using (Graphics g = Graphics.FromImage(formBitmap))
+                    {
+                        IntPtr hdc = g.GetHdc();
+                        PrintWindow(choiceForm.Handle, hdc, 0);
+                        g.ReleaseHdc(hdc);
+                    }
+
+                    choiceForm.Hide();
+                    choiceForm.Location = originalLocation;
+
+                    choiceForm.Opacity = 1;
+                    choiceForm.Visible = false;
+
+                    int duration = 250;
+                    int interval = 15;
+                    int elapsed = 0;
+                    int maxRadius = (int)Math.Ceiling(Math.Sqrt(choiceForm.Width * choiceForm.Width + choiceForm.Height * choiceForm.Height) / 2);
+
+                    System.Windows.Forms.Timer rippleTimer = new System.Windows.Forms.Timer { Interval = interval };
+                    rippleTimer.Tick += (s, e) =>
+                    {
+                        elapsed += interval;
+                        double progress = Math.Min(1.0, (double)elapsed / duration);
+                        int radius = (int)(maxRadius * EaseOutQuad(progress));
+
+                        Bitmap masked = new Bitmap(choiceForm.Width, choiceForm.Height, PixelFormat.Format32bppArgb);
+                        using (Graphics g = Graphics.FromImage(masked))
+                        {
+                            g.Clear(Color.Transparent);
+                        }
+
+                        int feather = Math.Max(24, radius / 6);
+
+                        BitmapData data = masked.LockBits(
+                            new Rectangle(0, 0, masked.Width, masked.Height),
+                            ImageLockMode.WriteOnly, PixelFormat.Format32bppArgb);
+
+                        BitmapData srcData = formBitmap.LockBits(
+                            new Rectangle(0, 0, formBitmap.Width, formBitmap.Height),
+                            ImageLockMode.ReadOnly, PixelFormat.Format32bppArgb);
+
+                        int w = masked.Width;
+                        int h = masked.Height;
+                        int cx = w / 2;
+                        int cy = h / 2;
+
+                        int bytes = Math.Abs(data.Stride) * h;
+                        byte[] dst = new byte[bytes];
+                        byte[] src = new byte[bytes];
+
+                        System.Runtime.InteropServices.Marshal.Copy(srcData.Scan0, src, 0, bytes);
+
+                        for (int y = 0; y < h; y++)
+                        {
+                            for (int x = 0; x < w; x++)
+                            {
+                                int dx = x - cx;
+                                int dy = y - cy;
+                                double dist = Math.Sqrt(dx * dx + dy * dy);
+
+                                double alpha;
+                                if (dist < radius - feather)
+                                    alpha = 1.0;
+                                else if (dist > radius)
+                                    alpha = 0.0;
+                                else
+                                    alpha = 1.0 - (dist - (radius - feather)) / feather;
+
+                                int idx = (y * data.Stride) + (x * 4);
+
+                                byte b = src[idx + 0];
+                                byte g = src[idx + 1];
+                                byte r = src[idx + 2];
+                                byte a = src[idx + 3];
+
+                                dst[idx + 0] = b;
+                                dst[idx + 1] = g;
+                                dst[idx + 2] = r;
+                                dst[idx + 3] = (byte)(a * alpha);
+                            }
+                        }
+
+                        System.Runtime.InteropServices.Marshal.Copy(dst, 0, data.Scan0, bytes);
+
+
+                        masked.UnlockBits(data);
+                        formBitmap.UnlockBits(srcData);
+
+                        IntPtr screenDC = NativeMethods.GetDC(IntPtr.Zero);
+                        IntPtr memDC = NativeMethods.CreateCompatibleDC(screenDC);
+                        IntPtr hBitmap = masked.GetHbitmap(Color.FromArgb(0));
+                        IntPtr oldBitmap = NativeMethods.SelectObject(memDC, hBitmap);
+
+                        NativeMethods.SIZE size = new NativeMethods.SIZE { cx = masked.Width, cy = masked.Height };
+                        NativeMethods.POINT pointSource = new NativeMethods.POINT { x = 0, y = 0 };
+                        NativeMethods.POINT topPos = new NativeMethods.POINT { x = choiceForm.Left, y = choiceForm.Top };
+                        NativeMethods.BLENDFUNCTION blend = new NativeMethods.BLENDFUNCTION
+                        {
+                            BlendOp = 0,
+                            BlendFlags = 0,
+                            SourceConstantAlpha = 255,
+                            AlphaFormat = 1
+                        };
+
+                        NativeMethods.UpdateLayeredWindow(choiceForm.Handle, screenDC, ref topPos, ref size, memDC, ref pointSource, 0, ref blend, 2);
+
+                        NativeMethods.SelectObject(memDC, oldBitmap);
+                        NativeMethods.DeleteObject(hBitmap);
+                        NativeMethods.DeleteDC(memDC);
+                        NativeMethods.ReleaseDC(IntPtr.Zero, screenDC);
+
+                        if (!choiceForm.Visible)
+                            choiceForm.Visible = true;
+
+                        if (progress >= 1.0)
+                        {
+                            rippleTimer.Stop();
+                            choiceForm.BeginInvoke(new Action(() =>
+                            {
+                                int exStyle = GetWindowLong(choiceForm.Handle, GWL_EXSTYLE);
+                                SetWindowLong(choiceForm.Handle, GWL_EXSTYLE, exStyle & ~WS_EX_LAYERED);
+
+                                // Only now make the form visible and opaque
+                                choiceForm.Visible = true;
+                                choiceForm.Opacity = 1;
+                                choiceForm.Refresh();
+                            }));
+                        }
+                    };
+
+                    // Set layered style
+                    int exStyle2 = GetWindowLong(choiceForm.Handle, GWL_EXSTYLE);
+                    SetWindowLong(choiceForm.Handle, GWL_EXSTYLE, exStyle2 | WS_EX_LAYERED);
+
+                    rippleTimer.Start();
+
+                    choiceForm.FormClosing += (s, e) =>
+                    {
+                        // Prevent recursive closing
+                        if ((choiceForm.Tag as string) == "Closing") return;
+
+                        e.Cancel = true;
+                        int durationOut = 250;
+                        int intervalOut = 15;
+                        int elapsedOut = 0;
+                        int maxRadiusOut = (int)Math.Ceiling(Math.Sqrt(choiceForm.Width * choiceForm.Width + choiceForm.Height * choiceForm.Height) / 2);
+
+                        Bitmap formBitmapOut = new Bitmap(choiceForm.Width, choiceForm.Height, PixelFormat.Format32bppArgb);
+                        using (Graphics g = Graphics.FromImage(formBitmapOut))
+                        {
+                            IntPtr hdc = g.GetHdc();
+                            PrintWindow(choiceForm.Handle, hdc, 0);
+                            g.ReleaseHdc(hdc);
+                        }
+
+                        System.Windows.Forms.Timer rippleOutTimer = new System.Windows.Forms.Timer { Interval = intervalOut };
+                        rippleOutTimer.Tick += (sender2, e2) =>
+                        {
+                            if (choiceForm.IsDisposed || !choiceForm.IsHandleCreated)
+                            {
+                                rippleOutTimer.Stop();
+                                rippleOutTimer.Dispose();
+                                return;
+                            }
+
+                            elapsedOut += intervalOut;
+                            double progress = Math.Min(1.0, (double)elapsedOut / durationOut);
+                            int radius = (int)(maxRadiusOut * (1.0 - EaseOutQuad(progress)));
+
+                            using (Bitmap masked = new Bitmap(choiceForm.Width, choiceForm.Height, PixelFormat.Format32bppArgb))
+                            using (Graphics g = Graphics.FromImage(masked))
+                            {
+                                g.Clear(Color.Transparent);
+
+                                int feather = Math.Max(24, radius / 6);
+
+                                BitmapData data = masked.LockBits(
+                                    new Rectangle(0, 0, masked.Width, masked.Height),
+                                    ImageLockMode.WriteOnly, PixelFormat.Format32bppArgb);
+
+                                BitmapData srcData = formBitmapOut.LockBits(
+                                    new Rectangle(0, 0, formBitmapOut.Width, formBitmapOut.Height),
+                                    ImageLockMode.ReadOnly, PixelFormat.Format32bppArgb);
+
+                                int w = masked.Width;
+                                int h = masked.Height;
+                                int cx = w / 2;
+                                int cy = h / 2;
+
+                                int bytes = Math.Abs(data.Stride) * h;
+                                byte[] dst = new byte[bytes];
+                                byte[] src = new byte[bytes];
+
+                                System.Runtime.InteropServices.Marshal.Copy(srcData.Scan0, src, 0, bytes);
+
+                                for (int y = 0; y < h; y++)
+                                {
+                                    for (int x = 0; x < w; x++)
+                                    {
+                                        int dx = x - cx;
+                                        int dy = y - cy;
+                                        double dist = Math.Sqrt(dx * dx + dy * dy);
+
+                                        double alpha;
+                                        if (dist < radius - feather)
+                                            alpha = 1.0;
+                                        else if (dist > radius)
+                                            alpha = 0.0;
+                                        else
+                                            alpha = 1.0 - (dist - (radius - feather)) / feather;
+
+                                        int idx = (y * data.Stride) + (x * 4);
+
+                                        byte b = src[idx + 0];
+                                        byte g2 = src[idx + 1];
+                                        byte r = src[idx + 2];
+                                        byte a = src[idx + 3];
+
+                                        dst[idx + 0] = b;
+                                        dst[idx + 1] = g2;
+                                        dst[idx + 2] = r;
+                                        dst[idx + 3] = (byte)(a * alpha);
+                                    }
+                                }
+
+                                System.Runtime.InteropServices.Marshal.Copy(dst, 0, data.Scan0, bytes);
+
+                                masked.UnlockBits(data);
+                                formBitmapOut.UnlockBits(srcData);
+
+                                IntPtr screenDC = NativeMethods.GetDC(IntPtr.Zero);
+                                IntPtr memDC = NativeMethods.CreateCompatibleDC(screenDC);
+                                IntPtr hBitmap = masked.GetHbitmap(Color.FromArgb(0));
+                                IntPtr oldBitmap = NativeMethods.SelectObject(memDC, hBitmap);
+
+                                NativeMethods.SIZE size = new NativeMethods.SIZE { cx = masked.Width, cy = masked.Height };
+                                NativeMethods.POINT pointSource = new NativeMethods.POINT { x = 0, y = 0 };
+                                NativeMethods.POINT topPos = new NativeMethods.POINT { x = choiceForm.Left, y = choiceForm.Top };
+                                NativeMethods.BLENDFUNCTION blend = new NativeMethods.BLENDFUNCTION
+                                {
+                                    BlendOp = 0,
+                                    BlendFlags = 0,
+                                    SourceConstantAlpha = 255,
+                                    AlphaFormat = 1
+                                };
+
+                                NativeMethods.UpdateLayeredWindow(choiceForm.Handle, screenDC, ref topPos, ref size, memDC, ref pointSource, 0, ref blend, 2);
+
+                                NativeMethods.SelectObject(memDC, oldBitmap);
+                                NativeMethods.DeleteObject(hBitmap);
+                                NativeMethods.DeleteDC(memDC);
+                                NativeMethods.ReleaseDC(IntPtr.Zero, screenDC);
+
+                                if (progress >= 1.0)
+                                {
+                                    rippleOutTimer.Stop();
+                                    rippleOutTimer.Dispose();
+
+                                    int exStyle = GetWindowLong(choiceForm.Handle, GWL_EXSTYLE);
+                                    SetWindowLong(choiceForm.Handle, GWL_EXSTYLE, exStyle & ~WS_EX_LAYERED);
+
+                                    choiceForm.Tag = "Closing";
+                                    choiceForm.BeginInvoke(new Action(() => choiceForm.Close()));
+                                }
+                            }
+                        };
+
+                        // Set layered style if not already set
+                        int exStyle3 = GetWindowLong(choiceForm.Handle, GWL_EXSTYLE);
+                        SetWindowLong(choiceForm.Handle, GWL_EXSTYLE, exStyle3 | WS_EX_LAYERED);
+
+                        rippleOutTimer.Start();
+                    };
+                }
+                else
+                {
+                    choiceForm.Location = new System.Drawing.Point(choiceForm.Location.X, targetY + 750);
+
+                    System.Windows.Forms.Timer animationTimer = new System.Windows.Forms.Timer { Interval = 10 };
+                    int elapsed = 0;
+                    int duration = 750; // Duration in milliseconds
+
+                    animationTimer.Tick += (sender, e) =>
+                    {
+                        elapsed += animationTimer.Interval;
+                        double progress = Math.Min(1.0, (double)elapsed / duration);
+                        double easedProgress = EaseOutQuad(progress);
+
+                        int newY = (int)(targetY + 750 * (1 - easedProgress));
+                        choiceForm.Location = new System.Drawing.Point(choiceForm.Location.X, newY);
+
+                        if (progress >= 1.0)
+                        {
+                            animationTimer.Stop();
+                        }
+                    };
+
+                    animationTimer.Start();
+
+                    choiceForm.FormClosing += (sender, e) =>
+                    {
+                        // Only animate if not already at the bottom
+                        if (choiceForm.Location.Y == targetY)
+                        {
+                            e.Cancel = true; // Cancel the close, we'll close after animation
+                            int closeElapsed = 0;
+                            int closeDuration = 750;
+                            int startY = choiceForm.Location.Y;
+                            int endY = targetY + 750;
+
+                            System.Windows.Forms.Timer closeTimer = new System.Windows.Forms.Timer { Interval = 10 };
+                            closeTimer.Tick += (s, args) =>
+                            {
+                                closeElapsed += closeTimer.Interval;
+                                double closeProgress = Math.Min(1.0, (double)closeElapsed / closeDuration);
+                                double closeEased = EaseInQuad(closeProgress);
+
+                                int newCloseY = (int)(startY + (endY - startY) * closeEased);
+                                choiceForm.Location = new System.Drawing.Point(choiceForm.Location.X, newCloseY);
+
+                                if (closeProgress >= 1.0)
+                                {
+                                    closeTimer.Stop();
+                                    choiceForm.FormClosing -= null; // Remove handler to avoid recursion
+                                    choiceForm.Close(); // Now close for real
+                                }
+                            };
+
+                            closeTimer.Start();
+                        }
+                    };
+                }
+            }
+        }
+
         System.Windows.Forms.Timer visibilityTimer = new System.Windows.Forms.Timer { Interval = 15 };
         visibilityTimer.Tick += (sender, e) =>
         {
@@ -2872,6 +3128,9 @@ public static class UIManager
     [DllImport("user32.dll", SetLastError = true)]
     private static extern int SetWindowLong(IntPtr hWnd, int nIndex, int dwNewLong);
 
+    [DllImport("user32.dll")]
+    private static extern bool PrintWindow(IntPtr hwnd, IntPtr hdcBlt, uint nFlags);
+
     private const int GWL_EXSTYLE = -20;
     private const int WS_EX_LAYERED = 0x00080000;
     private const int WS_EX_TOOLWINDOW = 0x00000080;
@@ -2880,6 +3139,43 @@ public static class UIManager
 
     private const int LWA_COLORKEY = 0x00000001;
     private const int LWA_ALPHA = 0x00000002;
+
+    private static class NativeMethods
+    {
+        [StructLayout(LayoutKind.Sequential)]
+        public struct POINT { public int x, y; }
+        [StructLayout(LayoutKind.Sequential)]
+        public struct SIZE { public int cx, cy; }
+        [StructLayout(LayoutKind.Sequential, Pack = 1)]
+        public struct BLENDFUNCTION
+        {
+            public byte BlendOp;
+            public byte BlendFlags;
+            public byte SourceConstantAlpha;
+            public byte AlphaFormat;
+        }
+
+        [DllImport("user32.dll", ExactSpelling = true, SetLastError = true)]
+        public static extern bool UpdateLayeredWindow(IntPtr hwnd, IntPtr hdcDst, ref POINT pptDst, ref SIZE psize, IntPtr hdcSrc, ref POINT pptSrc, int crKey, ref BLENDFUNCTION pblend, int dwFlags);
+
+        [DllImport("gdi32.dll", ExactSpelling = true, SetLastError = true)]
+        public static extern IntPtr CreateCompatibleDC(IntPtr hDC);
+
+        [DllImport("gdi32.dll", ExactSpelling = true, SetLastError = true)]
+        public static extern bool DeleteDC(IntPtr hdc);
+
+        [DllImport("gdi32.dll", ExactSpelling = true, SetLastError = true)]
+        public static extern IntPtr SelectObject(IntPtr hdc, IntPtr hgdiobj);
+
+        [DllImport("gdi32.dll", ExactSpelling = true, SetLastError = true)]
+        public static extern bool DeleteObject(IntPtr hObject);
+
+        [DllImport("user32.dll", ExactSpelling = true, SetLastError = true)]
+        public static extern IntPtr GetDC(IntPtr hWnd);
+
+        [DllImport("user32.dll", ExactSpelling = true, SetLastError = true)]
+        public static extern int ReleaseDC(IntPtr hWnd, IntPtr hDC);
+    }
 
     private static Bitmap ExtractSprite(Bitmap spriteSheet, int rowIndex, int rowCount = 3)
     {
