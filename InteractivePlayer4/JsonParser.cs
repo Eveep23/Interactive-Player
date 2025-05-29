@@ -884,6 +884,11 @@ public static class JsonParser
         }
         else
         {
+            while (mediaPlayer.Time < endTimeMs - 125)
+            {
+                Thread.Sleep(1);
+            }
+
             while (mediaPlayer.Time < endTimeMs - 105)
             {
                 Thread.SpinWait(20);
