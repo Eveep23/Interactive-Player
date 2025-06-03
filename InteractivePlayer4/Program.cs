@@ -35,19 +35,18 @@ class Program
         string configFilePath = Path.Combine(Directory.GetCurrentDirectory(), "config.json");
         Settings settings = File.Exists(configFilePath)
             ? JsonConvert.DeserializeObject<Settings>(File.ReadAllText(configFilePath))
-            : new Settings { EnableConsole = true }; // Default to true if the setting is missing
+            : new Settings { EnableConsole = true };
 
-        // Show or hide the console window based on the setting
         if (settings.EnableConsole)
         {
-            AllocConsole(); // Allocate a console window
+            AllocConsole();
         }
         else
         {
             IntPtr consoleWindow = GetConsoleWindow();
             if (consoleWindow != IntPtr.Zero)
             {
-                FreeConsole(); // Free the console window if it exists
+                FreeConsole();
             }
         }
 
@@ -64,7 +63,6 @@ class Program
         }
         else
         {
-            // Display movie selection menu
             movieFolder = Utilities.ShowMovieSelectionMenu();
             if (movieFolder == null)
             {

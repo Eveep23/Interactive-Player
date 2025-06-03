@@ -832,9 +832,9 @@ public static class JsonParser
         }
 
         // Handle segment group (sg) if nextSegment is a segment group and no SegmentId is listed
-        while (!segments.ContainsKey(nextSegment) && segmentGroups.TryGetValue(nextSegment, out List<SegmentGroup> nextGroup))
+        while (!string.IsNullOrEmpty(nextSegment) && !segments.ContainsKey(nextSegment) && segmentGroups.TryGetValue(nextSegment, out List<SegmentGroup> nextGroup))
         {
-            if (videoId == "81271335" && (nextSegment == "sL1" || nextSegment == "sL2" || nextSegment == "sL3" || nextSegment == "sL4" || segment.Id == "sL5" || nextSegment == "sL6" || nextSegment == "sL1_Cutdown" || nextSegment == "sL2_Cutdown" || nextSegment == "sL3_Cutdown" || nextSegment == "sL4_Cutdown" || nextSegment == "sL5_Cutdown" || nextSegment == "sL6_Cutdown" || nextSegment == "sVariantRetry"))
+            if (videoId == "81271335" && (nextSegment == "sL1_start" || nextSegment == "sL1" || nextSegment == "sL2" || nextSegment == "sL3" || nextSegment == "sL4" || segment.Id == "sL5" || nextSegment == "sL6" || nextSegment == "sL1_Cutdown" || nextSegment == "sL2_Cutdown" || nextSegment == "sL3_Cutdown" || nextSegment == "sL4_Cutdown" || nextSegment == "sL5_Cutdown" || nextSegment == "sL6_Cutdown" || nextSegment == "sVariantRetry"))
             {
                 nextGroup = ShuffleInGroupsOfFour(nextGroup);
             }
@@ -850,7 +850,7 @@ public static class JsonParser
         }
 
         // Check for special segment IDs to start a new episode
-        if (nextSegment.Contains("playEpisode"))
+        if (!string.IsNullOrEmpty(nextSegment) && nextSegment.Contains("playEpisode"))
         {
             // Extract episode number
             string episodeNumber = new string(nextSegment.Where(char.IsDigit).ToArray());
@@ -884,24 +884,16 @@ public static class JsonParser
         }
         else
         {
-            while (mediaPlayer.Time < endTimeMs - 125)
+            while (mediaPlayer.Time < endTimeMs - 200)
             {
                 Thread.Sleep(1);
             }
 
-            while (mediaPlayer.Time < endTimeMs - 105)
+            while (mediaPlayer.Time < endTimeMs - 185)
             {
                 Thread.SpinWait(20);
             }
         }
-
-        /*
-        int waitMs = endTimeMs - 185 - (int)mediaPlayer.Time;
-        if (waitMs > 0)
-        {
-            Thread.Sleep(waitMs);
-        }
-        */
 
         mediaPlayer.Pause();
 

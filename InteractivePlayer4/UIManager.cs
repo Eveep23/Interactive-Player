@@ -2621,13 +2621,14 @@ public static class UIManager
                             rippleTimer.Stop();
                             choiceForm.BeginInvoke(new Action(() =>
                             {
+                                // Remove layered style so the window becomes interactive
                                 int exStyle = GetWindowLong(choiceForm.Handle, GWL_EXSTYLE);
                                 SetWindowLong(choiceForm.Handle, GWL_EXSTYLE, exStyle & ~WS_EX_LAYERED);
 
-                                // Only now make the form visible and opaque
-                                choiceForm.Visible = true;
-                                choiceForm.Opacity = 1;
-                                choiceForm.Refresh();
+                                // Do NOT set Visible or Opacity here!
+                                // Instead, force a redraw to update the window in-place
+                                choiceForm.Invalidate();
+                                choiceForm.Update();
                             }));
                         }
                     };
