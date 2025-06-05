@@ -147,7 +147,15 @@ class Program
             "--freetype-bold",
             "--freetype-outline-thickness=3",
             "--no-stats",
-            "--quiet"
+            "--quiet",
+             "--drop-late-frames",
+            "--skip-frames",
+            "--file-caching=100",
+            "--network-caching=100",
+            "--live-caching=100",
+            "--disc-caching=100",
+            "--no-input-fast-seek",
+            "--no-video-title-show"
         );
         var media = new Media(libVLC, new Uri(Path.GetFullPath(videoFile)));
         var mediaPlayer = new MediaPlayer(media);
