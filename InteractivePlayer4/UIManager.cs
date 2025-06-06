@@ -32,7 +32,8 @@ public static class UIManager
             TopMost = true,
             ShowInTaskbar = false,
             Width = formWidth,
-            Height = 200
+            Height = 200,
+            Opacity = 0.87
         };
 
         notificationForm.Load += (sender, e) =>
@@ -125,19 +126,27 @@ public static class UIManager
             notificationForm.Location = new System.Drawing.Point(centerX, initialY);
 
             System.Windows.Forms.Timer animationTimer = new System.Windows.Forms.Timer { Interval = 10 };
+            int animationDuration = 400;
+            int animationElapsed = 0;
+            int upAnimationElapsed = 0;
             bool movingDown = true;
             bool delayCompleted = false;
             int delayCounter = 0;
+            int startY = initialY;
+            int endY = targetY;
 
             animationTimer.Tick += (sender, e) =>
             {
                 if (movingDown)
                 {
-                    if (notificationForm.Location.Y < targetY)
-                    {
-                        notificationForm.Location = new System.Drawing.Point(notificationForm.Location.X, notificationForm.Location.Y + 10);
-                    }
-                    else
+                    animationElapsed += animationTimer.Interval;
+                    double progress = Math.Min(1.0, (double)animationElapsed / animationDuration);
+                    double eased = EaseOutQuad(progress);
+                    int newY = (int)(startY + (endY - startY) * eased);
+
+                    notificationForm.Location = new System.Drawing.Point(notificationForm.Location.X, newY);
+
+                    if (progress >= 1.0)
                     {
                         movingDown = false;
                         delayCounter = 0;
@@ -149,15 +158,19 @@ public static class UIManager
                     if (delayCounter >= displayDurationMs)
                     {
                         delayCompleted = true;
+                        upAnimationElapsed = 0;
                     }
                 }
                 else
                 {
-                    if (notificationForm.Location.Y > initialY)
-                    {
-                        notificationForm.Location = new System.Drawing.Point(notificationForm.Location.X, notificationForm.Location.Y - 10);
-                    }
-                    else
+                    upAnimationElapsed += animationTimer.Interval;
+                    double progress = Math.Min(1.0, (double)upAnimationElapsed / animationDuration);
+                    double eased = EaseInQuad(progress);
+                    int newY = (int)(endY + (startY - endY) * eased);
+
+                    notificationForm.Location = new System.Drawing.Point(notificationForm.Location.X, newY);
+
+                    if (progress >= 1.0)
                     {
                         animationTimer.Stop();
                         notificationForm.Close();

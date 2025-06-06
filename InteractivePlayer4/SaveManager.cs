@@ -10,6 +10,40 @@ public static class SaveManager
 {
     public static string SelectedMovieFolder { get; private set; }
 
+    public static void SaveSnapshot(string saveFilePath)
+    {
+        string movieFolder = Path.GetDirectoryName(saveFilePath);
+        string snapshotsPath = Path.Combine(movieFolder, "snapshots.json");
+
+        // Load current save data
+        if (!File.Exists(saveFilePath))
+            return;
+
+        var currentSave = JsonConvert.DeserializeObject<SaveData>(File.ReadAllText(saveFilePath));
+
+        // Load or create the snapshots file
+        Dictionary<string, SaveData> snapshots;
+        if (File.Exists(snapshotsPath))
+        {
+            snapshots = JsonConvert.DeserializeObject<Dictionary<string, SaveData>>(File.ReadAllText(snapshotsPath));
+        }
+        else
+        {
+            snapshots = new Dictionary<string, SaveData>();
+        }
+
+        // Find the next available snapshot key
+        int nextIndex = 1;
+        while (snapshots.ContainsKey($"snapshot{nextIndex}"))
+            nextIndex++;
+
+        string snapshotKey = $"snapshot{nextIndex}";
+        snapshots[snapshotKey] = currentSave;
+
+        // Save back to snapshots.json
+        File.WriteAllText(snapshotsPath, JsonConvert.SerializeObject(snapshots, Formatting.Indented));
+    }
+
     public static string LoadSaveFile(string saveFilePath)
     {
         if (File.Exists(saveFilePath))

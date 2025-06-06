@@ -249,21 +249,22 @@ public static class JsonParser
         }
     }
 
-    // Trim the segment ID
-    private static string TrimSegmentId(string segmentId)
+    public static string HandleSegment(MediaPlayer mediaPlayer, Segment segment, Dictionary<string, Segment> segments, string movieFolder, string videoId, ref Dictionary<string, object> globalState, ref Dictionary<string, object> persistentState, string infoJsonFile, string saveFilePath, Dictionary<string, List<SegmentGroup>> segmentGroups, Dictionary<string, List<SegmentState>> segmentStates, bool isFirstLoad, int? overrideStartTimeMs = null)
     {
-        if (segmentId.Contains("_"))
+        mediaPlayer.Pause();
+
+        if (Math.Abs(mediaPlayer.Time - segment.StartTimeMs) > 422)
         {
-            string trimmedId = segmentId.Split('_')[0];
-            Console.WriteLine($"Segment {segmentId} not found. Using trimmed ID: {trimmedId}");
-            return trimmedId;
+            mediaPlayer.Time = segment.StartTimeMs + 65;
         }
 
-        return segmentId;
-    }
+        mediaPlayer.Play();
 
-    public static string HandleSegment(MediaPlayer mediaPlayer, Segment segment, Dictionary<string, Segment> segments, string movieFolder, string videoId, ref Dictionary<string, object> globalState, ref Dictionary<string, object> persistentState, string infoJsonFile, string saveFilePath, Dictionary<string, List<SegmentGroup>> segmentGroups, Dictionary<string, List<SegmentState>> segmentStates, bool isFirstLoad)
-    {
+        if (overrideStartTimeMs.HasValue)
+        {
+            mediaPlayer.Time = overrideStartTimeMs.Value;
+        }
+
         string nextSegment = segment.DefaultNext;
         bool choiceDisplayed = false;
         bool fakeChoiceDisplayed = false;
@@ -350,7 +351,7 @@ public static class JsonParser
         // Ensure EndTimeMs has a value
         int endTimeMs = segment.EndTimeMs > 0 ? segment.EndTimeMs : int.MaxValue;
 
-        KeyForm.InitializeKeyPressWindow(mediaPlayer, infoJsonFile, saveFilePath, segment, segments);
+        KeyForm.InitializeKeyPressWindow(mediaPlayer, infoJsonFile, saveFilePath, segment, segments, videoId, segmentGroups,segmentStates);
 
         while (mediaPlayer.Time < endTimeMs - 105)
         {
@@ -361,7 +362,7 @@ public static class JsonParser
             bool noNotificationsOrDone = segment.Notification == null || segment.Notification.Count == 0 ||
                 segment.Notification.All(n => mediaPlayer.Time > n.EndMs);
 
-            if (noChoicesOrDone && noChoiceSetsOrDone && noTutorialOrDone && noFakeChoicesOrDone && noNotificationsOrDone)
+            if (mediaPlayer.Time >= segment.StartTimeMs && mediaPlayer.Time < endTimeMs - 105 && noChoicesOrDone && noChoiceSetsOrDone && noTutorialOrDone && noFakeChoicesOrDone && noNotificationsOrDone)
             {
                 Console.WriteLine($"Breaking due to nothing left to evaluate");
                 break;
@@ -445,7 +446,7 @@ public static class JsonParser
             {
                 long choiceDurationMs = segment.HideChoiceTimeMs - segment.ChoiceDisplayTimeMs;
 
-                //Console.WriteLine($"Choice point reached for segment {segment.Id}");
+                Console.WriteLine($"Choice point reached for segment {segment.Id}");
 
                 // Determine the valid choices to display
                 List<Choice> validChoices;
@@ -709,6 +710,8 @@ public static class JsonParser
 
                 var (selectedSegment, choiceId) = UIManager.ShowChoiceUI(validChoices, buttonSprites, buttonIcons, (int)choiceDurationMs, movieFolder, videoId, segment, segment.HeaderText);
 
+                SaveManager.SaveSnapshot(saveFilePath);
+
                 if (!string.IsNullOrEmpty(selectedSegment))
                 {
                     nextSegment = selectedSegment;
@@ -733,7 +736,7 @@ public static class JsonParser
                                 foreach (var kvp in impressionData.Global)
                                 {
                                     localGlobalState[kvp.Key] = kvp.Value;
-                                    //Console.WriteLine($"Global state changed: {kvp.Key} = {kvp.Value}");
+                                    Console.WriteLine($"Global state changed: {kvp.Key} = {kvp.Value}");
                                 }
                             }
 
@@ -790,7 +793,7 @@ public static class JsonParser
                                     {
                                         localPersistentState[kvp.Key] = kvp.Value;
                                     }
-                                    //Console.WriteLine($"Persistent state changed: {kvp.Key} = {kvp.Value}");
+                                    Console.WriteLine($"Persistent state changed: {kvp.Key} = {kvp.Value}");
                                 }
                             }
                         }
@@ -884,28 +887,17 @@ public static class JsonParser
         }
         else
         {
-            while (mediaPlayer.Time < endTimeMs - 160)
+            Console.WriteLine("In loop 1");
+            while (mediaPlayer.Time < endTimeMs - 85)
             {
                 Thread.Sleep(1);
             }
-
-            while (mediaPlayer.Time < endTimeMs - 145)
+            Console.WriteLine("In loop 2");
+            while (mediaPlayer.Time < endTimeMs - 65)
             {
                 Thread.SpinWait(20);
             }
         }
-
-        mediaPlayer.Pause();
-
-        if (!string.IsNullOrEmpty(nextSegment) && segments.TryGetValue(nextSegment, out Segment nextSeg))
-        {
-            if (Math.Abs(mediaPlayer.Time - nextSeg.StartTimeMs) > 422)
-            {
-                mediaPlayer.Time = nextSeg.StartTimeMs + 105;
-            }
-        }
-
-        mediaPlayer.Play();
 
         return nextSegment;
     }
@@ -985,7 +977,7 @@ public static class JsonParser
         }
 
         // If no texture is found
-        Console.WriteLine("Default button texture not found in the movie folder.");
+        //Console.WriteLine("Default button texture not found in the movie folder.");
         return null;
     }
 
@@ -997,101 +989,5 @@ public static class JsonParser
             return files[0];
         }
         return null;
-    }
-
-    public static string GetDefaultButtonSpritePath(string jsonFilePath)
-    {
-        try
-        {
-            string jsonContent = File.ReadAllText(jsonFilePath);
-            dynamic jsonData = JsonConvert.DeserializeObject(jsonContent);
-
-            string defaultSpriteUrl = jsonData?.jsonGraph?.videos?.First?.interactiveVideoMoments?.value
-                ?.uiDefinition?.layouts?.l0?.elements?.notification?.children?.background?.backgroundImage?.url;
-
-            if (!string.IsNullOrEmpty(defaultSpriteUrl))
-            {
-                Console.WriteLine($"Default button sprite URL found: {defaultSpriteUrl}");
-                return DownloadSprite(defaultSpriteUrl);
-            }
-            else
-            {
-                Console.WriteLine("No default button sprite URL found in the JSON.");
-                return null;
-            }
-        }
-        catch (Exception ex)
-        {
-            Console.WriteLine($"Error extracting default button sprite: {ex.Message}");
-            return null;
-        }
-    }
-
-    // Download and save sprite locally
-    private static string DownloadSprite(string url)
-    {
-        try
-        {
-            string fileName = Path.GetFileName(new Uri(url).LocalPath);
-            string localPath = Path.Combine(AppDomain.CurrentDomain.BaseDirectory, fileName);
-
-            if (!File.Exists(localPath))
-            {
-                using (var client = new WebClient())
-                {
-                    Console.WriteLine($"Downloading sprite from: {url}");
-                    client.DownloadFile(url, localPath);
-                    Console.WriteLine($"Sprite downloaded to: {localPath}");
-                }
-            }
-            else
-            {
-                Console.WriteLine($"Sprite already exists at: {localPath}");
-            }
-
-            return localPath;
-        }
-        catch (Exception ex)
-        {
-            Console.WriteLine($"Error downloading sprite from {url}: {ex.Message}");
-            return null;
-        }
-    }
-
-    private static void SkipTime(MediaPlayer mediaPlayer, Segment currentSegment, int offsetMs)
-    {
-        long newTime = mediaPlayer.Time + offsetMs;
-
-        // Make sure the time doesn't go out of the segment bounds
-        if (newTime < currentSegment.StartTimeMs)
-        {
-            newTime = currentSegment.StartTimeMs;
-        }
-        else if (newTime > currentSegment.EndTimeMs)
-        {
-            newTime = currentSegment.EndTimeMs;
-        }
-
-        // Make sure the time doesn't go into a choice point
-        if (currentSegment.Choices != null && currentSegment.Choices.Count > 0)
-        {
-            if (newTime >= currentSegment.ChoiceDisplayTimeMs && newTime <= currentSegment.HideChoiceTimeMs)
-            {
-                Console.WriteLine("Cannot skip into a choice point.");
-                return;
-            }
-        }
-
-        mediaPlayer.Time = newTime;
-        Console.WriteLine($"Skipped to {mediaPlayer.Time} ms.");
-    }
-
-    private static string GetDefaultChoice(Segment segment)
-    {
-        if (segment.DefaultChoiceIndex.HasValue && segment.Choices != null && segment.Choices.Count > segment.DefaultChoiceIndex.Value)
-        {
-            return segment.Choices[segment.DefaultChoiceIndex.Value].SegmentId;
-        }
-        return segment.DefaultNext;
     }
 }

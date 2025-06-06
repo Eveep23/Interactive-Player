@@ -89,9 +89,16 @@ public static class SubtitleManager
 
         if (saveData.SubtitleLanguage.Equals("Disabled", StringComparison.OrdinalIgnoreCase))
         {
-            mediaPlayer.SetSpu(-1); // Disable subtitles
-            Console.WriteLine("Subtitles disabled.");
-            return;
+            if (!string.IsNullOrEmpty(saveData.AudioLanguage))
+            {
+                saveData.SubtitleLanguage = $"Forced - {saveData.AudioLanguage}";
+            }
+            else
+            {
+                mediaPlayer.SetSpu(-1);
+                Console.WriteLine("No audio language set. Subtitles disabled.");
+                return;
+            }
         }
 
         string[] trackInfo = saveData.SubtitleLanguage.Split(new[] { '-' }, 2);

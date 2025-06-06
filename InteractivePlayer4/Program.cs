@@ -14,6 +14,8 @@ class Program
 {
     public static DiscordRpcClient discordClient;
 
+    private static LoadingForm loadingForm;
+
     static void Main(string[] args)
     {
         discordClient = new DiscordRpcClient("1374146925128847370");
@@ -104,6 +106,15 @@ class Program
 
         string initialSegment = null;
 
+        loadingForm = null;
+        var loadingThread = new Thread(() =>
+        {
+            loadingForm = new LoadingForm();
+            Application.Run(loadingForm);
+        });
+        loadingThread.SetApartmentState(ApartmentState.STA);
+        loadingThread.Start();
+
         // Get video duration
         long videoDuration = GetVideoDuration(videoFile);
 
@@ -160,15 +171,15 @@ class Program
         var media = new Media(libVLC, new Uri(Path.GetFullPath(videoFile)));
         var mediaPlayer = new MediaPlayer(media);
 
+        if (loadingForm != null && loadingForm.IsHandleCreated)
+        {
+            loadingForm.Invoke((Action)(() => loadingForm.Close()));
+            loadingForm = null;
+        }
+
         try
         {
-            // After creating mediaPlayer and before Play()
             mediaPlayer.Play();
-
-            if (segments.TryGetValue(currentSegment, out Segment seg))
-            {
-                mediaPlayer.Time = seg.StartTimeMs + 105;
-            }
 
             while (!string.IsNullOrEmpty(currentSegment))
             {
@@ -184,7 +195,6 @@ class Program
 
                 SaveManager.SaveProgress(saveFilePath, currentSegment, globalState, persistentState);
 
-                // After the first segment, set isFirstLoad to false
                 isFirstLoad = false;
             }
 

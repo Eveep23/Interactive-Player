@@ -25,7 +25,7 @@ public static class KeyForm
     private static DateTime lastVlcHandleCheck = DateTime.MinValue;
     private static readonly TimeSpan vlcHandleCheckInterval = TimeSpan.FromSeconds(5);
 
-    public static void InitializeKeyPressWindow(MediaPlayer mediaPlayer, string infoJsonFile, string saveFilePath, Segment currentSegment, Dictionary<string, Segment> segments)
+    public static void InitializeKeyPressWindow(MediaPlayer mediaPlayer, string infoJsonFile, string saveFilePath, Segment currentSegment, Dictionary<string, Segment> segments, string videoId, Dictionary<string, List<SegmentGroup>> segmentGroups, Dictionary<string, List<SegmentState>> segmentStates)
     {
         if (keyPressForm != null && !keyPressForm.IsDisposed)
         {
@@ -60,14 +60,15 @@ public static class KeyForm
             SizeMode = PictureBoxSizeMode.Zoom,
             BackColor = Color.Transparent,
             Width = 380,
-            Height = 100
+            Height = 100,
         };
 
         logoPictureBox.Location = new Point(
-            (keyPressForm.Width - logoPictureBox.Width) / 2,
-            (keyPressForm.Height - logoPictureBox.Height) / 2
+           (keyPressForm.Width - logoPictureBox.Width) / 2,
+           (keyPressForm.Height - logoPictureBox.Height) / 2
         );
         logoPictureBox.Anchor = AnchorStyles.None;
+
         keyPressForm.Controls.Add(logoPictureBox);
 
         int buttonPanelLeftMargin = 20;
@@ -330,11 +331,106 @@ public static class KeyForm
             (keyPressForm.Height - fullScreenButton.Height) / 2
         );
 
+        string changeChoicesIconPath = Path.Combine(currentDirectory, "general", "Change_Choices.png");
+        Button changeChoicesButton = new Button
+        {
+            Width = 80,
+            Height = 80,
+            BackgroundImage = Image.FromFile(buttonUnselectedPath),
+            BackgroundImageLayout = ImageLayout.Stretch,
+            FlatStyle = FlatStyle.Flat,
+            TabStop = false,
+            BackColor = Color.Transparent,
+            Anchor = AnchorStyles.Top | AnchorStyles.Right,
+        };
+        changeChoicesButton.FlatAppearance.BorderSize = 0;
+        changeChoicesButton.FlatAppearance.MouseDownBackColor = Color.Transparent;
+        changeChoicesButton.FlatAppearance.MouseOverBackColor = Color.Transparent;
+
+        bool enableSnapshots = false;
+        try
+        {
+            string configFilePath = Path.Combine(currentDirectory, "config.json");
+            if (File.Exists(configFilePath))
+            {
+                var configJson = System.IO.File.ReadAllText(configFilePath);
+                var configObj = Newtonsoft.Json.Linq.JObject.Parse(configJson);
+                enableSnapshots = configObj["EnableSnapshots"]?.ToObject<bool>() ?? false;
+            }
+        }
+        catch
+        {
+            enableSnapshots = false;
+        }
+        changeChoicesButton.Visible = enableSnapshots;
+
+        changeChoicesButton.Paint += (sender, e) =>
+        {
+            Image icon = Image.FromFile(changeChoicesIconPath);
+            int iconSize = 50;
+            int iconX = (changeChoicesButton.Width - iconSize) / 2;
+            int iconY = (changeChoicesButton.Height - iconSize) / 2;
+            e.Graphics.DrawImage(icon, iconX, iconY, iconSize, iconSize);
+        };
+        changeChoicesButton.MouseEnter += (sender, e) =>
+        {
+            changeChoicesButton.BackgroundImage = Image.FromFile(buttonSelectedPath);
+        };
+        changeChoicesButton.MouseLeave += (sender, e) =>
+        {
+            changeChoicesButton.BackgroundImage = Image.FromFile(buttonUnselectedPath);
+        };
+        changeChoicesButton.Click += (sender, e) =>
+        {
+            mediaPlayer.Pause();
+            InteractivePlayer.ChangeChoices.ShowChangeChoicesMenu(saveFilePath, infoJsonFile, (selectedSnapshot, startTimeMs) =>
+            {
+                if (selectedSnapshot == null) return;
+                if (segments.TryGetValue(selectedSnapshot.CurrentSegment, out var seg))
+                {
+                    currentSegment = seg;
+
+                    var globalState = selectedSnapshot.GlobalState;
+                    var persistentState = selectedSnapshot.PersistentState;
+
+                    // Run HandleSegment on a background thread
+                    Task.Run(() =>
+                    {
+                        var nextSegmentId = JsonParser.HandleSegment(
+                            mediaPlayer, currentSegment, segments, Path.GetDirectoryName(saveFilePath),
+                            videoId, ref globalState, ref persistentState, infoJsonFile, saveFilePath,
+                            segmentGroups, segmentStates, false, startTimeMs);
+
+                        if (!string.IsNullOrEmpty(nextSegmentId) && segments.ContainsKey(nextSegmentId))
+                        {
+                            currentSegment = segments[nextSegmentId];
+                        }
+                    });
+                }
+                else
+                {
+                    MessageBox.Show($"Segment {selectedSnapshot.CurrentSegment} not found in this interactive.");
+                }
+            });
+            mediaPlayer.Play();
+        };
+
+        changeChoicesButton.Location = new Point(
+            keyPressForm.Width - exitButton.Width - fullScreenButton.Width - changeChoicesButton.Width - 60,
+            (keyPressForm.Height - changeChoicesButton.Height) / 2
+        );
+
+        keyPressForm.Controls.Add(changeChoicesButton);
+
         keyPressForm.SizeChanged += (s, e) =>
         {
             fullScreenButton.Location = new Point(
                 keyPressForm.Width - exitButton.Width - fullScreenButton.Width - 40,
                 (keyPressForm.Height - fullScreenButton.Height) / 2
+            );
+            changeChoicesButton.Location = new Point(
+                keyPressForm.Width - exitButton.Width - fullScreenButton.Width - changeChoicesButton.Width - 60,
+                (keyPressForm.Height - changeChoicesButton.Height) / 2
             );
             exitButton.Location = new Point(
                 keyPressForm.Width - exitButton.Width - 20,
@@ -663,7 +759,7 @@ public static class KeyForm
         if (keepOnTopTimer == null)
         {
             keepOnTopTimer = new System.Windows.Forms.Timer();
-            keepOnTopTimer.Interval = 5000;
+            keepOnTopTimer.Interval = 3000;
             keepOnTopTimer.Tick += (s, e) =>
             {
                 if (keyPressForm != null && !keyPressForm.IsDisposed && keyPressForm.Visible)
