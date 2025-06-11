@@ -3,8 +3,8 @@ This is an emulator for Netflix's interactive movies and shows!
 
 # Screenshots:
 * Escape from the Undertaker:
-  
-![Screenshot 2025-02-01 123308](https://github.com/user-attachments/assets/bb716d5b-33b6-4fae-a201-04c21a7e1338)
+
+![image](https://github.com/user-attachments/assets/567d244a-dcff-4df0-bca8-29aa313f475f)
 
 * Minecraft Story Mode:
   
@@ -12,7 +12,7 @@ This is an emulator for Netflix's interactive movies and shows!
 
 * Carmen Sandiego:
   
-![Screenshot 2025-02-01 143837](https://github.com/user-attachments/assets/1491310d-a5b4-478d-aaab-eee689516d47)
+![Carmen](https://github.com/user-attachments/assets/4ff834f2-a88d-4b5c-a631-d6b7eb47be91)
 
 # How to Use:
 
