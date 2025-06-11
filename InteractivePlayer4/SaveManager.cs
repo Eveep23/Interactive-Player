@@ -270,6 +270,46 @@ public static class SaveManager
                 }
             }
 
+            if (Path.GetFileName(movieFolder).Equals("Headspace Unwind Your Mind", StringComparison.OrdinalIgnoreCase))
+            {
+                string[] keysToShuffle = { "p_s2d", "p_s2c", "p_s2b", "p_s2a" };
+                var rng = new Random();
+
+                foreach (var key in keysToShuffle)
+                {
+                    if (persistentState.ContainsKey(key) && persistentState[key] is Newtonsoft.Json.Linq.JArray arr)
+                    {
+                        // Convert to list, shuffle, and assign back
+                        var list = arr.ToObject<List<string>>();
+                        int n = list.Count;
+                        while (n > 1)
+                        {
+                            n--;
+                            int k = rng.Next(n + 1);
+                            var value = list[k];
+                            list[k] = list[n];
+                            list[n] = value;
+                        }
+                        persistentState[key] = new Newtonsoft.Json.Linq.JArray(list);
+                    }
+                    else if (persistentState.ContainsKey(key) && persistentState[key] is List<object> objList)
+                    {
+                        // If it's a List<object>, try to shuffle as strings
+                        var strList = objList.Select(o => o.ToString()).ToList();
+                        int n = strList.Count;
+                        while (n > 1)
+                        {
+                            n--;
+                            int k = rng.Next(n + 1);
+                            var value = strList[k];
+                            strList[k] = strList[n];
+                            strList[n] = value;
+                        }
+                        persistentState[key] = strList;
+                    }
+                }
+            }
+
             // Create new save data
             saveData = new SaveData
             {

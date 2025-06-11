@@ -718,7 +718,7 @@ public static class JsonParser
 
                     // Update states based on the chosen option
                     Choice chosenOption;
-                    if (videoId == "81481556" || videoId == "81131714" && segment.LayoutType == "l69" || videoId == "81131714" && segment.LayoutType == "l5")
+                    if (videoId == "81481556" || videoId == "81328829" || videoId == "81131714" && segment.LayoutType == "l69" || videoId == "81131714" && segment.LayoutType == "l5")
                     {
                         chosenOption = validChoices.FirstOrDefault(c => c.Id == choiceId);
                     }
@@ -822,7 +822,14 @@ public static class JsonParser
         }
 
         // Check segment groups for the next segment
-        if (!string.IsNullOrEmpty(segment?.Id) && segmentGroups.TryGetValue(segment.Id, out List<SegmentGroup> group))
+        if (videoId == "81328829" && segment.Id != null &&
+    (segment.Id.StartsWith("sS2A") || segment.Id.StartsWith("sS2B") || segment.Id.StartsWith("sS2C") || segment.Id.StartsWith("sS2D")))
+        {
+            string next = HeadspaceShuffle(segment.Id, localPersistentState);
+            if (!string.IsNullOrEmpty(next))
+                nextSegment = next;
+        }
+        else if (!string.IsNullOrEmpty(segment?.Id) && segmentGroups.TryGetValue(segment.Id, out List<SegmentGroup> group))
         {
             foreach (var item in group)
             {
@@ -935,6 +942,34 @@ public static class JsonParser
         var persistentState = stateHistory?["persistent"]?.ToObject<Dictionary<string, object>>() ?? new Dictionary<string, object>();
 
         return (globalState, persistentState);
+    }
+
+    private static string HeadspaceShuffle(string currentSegment, Dictionary<string, object> persistentState)
+    {
+        // Map segment prefix to persistent variable
+        string prefix = null, persistentKey = null, endSegment = null;
+        if (currentSegment.StartsWith("sS2A")) { prefix = "sS2A"; persistentKey = "p_s2a"; endSegment = "sS2A8"; }
+        else if (currentSegment.StartsWith("sS2B")) { prefix = "sS2B"; persistentKey = "p_s2b"; endSegment = "sS2B8"; }
+        else if (currentSegment.StartsWith("sS2C")) { prefix = "sS2C"; persistentKey = "p_s2c"; endSegment = "sS2C8"; }
+        else if (currentSegment.StartsWith("sS2D")) { prefix = "sS2D"; persistentKey = "p_s2d"; endSegment = "sS2D8"; }
+        else return null;
+
+        if (!persistentState.TryGetValue(persistentKey, out var orderObj) || !(orderObj is Newtonsoft.Json.Linq.JArray orderArray))
+            return null;
+
+        var order = orderArray.Select(x => x.ToString()).ToList();
+
+        // The sequence is: sS2X0 -> order[0] -> ... -> order[6] -> sS2X8
+        if (currentSegment == $"{prefix}0")
+            return order.Count > 0 ? order[0] : endSegment;
+
+        int idx = order.IndexOf(currentSegment);
+        if (idx >= 0 && idx < order.Count - 1)
+            return order[idx + 1];
+        if (idx == order.Count - 1)
+            return endSegment;
+
+        return null;
     }
 
     // Find the default button texture

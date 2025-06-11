@@ -101,7 +101,14 @@ class Program
         bool isFirstLoad = currentSegment == null;
         if (isFirstLoad)
         {
-            File.Delete(saveFilePath); // Restart
+            // Restart
+            File.Delete(saveFilePath);
+
+            string snapshotsPath = Path.Combine(movieFolder, "snapshots.json");
+            if (File.Exists(snapshotsPath))
+            {
+                File.Delete(snapshotsPath);
+            }
         }
 
         string initialSegment = null;

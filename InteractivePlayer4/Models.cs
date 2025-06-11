@@ -7,6 +7,7 @@ public class SaveData
     public Dictionary<string, object> GlobalState { get; set; }
     public Dictionary<string, object> PersistentState { get; set; }
 }
+
 public class DoubleBufferedPanel : Panel
 {
     public DoubleBufferedPanel()

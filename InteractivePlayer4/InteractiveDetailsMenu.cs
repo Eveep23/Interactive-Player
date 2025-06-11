@@ -201,8 +201,8 @@ public static class InteractiveDetailsMenu
             }
             else if (buttonImagePath == updateButtonPath)
             {
-                // Update: delete all files except direct.json, save.json, and video file
-                var filesToKeep = new[] { "direct.json", "save.json" };
+                // Update: delete all files except direct.json, save.json, snapshots.json, and video file
+                var filesToKeep = new[] { "direct.json", "save.json", "snapshots.json" };
                 var videoExtensions = new[] { ".mkv", ".mp4" };
 
                 foreach (var filePath in Directory.GetFiles(interactiveFolder))
