@@ -29,6 +29,8 @@ public class Settings
     public bool EnableConsole { get; set; }
     public bool EnableSnapshots { get; set; }
     public bool DisableWindowAnimations { get; set; }
+    public string KeyboardIcon { get; set; }
+    public string ControllerIcon { get; set; }
 }
 public class Segment
 {

@@ -73,6 +73,12 @@ class Program
             }
         }
 
+        bool skipContinueMenu = false;
+        if (movieFolder != null && Directory.GetParent(movieFolder) != null && string.Equals(Directory.GetParent(movieFolder).Name, "MCSM", StringComparison.OrdinalIgnoreCase) && File.Exists(Path.Combine(movieFolder, "save.json")))
+        {
+            skipContinueMenu = true;
+        }
+
         discordClient.SetPresence(new RichPresence()
         {
             Details = "Playing an Interactive",
@@ -96,19 +102,29 @@ class Program
             return;
         }
 
-        // Load save file if it exists
-        string currentSegment = SaveManager.LoadSaveFile(saveFilePath);
-        bool isFirstLoad = currentSegment == null;
-        if (isFirstLoad)
-        {
-            // Restart
-            File.Delete(saveFilePath);
+        string currentSegment = null;
+        bool isFirstLoad = true;
 
-            string snapshotsPath = Path.Combine(movieFolder, "snapshots.json");
-            if (File.Exists(snapshotsPath))
+        if (!skipContinueMenu)
+        {
+            currentSegment = SaveManager.LoadSaveFile(saveFilePath);
+            isFirstLoad = currentSegment == null;
+            if (isFirstLoad)
             {
-                File.Delete(snapshotsPath);
+                // Restart
+                File.Delete(saveFilePath);
+
+                string snapshotsPath = Path.Combine(movieFolder, "snapshots.json");
+                if (File.Exists(snapshotsPath))
+                {
+                    File.Delete(snapshotsPath);
+                }
             }
+        }
+        else
+        {
+            currentSegment = SaveManager.LoadSaveFile(saveFilePath, skipContinueMenu);
+            isFirstLoad = false;
         }
 
         string initialSegment = null;
@@ -160,21 +176,32 @@ class Program
         }
 
         // Initialize LibVLC with subtitle options
-        var libVLC = new LibVLC(
-            "--freetype-font=Consolas",
+        var vlcOptions = new List<string>
+        {
+            "--freetype-font=" + Path.Combine(Directory.GetCurrentDirectory(), "general", "NetflixSans_W_Md.ttf"),
             "--freetype-bold",
             "--freetype-outline-thickness=3",
+            "--freetype-rel-fontsize=23",
+            "--sub-margin=90",
             "--no-stats",
             "--quiet",
-             "--drop-late-frames",
-            "--skip-frames",
             "--file-caching=100",
             "--network-caching=100",
             "--live-caching=100",
             "--disc-caching=100",
             "--no-input-fast-seek",
-            "--no-video-title-show"
-        );
+            "--drop-late-frames",
+            "--skip-frames",
+            "--video-title=Interactive Player   "
+        };
+        /*
+        if (movieFolder == null || !movieFolder.Contains("Minecraft Story Mode Ep"))
+        {
+            vlcOptions.Add("--drop-late-frames");
+            vlcOptions.Add("--skip-frames");
+        }
+        */
+        var libVLC = new LibVLC(vlcOptions.ToArray());
         var media = new Media(libVLC, new Uri(Path.GetFullPath(videoFile)));
         var mediaPlayer = new MediaPlayer(media);
 

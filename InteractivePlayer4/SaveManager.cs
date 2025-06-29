@@ -44,10 +44,18 @@ public static class SaveManager
         File.WriteAllText(snapshotsPath, JsonConvert.SerializeObject(snapshots, Formatting.Indented));
     }
 
-    public static string LoadSaveFile(string saveFilePath)
+    public static string LoadSaveFile(string saveFilePath, bool skipContinueMenu = false)
     {
-        if (File.Exists(saveFilePath))
+        if (!File.Exists(saveFilePath))
+            return null;
+
+        if (skipContinueMenu)
         {
+            var saveData = JsonConvert.DeserializeObject<SaveData>(File.ReadAllText(saveFilePath));
+            SelectedMovieFolder = saveData.CurrentSegment;
+            return SelectedMovieFolder;
+        }
+
             string defaultBackdropPath = Path.Combine(Directory.GetCurrentDirectory(), "general", "Save_backdrop.png");
             string topBarPath = Path.Combine(Directory.GetCurrentDirectory(), "general", "Top_bar.png");
             string logoPath = Path.Combine(Directory.GetCurrentDirectory(), "general", "Interactive_player_logo.png");
@@ -120,7 +128,6 @@ public static class SaveManager
                 SelectedMovieFolder = null;
             };
 
-            // Adjust the TableLayoutPanel for better vertical positioning of buttons
             TableLayoutPanel buttonPanel = new TableLayoutPanel
             {
                 Dock = DockStyle.Fill,
@@ -129,24 +136,19 @@ public static class SaveManager
                 AutoSize = false
             };
 
-            // Set the row and column styles to position the buttons higher
             buttonPanel.ColumnStyles.Add(new ColumnStyle(SizeType.Percent, 100F));
             buttonPanel.RowStyles.Add(new RowStyle(SizeType.Percent, 60F)); // Top spacing
             buttonPanel.RowStyles.Add(new RowStyle(SizeType.AutoSize));     // Continue button
             buttonPanel.RowStyles.Add(new RowStyle(SizeType.AutoSize));     // Restart button
             buttonPanel.RowStyles.Add(new RowStyle(SizeType.Percent, 40F)); // Bottom spacing
 
-            // Add the buttons to the TableLayoutPanel
             buttonPanel.Controls.Add(continueButton, 0, 1);
             buttonPanel.Controls.Add(restartButton, 0, 2);
 
-            // Center the buttons horizontally by setting their Anchor property
             continueButton.Anchor = AnchorStyles.None;
             restartButton.Anchor = AnchorStyles.None;
 
-            // Add the TableLayoutPanel to the form
             form.Controls.Add(buttonPanel);
-
 
             form.FormClosed += (sender, e) =>
             {
@@ -183,8 +185,6 @@ public static class SaveManager
             }
 
             return form.ShowDialog() == DialogResult.OK ? SelectedMovieFolder : null;
-        }
-        return null;
     }
 
     public static SaveData LoadSaveData(string saveFilePath)

@@ -1,10 +1,10 @@
+using Newtonsoft.Json.Linq;
 using System;
 using System.Drawing;
 using System.IO;
 using System.Linq;
 using System.Threading;
 using System.Windows.Forms;
-using Newtonsoft.Json.Linq;
 
 public static class InteractiveDetailsMenu
 {
@@ -96,6 +96,52 @@ public static class InteractiveDetailsMenu
             BackColor = Color.Transparent
         };
 
+        Label detailsLabel = new Label
+        {
+            ForeColor = Color.White,
+            BackColor = Color.Transparent,
+            AutoSize = true,
+            Font = new Font("Arial", 15, FontStyle.Bold),
+            TextAlign = ContentAlignment.BottomRight,
+            Visible = true,
+            Anchor = AnchorStyles.Bottom | AnchorStyles.Right
+        };
+        displayPictureBox.Controls.Add(detailsLabel);
+
+        detailsLabel.Paint += (s, e) =>
+        {
+            var g = e.Graphics;
+            var rect = detailsLabel.ClientRectangle;
+
+            using (var brush = new System.Drawing.Drawing2D.LinearGradientBrush(
+                rect,
+                Color.FromArgb(0, 154, 27, 43),
+                Color.FromArgb(255, 154, 27, 43),
+                System.Drawing.Drawing2D.LinearGradientMode.Horizontal))
+            {
+                g.FillRectangle(brush, rect);
+            }
+
+            TextRenderer.DrawText(
+                g,
+                detailsLabel.Text,
+                detailsLabel.Font,
+                rect,
+                detailsLabel.ForeColor,
+                TextFormatFlags.Right | TextFormatFlags.VerticalCenter | TextFormatFlags.EndEllipsis
+            );
+        };
+
+        void PositionDetailsLabel()
+        {
+            detailsLabel.Location = new Point(
+                Math.Max(0, displayPictureBox.Width - detailsLabel.Width - 67),
+                Math.Max(0, displayPictureBox.Height - detailsLabel.Height - 3)
+            );
+        }
+        displayPictureBox.Resize += (s, e) => PositionDetailsLabel();
+        detailsLabel.SizeChanged += (s, e) => PositionDetailsLabel();
+
         Label titleLabel = new Label
         {
             ForeColor = Color.White,
@@ -133,10 +179,12 @@ public static class InteractiveDetailsMenu
             var jsonData = JObject.Parse(File.ReadAllText(jsonFilePath));
             string title = jsonData["title"]?.ToString();
             string description = jsonData["description"]?.ToString();
+            string details = jsonData["details"]?.ToString();
 
             displayPictureBox.Image = Image.FromFile(pngFilePath);
             titleLabel.Text = title;
             descriptionLabel.Text = description;
+            detailsLabel.Text = details;
         }
 
         // Right panel (actions)

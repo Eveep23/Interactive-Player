@@ -9,19 +9,19 @@ public static class PreconditionChecker
     public static int GetPreconditionValue(string preconditionId, Dictionary<string, object> globalState, Dictionary<string, object> persistentState, string infoJsonFile)
     {
         foreach (var key in new[] {
-    "p_1b_f", "p_1c_f", "p_1e_f", "p_1h_f",
-    "p_2b_f", "p_2c_f", "p_2d_f", "p_2e_f",
-    "p_3a_f", "p_3d_f", "p_3e_f", "p_3f_f",
-    "p_4a_f", "p_4e_f", "p_4f_f", "p_4g_f",
-    "p_5a_f", "p_5b_f", "p_5c_f", "p_5d_f",
-    "p_6a_f", "p_6b_f", "p_6c_f", "p_6d_f"
-})
-{
-    if (persistentState.TryGetValue(key, out var value))
-        Console.WriteLine($"{key}: {value}");
-    else
-        Console.WriteLine($"{key}: (missing)");
-}
+            "p_1b_f", "p_1c_f", "p_1e_f", "p_1h_f",
+            "p_2b_f", "p_2c_f", "p_2d_f", "p_2e_f",
+            "p_3a_f", "p_3d_f", "p_3e_f", "p_3f_f",
+            "p_4a_f", "p_4e_f", "p_4f_f", "p_4g_f",
+            "p_5a_f", "p_5b_f", "p_5c_f", "p_5d_f",
+            "p_6a_f", "p_6b_f", "p_6c_f", "p_6d_f"
+        })
+        {
+            if (persistentState.TryGetValue(key, out var value))
+                Console.WriteLine($"{key}: {value}");
+            else
+                Console.WriteLine($"{key}: (missing)");
+        }
         
         if (preconditionId == "livesLost")
         {

@@ -38,7 +38,7 @@ public static class AudioManager
         Console.WriteLine("Enter the number of the audio track you want to switch to:");
         if (int.TryParse(Console.ReadLine(), out int selectedTrack) && selectedTrack >= 1 && selectedTrack <= audioTracks.Count)
         {
-            int trackId = audioTracks[selectedTrack - 1].Id; // Adjust for 1-based index
+            int trackId = audioTracks[selectedTrack - 1].Id;
 
             if (mediaPlayer.SetAudioTrack(trackId))
             {

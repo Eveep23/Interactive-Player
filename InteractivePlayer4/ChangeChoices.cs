@@ -153,7 +153,7 @@ namespace InteractivePlayer
 
         private static void CenterFormOnVLC(Form form)
         {
-            vlcHandle = FindWindow(null, "VLC (Direct3D11 output)");
+            vlcHandle = FindWindow(null, "Interactive Player   ");
             if (vlcHandle != IntPtr.Zero)
             {
                 UIManager.RECT rect;
@@ -183,7 +183,7 @@ namespace InteractivePlayer
                         return;
 
                     if (vlcHandle == IntPtr.Zero)
-                        vlcHandle = FindWindow(null, "VLC (Direct3D11 output)");
+                        vlcHandle = FindWindow(null, "Interactive Player   ");
 
                     if (vlcHandle != IntPtr.Zero)
                     {

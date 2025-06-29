@@ -47,7 +47,7 @@ public static class SubtitleManager
             }
             else
             {
-                int trackId = subtitleTracks[selectedTrack - 1].Id; // Adjust for 1-based index
+                int trackId = subtitleTracks[selectedTrack - 1].Id;
 
                 if (mediaPlayer.SetSpu(trackId))
                 {

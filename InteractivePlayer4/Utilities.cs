@@ -30,10 +30,9 @@ public static class Utilities
                 {
                     using (Image logo = Image.FromFile(logoPath))
                     {
-                        // Scale the logo to 1.5 times the backdrop width
                         int logoWidth = (int)(compositeImage.Width / 1.35);
-                        int logoHeight = logo.Height * logoWidth / logo.Width; // Maintain aspect ratio
-                        int logoX = (compositeImage.Width - logoWidth) / 2; // Center horizontally
+                        int logoHeight = logo.Height * logoWidth / logo.Width;
+                        int logoX = (compositeImage.Width - logoWidth) / 2;
                         int logoY = compositeImage.Height - logoHeight - 20;
 
                         g.DrawImage(logo, logoX, logoY, logoWidth, logoHeight);
@@ -111,12 +110,12 @@ public static class Utilities
             AutoScroll = true,
             FlowDirection = FlowDirection.TopDown,
             WrapContents = false,
-            Padding = new Padding(0, 50, 0, 0) // Center the buttons vertically
+            Padding = new Padding(0, 50, 0, 0)
         };
 
         Label footerLabel = new Label
         {
-            Text = "Interactive Player 1.7.14 Preview developed by Eveep23",
+            Text = "Interactive Player 1.7.64 developed by Eveep23",
             Font = new Font("Arial", 10, FontStyle.Italic),
             ForeColor = Color.White,
             TextAlign = ContentAlignment.MiddleCenter,
@@ -133,12 +132,16 @@ public static class Utilities
 
         settingsPictureBox.Click += (sender, e) =>
         {
+            form.Hide();
             SettingsMenu.ShowSettingsMenu();
+            form.Show();
         };
 
         addButtonPictureBox.Click += (sender, e) =>
         {
+            form.Hide();
             InstallInteractives.ShowInstallInteractivesMenu();
+            form.Show();
         };
 
         topBarPanel.Controls.Add(logoPictureBox);
@@ -157,13 +160,16 @@ public static class Utilities
         form.Controls.Add(mainPanel);
         form.Controls.Add(topBarPanel);
 
+        /*
         if (movieFolders.Length == 0)
         {
             MessageBox.Show("No Interactives Installed (Found).");
         }
+        */
 
         // Read the JSON files in the Packs folder and extract the "Category" field
         var folderCategories = new Dictionary<string, string>();
+        var packJsons = new Dictionary<string, JObject>();
         if (Directory.Exists(packsDirectory))
         {
             var jsonFiles = Directory.GetFiles(packsDirectory, "*.json");
@@ -176,6 +182,7 @@ public static class Utilities
                 {
                     folderCategories[folderName] = category;
                 }
+                packJsons[folderName] = jsonData;
             }
         }
 
@@ -185,6 +192,98 @@ public static class Utilities
             var folderName = Path.GetFileName(folder);
             return folderCategories.TryGetValue(folderName, out var category) ? category : "Uncategorized";
         }).OrderBy(g => g.Key, new NaturalStringComparer());
+
+        var packButtonsByCategory = new Dictionary<string, List<Control>>();
+        if (Directory.Exists(packsDirectory))
+        {
+            var packJsonFiles = Directory.GetFiles(packsDirectory, "*.json");
+            foreach (var packJsonFile in packJsonFiles)
+            {
+                var packName = Path.GetFileNameWithoutExtension(packJsonFile);
+
+                // If a folder with this name already exists, skip (it will be shown as a folder)
+                if (movieFolders.Any(f => Path.GetFileName(f).Equals(packName, StringComparison.OrdinalIgnoreCase)))
+                    continue;
+
+                // Filtering logic
+                string currentFolderName = Path.GetFileName(currentDirectory);
+                bool show = true;
+
+                if (currentDirectory == Directory.GetCurrentDirectory())
+                {
+                    // Main menu: filter out packs with these substrings
+                    if (packName.Contains("Battle Kitty E") ||
+                        packName.Contains("You vs Wild EP") ||
+                        packName.Contains("Minecraft Story Mode Ep") ||
+                        packName.Contains("Trivia Quest E"))
+                    {
+                        show = false;
+                    }
+                }
+                else if (currentFolderName.Equals("BK", StringComparison.OrdinalIgnoreCase))
+                {
+                    show = packName.Contains("Battle Kitty E");
+                }
+                else if (currentFolderName.Equals("TQ", StringComparison.OrdinalIgnoreCase))
+                {
+                    show = packName.Contains("Trivia Quest E");
+                }
+                else if (currentFolderName.Equals("YvW", StringComparison.OrdinalIgnoreCase))
+                {
+                    show = packName.Contains("You vs Wild EP");
+                }
+                // else: show all packs
+
+                if (!show)
+                    continue;
+
+                var jsonData = packJsons[packName];
+                var category = jsonData["Category"]?.ToString() ?? "Uncategorized";
+                var title = jsonData["title"]?.ToString() ?? packName;
+                var description = jsonData["description"]?.ToString() ?? "";
+                var imagePath = Path.Combine(packsDirectory, packName + ".png");
+                Image packImage = null;
+                if (File.Exists(imagePath))
+                {
+                    packImage = Image.FromFile(imagePath);
+                }
+                else
+                {
+                    packImage = new Bitmap(424, 238); // fallback blank
+                }
+
+                // Create a button for the pack
+                RoundedButton packButton = new RoundedButton
+                {
+                    Width = 424,
+                    Height = 238,
+                    BackgroundImage = GrayscaleImage(packImage),
+                    BackgroundImageLayout = ImageLayout.Stretch,
+                    Text = string.Empty,
+                    TextAlign = ContentAlignment.MiddleCenter,
+                    Font = new Font("Arial", 12, FontStyle.Bold),
+                    ForeColor = Color.White,
+                    FlatStyle = FlatStyle.Flat,
+                    FlatAppearance = { BorderSize = 0 },
+                    Tag = packName
+                };
+
+                // Tooltip for title/description
+                var toolTip = new ToolTip();
+                toolTip.SetToolTip(packButton, $"{title}");
+
+                packButton.Click += (sender, e) =>
+                {
+                    // Open InteractiveDetailsMenu for this pack
+                    string folderPath = Path.Combine(currentDirectory, packName);
+                    InteractiveDetailsMenu.ShowInteractiveDetailsMenu(folderPath);
+                };
+
+                if (!packButtonsByCategory.ContainsKey(category))
+                    packButtonsByCategory[category] = new List<Control>();
+                packButtonsByCategory[category].Add(packButton);
+            }
+        }
 
         foreach (var group in groupedFolders)
         {
@@ -209,6 +308,8 @@ public static class Utilities
             int buttonWidth = 424;
             int buttonSpacing = 10;
             int totalButtons = group.Count();
+            if (packButtonsByCategory.ContainsKey(group.Key))
+                totalButtons += packButtonsByCategory[group.Key].Count;
             int rowPanelWidth = (buttonWidth + buttonSpacing) * totalButtons - buttonSpacing;
 
             Panel rowPanel = new Panel
@@ -219,7 +320,6 @@ public static class Utilities
                 Location = new Point(50, 0)
             };
 
-            // Add left and right navigation buttons
             Button leftButton = new Button
             {
                 Width = 50,
@@ -254,8 +354,6 @@ public static class Utilities
                 Location = new Point(rowContainer.Width - 50, (rowContainer.Height - 240) / 2)
             };
 
-
-            // Add scrolling functionality to the buttons with smooth animation and "boing" effect
             Timer scrollTimer = new Timer { Interval = 15 };
             int scrollStart = 0;
             int scrollTarget = 0;
@@ -327,11 +425,26 @@ public static class Utilities
                 string movieLogoPath = Directory.GetFiles(folder, "*logo.png").FirstOrDefault();
                 string folderName = Path.GetFileName(folder);
 
+                var subfolders = Directory.GetDirectories(folder)
+                    .Where(d => !Path.GetFileName(d).Equals("general", StringComparison.OrdinalIgnoreCase))
+                    .ToArray();
+                bool isEmptyInteractiveFolder = subfolders.Length == 0;
+
                 // Generate or retrieve the composite image
-                if (!compositeImageCache.TryGetValue(folder, out Image compositeImage))
+                Image compositeImage;
+                string cacheKey = folder + (isEmptyInteractiveFolder ? "_gray" : "_color");
+                if (!compositeImageCache.TryGetValue(cacheKey, out compositeImage))
                 {
-                    compositeImage = CreateCompositeImage(backdropPath, movieLogoPath);
-                    compositeImageCache[folder] = compositeImage;
+                    if (isEmptyInteractiveFolder)
+                    {
+                        // Grayscale, no logo
+                        compositeImage = GrayscaleImage(CreateCompositeImage(backdropPath, null));
+                    }
+                    else
+                    {
+                        compositeImage = CreateCompositeImage(backdropPath, movieLogoPath);
+                    }
+                    compositeImageCache[cacheKey] = compositeImage;
                 }
 
                 RoundedButton button = new RoundedButton
@@ -340,7 +453,6 @@ public static class Utilities
                     Height = 238,
                     BackgroundImage = compositeImage,
                     BackgroundImageLayout = ImageLayout.Stretch,
-                    Text = string.IsNullOrEmpty(movieLogoPath) ? folderName : string.Empty,
                     TextAlign = ContentAlignment.MiddleCenter,
                     Font = new Font("Arial", 12, FontStyle.Bold),
                     ForeColor = Color.White,
@@ -349,11 +461,40 @@ public static class Utilities
                     Location = new Point(xOffset, 30)
                 };
 
+                button.MouseDown += (sender, e) =>
+                {
+                    if (e.Button == MouseButtons.Right)
+                    {
+                        bool isInteractive =
+                            (Directory.GetFiles(folder, "*.mkv").Concat(Directory.GetFiles(folder, "*.mp4")).Any() && Directory.GetFiles(folder, "*.json").Any()) ||
+                            Directory.GetFiles(folder, "direct.json").Any();
+
+                        if (isInteractive)
+                        {
+                            InteractiveDetailsMenu.ShowInteractiveDetailsMenu(folder);
+                        }
+                    }
+                };
+
                 button.Click += (sender, e) =>
                 {
                     // Check for update before proceeding
                     if (CheckAndPromptForUpdate(folder, packsDirectory))
                     {
+                        return;
+                    }
+
+                    if (Path.GetFileName(folder).Equals("MCSM", StringComparison.OrdinalIgnoreCase))
+                    {
+                        form.Hide();
+                        var mcsmMenu = new InteractivePlayer.MCSMMenu();
+                        if (mcsmMenu.ShowDialog() == DialogResult.OK && !string.IsNullOrEmpty(mcsmMenu.SelectedEpisodeFolder))
+                        {
+                            SelectedMovieFolder = mcsmMenu.SelectedEpisodeFolder;
+                            form.DialogResult = DialogResult.OK;
+                            form.Close();
+                        }
+                        form.Show();
                         return;
                     }
 
@@ -368,12 +509,14 @@ public static class Utilities
                     else if (Directory.GetDirectories(folder).Any())
                     {
                         // Open another Movie Selection Menu with the movies in the selected folder
+                        form.Hide();
                         SelectedMovieFolder = ShowMovieSelectionMenu(folder);
                         if (SelectedMovieFolder != null)
                         {
                             form.DialogResult = DialogResult.OK;
                             form.Close();
                         }
+                        form.Show();
                     }
                     else
                     {
@@ -387,6 +530,156 @@ public static class Utilities
                 rowPanel.Controls.Add(button);
                 xOffset += buttonWidth + buttonSpacing;
             }
+
+            if (packButtonsByCategory.ContainsKey(group.Key))
+            {
+                foreach (var packButton in packButtonsByCategory[group.Key])
+                {
+                    packButton.Location = new Point(xOffset, 30);
+                    rowPanel.Controls.Add(packButton);
+                    xOffset += buttonWidth + buttonSpacing;
+                }
+            }
+        }
+
+        var usedCategories = new HashSet<string>(groupedFolders.Select(g => g.Key));
+        foreach (var kvp in packButtonsByCategory)
+        {
+            if (usedCategories.Contains(kvp.Key))
+                continue;
+
+            Label groupLabel = new Label
+            {
+                Text = kvp.Key,
+                Font = new Font("Arial", 16, FontStyle.Bold),
+                ForeColor = Color.White,
+                AutoSize = true,
+                Margin = new Padding(10, 10, 10, 0)
+            };
+            mainPanel.Controls.Add(groupLabel);
+
+            Panel rowContainer = new Panel
+            {
+                Height = 300,
+                Width = 1360,
+                AutoScroll = false
+            };
+
+            int buttonWidth = 424;
+            int buttonSpacing = 10;
+            int totalButtons = kvp.Value.Count;
+            int rowPanelWidth = (buttonWidth + buttonSpacing) * totalButtons - buttonSpacing;
+
+            Panel rowPanel = new Panel
+            {
+                Height = 300,
+                Width = Math.Max(rowPanelWidth, rowContainer.Width - 100),
+                AutoScroll = false,
+                Location = new Point(50, 0)
+            };
+
+            Button leftButton = new Button
+            {
+                Width = 50,
+                Height = 240,
+                BackgroundImage = Image.FromFile(Path.Combine(currentDirectory, "general", "Left_Arrow.png")),
+                BackgroundImageLayout = ImageLayout.Stretch,
+                FlatStyle = FlatStyle.Flat,
+                FlatAppearance =
+                {
+                   BorderSize = 0,
+                   MouseDownBackColor = Color.Transparent,
+                    MouseOverBackColor = Color.Transparent
+                },
+                BackColor = Color.Transparent,
+                Location = new Point(0, (rowContainer.Height - 240) / 2)
+            };
+
+            Button rightButton = new Button
+            {
+                Width = 50,
+                Height = 240,
+                BackgroundImage = Image.FromFile(Path.Combine(currentDirectory, "general", "Right_Arrow.png")),
+                BackgroundImageLayout = ImageLayout.Stretch,
+                FlatStyle = FlatStyle.Flat,
+                FlatAppearance =
+                {
+                  BorderSize = 0,
+                  MouseDownBackColor = Color.Transparent,
+                  MouseOverBackColor = Color.Transparent
+                },
+                BackColor = Color.Transparent,
+                Location = new Point(rowContainer.Width - 50, (rowContainer.Height - 240) / 2)
+            };
+
+            Timer scrollTimer = new Timer { Interval = 15 };
+            int scrollStart = 0;
+            int scrollTarget = 0;
+            int scrollDuration = 500;
+            int elapsedTime = 0;
+
+            leftButton.Click += (sender, e) =>
+            {
+                scrollStart = rowPanel.Left;
+                scrollTarget = Math.Min(rowPanel.Left + 500, 50);
+                elapsedTime = 0;
+
+                scrollTimer.Start();
+            };
+
+            rightButton.Click += (sender, e) =>
+            {
+                scrollStart = rowPanel.Left;
+                scrollTarget = Math.Max(rowPanel.Left - 500, rowContainer.Width - rowPanel.Width - 50);
+                elapsedTime = 0;
+
+                scrollTimer.Start();
+            };
+
+            scrollTimer.Tick += (sender, e) =>
+            {
+                elapsedTime += scrollTimer.Interval;
+                double t = (double)elapsedTime / scrollDuration;
+
+                if (t >= 1.0)
+                {
+                    rowPanel.Left = scrollTarget;
+                    scrollTimer.Stop();
+                }
+                else
+                {
+                    double overshoot = 1.70158;
+                    t = t - 1;
+                    double easedT = (t * t * ((overshoot + 1) * t + overshoot) + 1);
+
+                    rowPanel.Left = (int)(scrollStart + (scrollTarget - scrollStart) * easedT);
+                }
+
+                UpdateArrowVisibility();
+            };
+
+            void UpdateArrowVisibility()
+            {
+                leftButton.Visible = rowPanel.Left < 50;
+
+                rightButton.Visible = rowPanel.Width > rowContainer.Width &&
+                                      rowPanel.Left > rowContainer.Width - rowPanel.Width - 50;
+            }
+
+            UpdateArrowVisibility();
+
+            rowContainer.Controls.Add(leftButton);
+            rowContainer.Controls.Add(rightButton);
+            rowContainer.Controls.Add(rowPanel);
+            mainPanel.Controls.Add(rowContainer);
+
+            int xOffset = 0;
+            foreach (var packButton in kvp.Value)
+            {
+                packButton.Location = new Point(xOffset, 30);
+                rowPanel.Controls.Add(packButton);
+                xOffset += buttonWidth + buttonSpacing;
+            }
         }
 
         mainPanel.Controls.Add(footerLabel);
@@ -395,8 +688,29 @@ public static class Utilities
         return form.ShowDialog() == DialogResult.OK ? SelectedMovieFolder : null;
     }
 
-    // Add this helper method to Utilities
-    private static bool CheckAndPromptForUpdate(string folder, string packsDirectory)
+    private static Bitmap GrayscaleImage(Image src)
+    {
+        Bitmap grayBmp = new Bitmap(src.Width, src.Height);
+        using (Graphics g = Graphics.FromImage(grayBmp))
+        {
+            var colorMatrix = new System.Drawing.Imaging.ColorMatrix(
+                new float[][]
+                {
+                new float[] {0.299f, 0.299f, 0.299f, 0, 0},
+                new float[] {0.587f, 0.587f, 0.587f, 0, 0},
+                new float[] {0.114f, 0.114f, 0.114f, 0, 0},
+                new float[] {0,      0,      0,      1, 0},
+                new float[] {0,      0,      0,      0, 1}
+                });
+            var attributes = new System.Drawing.Imaging.ImageAttributes();
+            attributes.SetColorMatrix(colorMatrix);
+            g.DrawImage(src, new Rectangle(0, 0, src.Width, src.Height),
+                0, 0, src.Width, src.Height, GraphicsUnit.Pixel, attributes);
+        }
+        return grayBmp;
+    }
+
+    public static bool CheckAndPromptForUpdate(string folder, string packsDirectory)
     {
         string folderName = Path.GetFileName(folder);
         string buildTxtPath = Path.Combine(folder, "build.txt");

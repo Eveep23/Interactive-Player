@@ -21,7 +21,7 @@ public static class UIManager
 
     static UIManager()
     {
-        // Load the custom font once
+        // Load the custom font
         string fontPath = Path.Combine(Directory.GetCurrentDirectory(), "general", "NetflixSans_W_Bd.ttf");
         if (File.Exists(fontPath))
         {
@@ -65,139 +65,176 @@ public static class UIManager
         // Load settings
         var settings = LoadSettings();
 
-        // Determine the notification background image based on the notification text and settings
-        string notificationImagePath;
+        string leftCapPath = FindTexturePath(movieFolder, "toast_leftCap_2x.png");
+        string centerPath = FindTexturePath(movieFolder, "toast_center_2x.png");
+        string rightCapPath = FindTexturePath(movieFolder, "toast_rightCap_2x.png");
+
         if (notificationText == "Your story is changing." && settings.CustomStoryChangingNotification)
         {
-            notificationImagePath = FindTexturePath(movieFolder, "changing_notification_2x.png");
+            leftCapPath = FindTexturePath(movieFolder, "changing_leftCap_2x.png");
         }
         else
         {
-            notificationImagePath = FindTexturePath(movieFolder, "notification_2x.png");
+            leftCapPath = FindTexturePath(movieFolder, "toast_leftCap_2x.png");
         }
 
-        Bitmap notificationImage = LoadBitmap(notificationImagePath);
+        Bitmap leftCap = LoadBitmap(leftCapPath);
+        Bitmap center = LoadBitmap(centerPath);
+        Bitmap rightCap = LoadBitmap(rightCapPath);
 
-        if (notificationImage == null)
+        if (leftCap == null || center == null || rightCap == null)
         {
-            Console.WriteLine("Notification image not found.");
+            Console.WriteLine("Notification cap images not found.");
             return;
         }
 
-        int notificationWidth = (int)(notificationImage.Width * scaleFactor);
-        int notificationHeight = (int)(notificationImage.Height * scaleFactor);
-
-        var notificationPanel = new Panel
+        // Measure text
+        using (var g = Graphics.FromImage(center))
+        using (var font = new Font("Arial", (float)(26 * scaleFactor)))
         {
-            Size = new Size(notificationWidth, notificationHeight),
-            Location = new System.Drawing.Point((notificationForm.Width - notificationWidth) / 2, (notificationForm.Height - notificationHeight) / 2),
-            BackgroundImage = new Bitmap(notificationImage, new Size(notificationWidth, notificationHeight)),
-            BackgroundImageLayout = ImageLayout.Stretch,
-            BackColor = Color.Transparent,
-            Padding = new Padding(10)
-        };
+            SizeF textSize = g.MeasureString(notificationText, font);
+            int padding = (int)(40 * scaleFactor);
+            int centerWidth = Math.Max((int)textSize.Width + padding, 1);
+            int notificationWidth = (int)(leftCap.Width * scaleFactor) + centerWidth + (int)(rightCap.Width * scaleFactor);
+            int notificationHeight = (int)(Math.Max(leftCap.Height, Math.Max(center.Height, rightCap.Height)) * scaleFactor);
 
-        var textLabel = new Label
-        {
-            Text = notificationText,
-            AutoSize = true,
-            Font = new Font("Arial", (float)(26 * scaleFactor)),
-            ForeColor = Color.White,
-            BackColor = Color.Transparent,
-            TextAlign = ContentAlignment.MiddleCenter
-        };
-
-        notificationPanel.Controls.Add(textLabel);
-
-        int offsetX = (int)(17 * scaleFactor);
-        textLabel.Location = new System.Drawing.Point((notificationPanel.Width - textLabel.Width) / 2 + offsetX, (notificationPanel.Height - textLabel.Height) / 2);
-
-        notificationForm.Controls.Add(notificationPanel);
-
-        // Load and play notification sound
-        string notificationSoundPath = FindTexturePath(movieFolder, "sfx_notification.m4a");
-        MediaPlayer notificationPlayer = null;
-        if (File.Exists(notificationSoundPath))
-        {
-            Core.Initialize();
-            var libVLC = new LibVLC();
-            notificationPlayer = new MediaPlayer(new Media(libVLC, notificationSoundPath, FromType.FromPath));
-            notificationPlayer.Play();
-        }
-        else
-        {
-            Console.WriteLine("Notification sound not found.");
-        }
-
-        // Set initial position above the VLC window
-        IntPtr videoPlayerHandle = FindWindow(null, "VLC (Direct3D11 output)");
-        if (videoPlayerHandle != IntPtr.Zero)
-        {
-            GetWindowRect(videoPlayerHandle, out RECT rect);
-            int centerX = rect.Left;
-            int initialY = rect.Top - notificationForm.Height;
-            int targetY = rect.Top + 30;
-
-            notificationForm.Location = new System.Drawing.Point(centerX, initialY);
-
-            System.Windows.Forms.Timer animationTimer = new System.Windows.Forms.Timer { Interval = 10 };
-            int animationDuration = 400;
-            int animationElapsed = 0;
-            int upAnimationElapsed = 0;
-            bool movingDown = true;
-            bool delayCompleted = false;
-            int delayCounter = 0;
-            int startY = initialY;
-            int endY = targetY;
-
-            animationTimer.Tick += (sender, e) =>
+            // Compose background
+            Bitmap notificationBg = new Bitmap(notificationWidth, notificationHeight);
+            using (Graphics bg = Graphics.FromImage(notificationBg))
             {
-                if (movingDown)
-                {
-                    animationElapsed += animationTimer.Interval;
-                    double progress = Math.Min(1.0, (double)animationElapsed / animationDuration);
-                    double eased = EaseOutQuad(progress);
-                    int newY = (int)(startY + (endY - startY) * eased);
+                int leftCapWidth = (int)(leftCap.Width * scaleFactor);
+                int rightCapWidth = (int)(rightCap.Width * scaleFactor);
 
-                    notificationForm.Location = new System.Drawing.Point(notificationForm.Location.X, newY);
+                // Draw left cap
+                bg.DrawImage(leftCap, new Rectangle(0, 0, leftCapWidth, notificationHeight));
 
-                    if (progress >= 1.0)
-                    {
-                        movingDown = false;
-                        delayCounter = 0;
-                    }
-                }
-                else if (!delayCompleted)
-                {
-                    delayCounter += animationTimer.Interval;
-                    if (delayCounter >= displayDurationMs)
-                    {
-                        delayCompleted = true;
-                        upAnimationElapsed = 0;
-                    }
-                }
-                else
-                {
-                    upAnimationElapsed += animationTimer.Interval;
-                    double progress = Math.Min(1.0, (double)upAnimationElapsed / animationDuration);
-                    double eased = EaseInQuad(progress);
-                    int newY = (int)(endY + (startY - endY) * eased);
+                // Draw center (stretched, but exclude 1px from the right edge to avoid fade)
+                Rectangle srcCenter = new Rectangle(0, 0, center.Width - 1, center.Height); // Exclude last column
+                Rectangle destCenter = new Rectangle(leftCapWidth, 0, centerWidth, notificationHeight);
+                bg.DrawImage(center, destCenter, srcCenter, GraphicsUnit.Pixel);
 
-                    notificationForm.Location = new System.Drawing.Point(notificationForm.Location.X, newY);
+                // Draw right cap
+                bg.DrawImage(rightCap, new Rectangle(leftCapWidth + centerWidth, 0, rightCapWidth, notificationHeight));
+            }
 
-                    if (progress >= 1.0)
-                    {
-                        animationTimer.Stop();
-                        notificationForm.Close();
-                    }
-                }
+            var notificationPanel = new Panel
+            {
+                Size = new Size(notificationWidth, notificationHeight),
+                Location = new Point((notificationForm.Width - notificationWidth) / 2, (notificationForm.Height - notificationHeight) / 2),
+                BackgroundImage = notificationBg,
+                BackgroundImageLayout = ImageLayout.None,
+                BackColor = Color.Transparent,
+                Padding = new Padding(10)
             };
 
-            animationTimer.Start();
-            notificationForm.ShowDialog();
-        }
+            var textLabel = new Label
+            {
+                Text = notificationText,
+                AutoSize = true,
+                Font = new Font("Arial", (float)(26 * scaleFactor)),
+                ForeColor = Color.White,
+                BackColor = Color.Transparent,
+                TextAlign = ContentAlignment.MiddleCenter
+            };
 
-        notificationPlayer?.Dispose();
+            notificationPanel.Controls.Add(textLabel);
+            textLabel.Location = new Point(
+                (notificationPanel.Width - textLabel.Width) / 2,
+                (notificationPanel.Height - textLabel.Height) / 2
+            );
+
+            notificationForm.Controls.Add(notificationPanel);
+
+            int offsetX = (int)(17 * scaleFactor);
+            textLabel.Location = new System.Drawing.Point((notificationPanel.Width - textLabel.Width) / 2 + offsetX, (notificationPanel.Height - textLabel.Height) / 2);
+
+            notificationForm.Controls.Add(notificationPanel);
+
+            // Load and play notification sound
+            string notificationSoundPath = FindTexturePath(movieFolder, "sfx_notification.m4a");
+            MediaPlayer notificationPlayer = null;
+            if (File.Exists(notificationSoundPath))
+            {
+                Core.Initialize();
+                var libVLC = new LibVLC();
+                notificationPlayer = new MediaPlayer(new Media(libVLC, notificationSoundPath, FromType.FromPath));
+                notificationPlayer.Play();
+            }
+            else
+            {
+                Console.WriteLine("Notification sound not found.");
+            }
+
+            // Set initial position above the VLC window
+            IntPtr videoPlayerHandle = FindWindow(null, "Interactive Player   ");
+            if (videoPlayerHandle != IntPtr.Zero)
+            {
+                GetWindowRect(videoPlayerHandle, out RECT rect);
+                int centerX = rect.Left;
+                int initialY = rect.Top - notificationForm.Height;
+                int targetY = rect.Top + 30;
+
+                notificationForm.Location = new System.Drawing.Point(centerX, initialY);
+
+                System.Windows.Forms.Timer animationTimer = new System.Windows.Forms.Timer { Interval = 10 };
+                int animationDuration = 400;
+                int animationElapsed = 0;
+                int upAnimationElapsed = 0;
+                bool movingDown = true;
+                bool delayCompleted = false;
+                int delayCounter = 0;
+                int startY = initialY;
+                int endY = targetY;
+
+                animationTimer.Tick += (sender, e) =>
+                {
+                    if (movingDown)
+                    {
+                        animationElapsed += animationTimer.Interval;
+                        double progress = Math.Min(1.0, (double)animationElapsed / animationDuration);
+                        double eased = EaseOutQuad(progress);
+                        int newY = (int)(startY + (endY - startY) * eased);
+
+                        notificationForm.Location = new System.Drawing.Point(notificationForm.Location.X, newY);
+
+                        if (progress >= 1.0)
+                        {
+                            movingDown = false;
+                            delayCounter = 0;
+                        }
+                    }
+                    else if (!delayCompleted)
+                    {
+                        delayCounter += animationTimer.Interval;
+                        if (delayCounter >= displayDurationMs)
+                        {
+                            delayCompleted = true;
+                            upAnimationElapsed = 0;
+                        }
+                    }
+                    else
+                    {
+                        upAnimationElapsed += animationTimer.Interval;
+                        double progress = Math.Min(1.0, (double)upAnimationElapsed / animationDuration);
+                        double eased = EaseInQuad(progress);
+                        int newY = (int)(endY + (startY - endY) * eased);
+
+                        notificationForm.Location = new System.Drawing.Point(notificationForm.Location.X, newY);
+
+                        if (progress >= 1.0)
+                        {
+                            animationTimer.Stop();
+                            notificationForm.Close();
+                        }
+                    }
+                };
+
+                animationTimer.Start();
+                notificationForm.ShowDialog();
+            }
+
+            notificationPlayer?.Dispose();
+        }
     }
     private static string FindTexturePath(string folder, string textureName)
     {
@@ -211,7 +248,7 @@ public static class UIManager
 
     private static void AlignNotificationWithVideoPlayer(Form notificationForm, string videoId)
     {
-        IntPtr videoPlayerHandle = FindWindow(null, "VLC (Direct3D11 output)");
+        IntPtr videoPlayerHandle = FindWindow(null, "Interactive Player   ");
         if (videoPlayerHandle != IntPtr.Zero)
         {
             GetWindowRect(videoPlayerHandle, out RECT rect);
@@ -254,7 +291,7 @@ public static class UIManager
         int formHeight = baseHeight;
         int vlcX = 0, vlcY = 0;
 
-        IntPtr vlcHandle = FindWindow(null, "VLC (Direct3D11 output)");
+        IntPtr vlcHandle = FindWindow(null, "Interactive Player   ");
         if (vlcHandle != IntPtr.Zero && GetWindowRect(vlcHandle, out RECT rect))
         {
             int playerWidth = rect.Right - rect.Left;
@@ -555,6 +592,7 @@ public static class UIManager
         string selectedSegmentId = null;
         string selectedChoiceId = null;
         bool inputCaptured = false;
+        bool fadeInActive = false;
 
         correctAnswersCount = 0;
 
@@ -630,7 +668,7 @@ public static class UIManager
         double scaleFactor = (double)choiceForm.Width / formWidth;
 
         // Apply additional scaling for specific video ID
-        if (videoId == "10000001" || videoId == "10000003" || videoId == "81481556" || videoId == "81251335" || videoId == "81271335" || videoId == "81287545" || videoId == "80149064" || videoId == "81260654" || videoId == "80994695" || videoId == "81328829" || videoId == "81058723" || videoId == "81054409" || videoId == "81108751" || videoId == "81004016" || videoId == "80988062" || videoId == "81131714" || videoId == "81205738" || videoId == "80227804" || videoId == "80227805" || videoId == "80227800" || videoId == "80227801" || videoId == "80227802" || videoId == "80227803" || videoId == "80227699" || videoId == "80227698" || videoId == "81319137" || videoId == "81205737" || videoId == "81054415" || videoId == "81175265" || videoId == "81019938" || videoId == "80227815" || videoId == "81250260" || videoId == "81250261" || videoId == "81250262" || videoId == "81250263" || videoId == "81250264" || videoId == "81250265" || videoId == "81250266" || videoId == "81250267")
+        if (videoId == "10000001" || videoId == "10000003" || videoId == "80135585" || videoId == "81481556" || videoId == "81251335" || videoId == "81271335" || videoId == "81287545" || videoId == "80149064" || videoId == "81260654" || videoId == "80994695" || videoId == "81328829" || videoId == "81058723" || videoId == "81054409" || videoId == "81108751" || videoId == "81004016" || videoId == "80988062" || videoId == "81131714" || videoId == "81205738" || videoId == "80227804" || videoId == "80227805" || videoId == "80227800" || videoId == "80227801" || videoId == "80227802" || videoId == "80227803" || videoId == "80227699" || videoId == "80227698" || videoId == "81319137" || videoId == "81205737" || videoId == "81054415" || videoId == "81175265" || videoId == "81019938" || videoId == "80227815" || videoId == "81250260" || videoId == "81250261" || videoId == "81250262" || videoId == "81250263" || videoId == "81250264" || videoId == "81250265" || videoId == "81250266" || videoId == "81250267")
         {
             scaleFactor *= 0.75;
         }
@@ -812,7 +850,7 @@ public static class UIManager
                 int buttonWidth = buttonWidths[i];
                 buttonHeight = (int)(defaultSprite.Height * scaleFactor);
 
-                var button = new Button
+                var button = new NoFocusCueButton
                 {
                     Text = (videoId == "81131714" && segment.LayoutType == "l6" || segment.LayoutType == "ReubenZone" || segment.LayoutType == "EnderconZone" || segment.LayoutType == "TempleZone" || segment.LayoutType == "Crafting" || segment.LayoutType == "EpisodeEnd" || segment.LayoutType == "RedstoniaZone" || segment.LayoutType == "MCSMThroneZone" || segment.LayoutType == "MCSMTownZone" || segment.LayoutType == "MCSMWoolLand" || segment.LayoutType == "MCSMLabZone" || segment.LayoutType == "MCSMGunZone" || segment.LayoutType == "IvorZone" || videoId == "81271335" && segment.LayoutType == "l1") ? string.Empty : (new[] { "80149064", "80135585", "81054409", "81287545", "81019938", "81260654", "81054415", "81058723", "80227815", "81250260", "81250261", "81250262", "81250263", "81250264", "81250265", "81250266", "81250267" }.Contains(videoId)) ? string.Empty : choices[i].Text,
                     Size = new Size(buttonWidth, buttonHeight),
@@ -847,7 +885,7 @@ public static class UIManager
                     {
                         if (videoId == "10000001" || videoId == "80988062")
                         {
-                            EaseIntoFocusedSprite(button, defaultSprite, focusedSprite, 65);
+                            EaseIntoFocusedSprite(button, defaultSprite, focusedSprite, 65, fadeInActive);
                         }
                         else
                         {
@@ -863,6 +901,8 @@ public static class UIManager
                         {
                             button.ForeColor = Color.White;
                         }
+
+                        if (fadeInActive) return;
 
                         if (File.Exists(hoverSoundPath))
                         {
@@ -884,7 +924,7 @@ public static class UIManager
                     {
                         if (videoId == "10000001" || videoId == "80988062")
                         {
-                            EaseOutToDefaultSprite(button, defaultSprite, focusedSprite, 65);
+                            EaseOutToDefaultSprite(button, defaultSprite, focusedSprite, 65, fadeInActive);
                         }
                         else
                         {
@@ -910,6 +950,8 @@ public static class UIManager
                 };
                 button.MouseDown += (sender, e) =>
                 {
+                    if (fadeInActive) return;
+
                     if (button.Enabled)
                     {
                         button.BackgroundImage = new Bitmap(selectedSprite, new Size(buttonWidth, buttonHeight));
@@ -917,6 +959,8 @@ public static class UIManager
                 };
                 button.MouseUp += (sender, e) =>
                 {
+                    if (fadeInActive) return;
+
                     if (button.Enabled)
                     {
                         button.BackgroundImage = new Bitmap(focusedSprite, new Size(buttonWidth, buttonHeight));
@@ -925,6 +969,8 @@ public static class UIManager
 
                 button.Click += (sender, e) =>
                 {
+                    if (fadeInActive) return;
+
                     if (!inputCaptured)
                     {
                         selectedSegmentId = (string)((Button)sender).Tag;
@@ -1112,7 +1158,7 @@ public static class UIManager
                 {
                     if (button.Enabled)
                     {
-                        if (videoId == "81328829" || videoId == "81250267" || videoId == "81250266" || videoId == "81250265" || videoId == "81250264" || videoId == "81250263" || videoId == "81250262" || videoId == "81250261" || videoId == "81250260" || videoId == "80227815" || videoId == "81271335" && segment.LayoutType == "l0" || videoId == "81205737" || videoId == "80149064" || videoId == "80994695" || videoId == "81175265" || videoId == "81251335" || videoId == "81108751" || videoId == "81319137" || videoId == "81054415" || videoId == "80135585" || videoId == "81054409" || videoId == "81058723" || videoId == "81004016" || videoId == "81205738" || videoId == "80227804" || videoId == "80227805" || videoId == "80227800" || videoId == "80227801" || videoId == "80227802" || videoId == "80227803" || videoId == "80227699" || videoId == "80227698")
+                        if (videoId == "81328829" || videoId == "81250267" || videoId == "81250266" || videoId == "81250265" || videoId == "81250264" || videoId == "81250263" || videoId == "81250262" || videoId == "81250261" || videoId == "81250260" || videoId == "80227815" || videoId == "81271335" && segment.LayoutType == "l0" || videoId == "81205737" || videoId == "80149064" || videoId == "80994695" || videoId == "81175265" || videoId == "81251335" || videoId == "81108751" || videoId == "81319137" || videoId == "81054415" || videoId == "80135585" || videoId == "81004016" || videoId == "81205738" || videoId == "80227804" || videoId == "80227805" || videoId == "80227800" || videoId == "80227801" || videoId == "80227802" || videoId == "80227803" || videoId == "80227699" || videoId == "80227698")
                         {
                             AnimatePanelGrow(buttonPanel, button);
                         }
@@ -1122,7 +1168,7 @@ public static class UIManager
                 {
                     if (button.Enabled)
                     {
-                        if (videoId == "81328829" || videoId == "81250267" || videoId == "81250266" || videoId == "81250265" || videoId == "81250264" || videoId == "81250263" || videoId == "81250262" || videoId == "81250261" || videoId == "81250260" || videoId == "80227815" || videoId == "81271335" && segment.LayoutType == "l0" || videoId == "81205737" || videoId == "80149064" || videoId == "80994695" || videoId == "81175265" || videoId == "81251335" || videoId == "81108751" || videoId == "81319137" || videoId == "81054415" || videoId == "80135585" || videoId == "81054409" || videoId == "81058723" || videoId == "81004016" || videoId == "81205738" || videoId == "80227804" || videoId == "80227805" || videoId == "80227800" || videoId == "80227801" || videoId == "80227802" || videoId == "80227803" || videoId == "80227699" || videoId == "80227698")
+                        if (videoId == "81328829" || videoId == "81250267" || videoId == "81250266" || videoId == "81250265" || videoId == "81250264" || videoId == "81250263" || videoId == "81250262" || videoId == "81250261" || videoId == "81250260" || videoId == "80227815" || videoId == "81271335" && segment.LayoutType == "l0" || videoId == "81205737" || videoId == "80149064" || videoId == "80994695" || videoId == "81175265" || videoId == "81251335" || videoId == "81108751" || videoId == "81319137" || videoId == "81054415" || videoId == "80135585" || videoId == "81004016" || videoId == "81205738" || videoId == "80227804" || videoId == "80227805" || videoId == "80227800" || videoId == "80227801" || videoId == "80227802" || videoId == "80227803" || videoId == "80227699" || videoId == "80227698")
                         {
                             AnimatePanelShrink(buttonPanel, button);
                         }
@@ -1924,7 +1970,7 @@ public static class UIManager
         {
             System.Windows.Forms.Timer animationTimer = new System.Windows.Forms.Timer { Interval = 10 };
             int elapsed = 0;
-            int duration = 400; // Duration in milliseconds
+            int duration = 400;
 
             // Store the original sizes of the buttons
             List<Size> originalSizes = buttons.Select(button => button.Size).ToList();
@@ -2029,7 +2075,6 @@ public static class UIManager
                 Rectangle bottomRightRect = new Rectangle(spriteWidth, spriteHeight, spriteWidth, spriteHeight);
                 Bitmap incorrectArrowSprite = accessorySpriteSheet.Clone(bottomRightRect, accessorySpriteSheet.PixelFormat);
 
-                // Create PictureBox for the left arrow
                 PictureBox leftArrowPictureBox = new PictureBox
                 {
                     Image = leftArrowSprite,
@@ -2038,7 +2083,6 @@ public static class UIManager
                     BackColor = Color.Transparent
                 };
 
-                // Create PictureBox for the right arrow
                 PictureBox rightArrowPictureBox = new PictureBox
                 {
                     Image = rightArrowSprite,
@@ -2047,7 +2091,6 @@ public static class UIManager
                     BackColor = Color.Transparent
                 };
 
-                // Position the arrows in the middle of the choice window
                 int arrowOffset = (int)(50 * scaleFactor);
                 int verticalAdjustment = (int)(15 * scaleFactor);
                 leftArrowPictureBox.Location = new Point(
@@ -2059,7 +2102,6 @@ public static class UIManager
                     (choiceForm.Height / 2) - (rightArrowPictureBox.Height / 2) - verticalAdjustment
                 );
 
-                // Add the arrows to the choice form
                 choiceForm.Controls.Add(leftArrowPictureBox);
                 choiceForm.Controls.Add(rightArrowPictureBox);
 
@@ -2141,8 +2183,9 @@ public static class UIManager
             }
         }
 
-        // Define possible names for each texture
+        // Possible names for each texture
         string timerFillPath, timerCapLPath, timerCapRPath, timerBottomPath, timerTopPath, webPath;
+        string[] fallbackWebIcons = { "web_2x.png", "device_web_2x.png", "web_2x_v2.png", "web_3x.png", "web_icon_2x.png" };
 
         if (videoId == "10000001")
         {
@@ -2151,7 +2194,30 @@ public static class UIManager
             timerCapRPath = null;
             timerBottomPath = null;
             timerTopPath = null;
-            webPath = isControllerConnected ? FindTexturePath(movieFolder, new[] { "controller_2x.png" }) : FindTexturePath(movieFolder, new[] { "web_2x.png", "device_web_2x.png", "web_2x_v2.png", "web_3x.png", "web_icon_2x.png" });
+            if (isControllerConnected)
+            {
+                // Controller is connected
+                if (settings.ControllerIcon == "Gamepad")
+                {
+                    webPath = FindTexturePath(movieFolder, new[] { "controller_2x.png", "remote_2x.png" }.Concat(fallbackWebIcons).ToArray());
+                }
+                else // "Remote"
+                {
+                    webPath = FindTexturePath(movieFolder, new[] { "remote_2x.png", "controller_2x.png" }.Concat(fallbackWebIcons).ToArray());
+                }
+            }
+            else
+            {
+                // Not using controller
+                if (settings.KeyboardIcon == "Hand")
+                {
+                    webPath = FindTexturePath(movieFolder, new[] { "touch_2x.png" }.Concat(fallbackWebIcons).ToArray());
+                }
+                else // "Cursor"
+                {
+                    webPath = FindTexturePath(movieFolder, fallbackWebIcons);
+                }
+            }
         }
         else if (videoId == "81131714" && segment.LayoutType == "l6")
         {
@@ -2223,13 +2289,30 @@ public static class UIManager
             timerCapRPath = FindTexturePath(movieFolder, new[] { "timer_capR_2x.png", "timer_capR_2x_v2.png", "timer_capR_3x.png" });
             timerBottomPath = FindTexturePath(movieFolder, new[] { "timer_bottom_2x.png", "timer_bottom_2x_v2.png", "timer_bottom_3x.png", "bottombar_2x.png" });
             timerTopPath = FindTexturePath(movieFolder, new[] { "timer_top_2x.png", "timer_top_2x_v2.png", "timer_top_3x.png" });
-            webPath = isControllerConnected ? FindTexturePath(movieFolder, new[] { "controller_2x.png" }) : FindTexturePath(movieFolder, new[] { "web_2x.png", "device_web_2x.png", "web_2x_v2.png", "web_3x.png", "web_icon_2x.png" });
-        }
-
-        // Handle cases where a texture wasn't found
-        if (webPath == null)
-        {
-            webPath = FindTexturePath(movieFolder, new[] { "web_2x.png", "web_2x_v2.png", "web_3x.png", "web_icon_2x.png" });
+            if (isControllerConnected)
+            {
+                // Controller is connected
+                if (settings.ControllerIcon == "Gamepad")
+                {
+                    webPath = FindTexturePath(movieFolder, new[] { "controller_2x.png", "remote_2x.png" }.Concat(fallbackWebIcons).ToArray());
+                }
+                else // "Remote"
+                {
+                    webPath = FindTexturePath(movieFolder, new[] { "remote_2x.png", "controller_2x.png" }.Concat(fallbackWebIcons).ToArray());
+                }
+            }
+            else
+            {
+                // Not using controller
+                if (settings.KeyboardIcon == "Hand")
+                {
+                    webPath = FindTexturePath(movieFolder, new[] { "touch_2x.png" }.Concat(fallbackWebIcons).ToArray());
+                }
+                else // "Cursor"
+                {
+                    webPath = FindTexturePath(movieFolder, fallbackWebIcons);
+                }
+            }
         }
 
         if (timerFillPath == null)
@@ -2265,7 +2348,12 @@ public static class UIManager
 
             int currentY = timerBarY;
 
-            if (videoId == "10000001")
+            if (videoId == "10000001" && fadeInActive)
+            {
+                // Keep the timer bar at its starting position (offscreen/bottom)
+                currentY = choiceForm.Height + timerBarY;
+            }
+            else if (videoId == "10000001")
             {
                 // Calculate the eased Y position
                 double progress = Math.Min(1.0, (double)stopwatch.ElapsedMilliseconds / 370);
@@ -2473,11 +2561,20 @@ public static class UIManager
         {
             Task.Run(async () =>
             {
+                if (videoId == "10000001")
+                {
+                    // Wait for fade-in to finish before starting the go-up animation
+                    while (fadeInActive)
+                        await Task.Delay(10);
+
+                    stopwatch.Restart();
+                }
+
                 int duration = videoId == "10000001" ? 370 : 400;
                 while (stopwatch.ElapsedMilliseconds < duration)
                 {
                     drawingPanel.Invalidate();
-                    await Task.Delay(11); // Update approximately every 16ms (~60 FPS)
+                    await Task.Delay(8); // Update approximately every 16ms (~60 FPS)
                 }
             });
         }
@@ -2550,7 +2647,7 @@ public static class UIManager
                     drawingPanel.Invalidate();
 
                     // Handle controller input
-                    HandleControllerInput(ref selectedIndex, buttons, buttonSprites, ref inputCaptured, ref selectedSegmentId, choiceForm, selectSoundPath, hoverSoundPath, libVLC, videoId, choices, segment, movieFolder);
+                    HandleControllerInput(ref selectedIndex, buttons, buttonSprites, ref inputCaptured, ref selectedSegmentId, choiceForm, selectSoundPath, hoverSoundPath, libVLC, videoId, choices, segment, movieFolder, fadeInActive);
 
                     await Task.Delay(16); // Update approximately every 16ms (~60 FPS)
                 }
@@ -2922,8 +3019,77 @@ public static class UIManager
         System.Windows.Forms.Timer visibilityTimer = new System.Windows.Forms.Timer { Interval = 15 };
         visibilityTimer.Tick += (sender, e) =>
         {
-            choiceForm.Opacity = 1;
             visibilityTimer.Stop();
+
+            if (videoId == "10000001")
+            {
+                fadeInActive = true;
+                int fadeDuration = 500;
+                int fadeInterval = 15;
+                int fadeElapsed = 0;
+                System.Windows.Forms.Timer fadeTimer = new System.Windows.Forms.Timer { Interval = fadeInterval };
+                fadeTimer.Tick += (s2, e2) =>
+                {
+                    fadeElapsed += fadeInterval;
+                    double progress = Math.Min(1.0, (double)fadeElapsed / fadeDuration);
+                    choiceForm.Opacity = 0.9 * progress;
+
+                    if (controller.IsConnected)
+                    {
+                        for (int i = 0; i < buttons.Count; i++)
+                        {
+                            var button = buttons[i];
+                            var spriteSheet = buttonSprites[i];
+                            if (spriteSheet != null)
+                            {
+                                Bitmap defaultSprite = ExtractSprite(spriteSheet, 0);
+                                button.BackgroundImage = new Bitmap(defaultSprite, button.Size);
+                            }
+                        }
+                    }
+
+                    if (progress >= 1.0)
+                    {
+                        fadeTimer.Stop();
+                        choiceForm.Opacity = 0.9;
+
+                        Task.Run(async () =>
+                        {
+                            await Task.Delay(700);
+                            choiceForm.Invoke(new Action(() =>
+                            {
+                                fadeInActive = false;
+                                stopwatch.Restart();
+
+                                for (int i = 0; i < buttons.Count; i++)
+                                {
+                                    var button = buttons[i];
+                                    var spriteSheet = buttonSprites[i];
+                                    if (spriteSheet != null)
+                                    {
+                                        Bitmap defaultSprite = ExtractSprite(spriteSheet, 0);
+                                        Bitmap focusedSprite = ExtractSprite(spriteSheet, 1);
+                                        if (button.Bounds.Contains(button.Parent.PointToClient(Control.MousePosition)))
+                                        {
+                                            EaseIntoFocusedSprite(button, defaultSprite, focusedSprite, 65, fadeInActive);
+                                            if (File.Exists(hoverSoundPath))
+                                            {
+                                                var hoverPlayer = new MediaPlayer(new Media(libVLC, hoverSoundPath, FromType.FromPath));
+                                                hoverPlayer.Play();
+                                            }
+                                        }
+                                    }
+                                }
+                            }));
+                        });
+                    }
+                };
+                fadeTimer.Start();
+            }
+            else
+            {
+                choiceForm.Opacity = 1.0;
+            }
         };
         visibilityTimer.Start();
 
@@ -2993,7 +3159,7 @@ public static class UIManager
     // Align the UI window with the video player
     private static void AlignWithVideoPlayer(Form choiceForm, string videoId, Segment segment)
     {
-        IntPtr videoPlayerHandle = FindWindow(null, "VLC (Direct3D11 output)");
+        IntPtr videoPlayerHandle = FindWindow(null, "Interactive Player   ");
         if (videoPlayerHandle != IntPtr.Zero)
         {
             GetWindowRect(videoPlayerHandle, out RECT rect);
@@ -3283,8 +3449,10 @@ public static class UIManager
         }
     }
 
-    private static void HandleControllerInput(ref int selectedIndex, List<Button> buttons, List<Bitmap> buttonSprites, ref bool inputCaptured, ref string selectedSegmentId, Form choiceForm, string selectSoundPath, string hoverSoundPath, LibVLC libVLC, string videoId, List<Choice> choices, Segment segment, string movieFolder)
+    private static void HandleControllerInput(ref int selectedIndex, List<Button> buttons, List<Bitmap> buttonSprites, ref bool inputCaptured, ref string selectedSegmentId, Form choiceForm, string selectSoundPath, string hoverSoundPath, LibVLC libVLC, string videoId, List<Choice> choices, Segment segment, string movieFolder, bool fadeInActive = false)
     {
+        if (fadeInActive) return;
+
         var controller = new Controller(UserIndex.One);
         if (!controller.IsConnected)
         {
@@ -3380,7 +3548,7 @@ public static class UIManager
                 }
 
                 buttons[i].BackgroundImage = i == selectedIndex
-                    ? new Bitmap(focusedSprite, buttons[i].Size)
+                    ? new Bitmap(fadeInActive ? defaultSprite : focusedSprite, buttons[i].Size)
                     : new Bitmap(defaultSprite, buttons[i].Size);
             }
         }
@@ -3499,7 +3667,7 @@ public static class UIManager
             }
         }
     }
-    private static void EaseIntoFocusedSprite(Button button, Bitmap defaultSprite, Bitmap focusedSprite, int durationMs)
+    private static void EaseIntoFocusedSprite(Button button, Bitmap defaultSprite, Bitmap focusedSprite, int durationMs, bool fadeInActive = false)
     {
         System.Windows.Forms.Timer easingTimer = new System.Windows.Forms.Timer { Interval = 10 };
         int elapsed = 0;
@@ -3513,7 +3681,7 @@ public static class UIManager
             double easedProgress = EaseOutQuad(progress);
 
             // Interpolate between the default and focused sprites
-            Bitmap blendedSprite = BlendSprites(defaultSprite, focusedSprite, easedProgress);
+            Bitmap blendedSprite = BlendSprites(defaultSprite, fadeInActive ? defaultSprite : focusedSprite, easedProgress);
             button.BackgroundImage = new Bitmap(blendedSprite, button.Size);
 
             if (progress >= 1.0)
@@ -3525,7 +3693,7 @@ public static class UIManager
         easingTimer.Start();
     }
 
-    private static void EaseOutToDefaultSprite(Button button, Bitmap defaultSprite, Bitmap focusedSprite, int durationMs)
+    private static void EaseOutToDefaultSprite(Button button, Bitmap defaultSprite, Bitmap focusedSprite, int durationMs, bool fadeInActive = false)
     {
         System.Windows.Forms.Timer easingTimer = new System.Windows.Forms.Timer { Interval = 10 };
         int elapsed = 0;
@@ -3539,7 +3707,7 @@ public static class UIManager
             double easedProgress = EaseOutQuad(progress);
 
             // Interpolate between the focused and default sprites
-            Bitmap blendedSprite = BlendSprites(focusedSprite, defaultSprite, easedProgress);
+            Bitmap blendedSprite = BlendSprites(fadeInActive ? defaultSprite : focusedSprite, defaultSprite, easedProgress);
             button.BackgroundImage = new Bitmap(blendedSprite, button.Size);
 
             if (progress >= 1.0)
@@ -3720,6 +3888,33 @@ public static class UIManager
             }
         };
         timer.Start();
+    }
+
+    public class NoFocusCueButton : Button
+    {
+        public NoFocusCueButton()
+        {
+            SetStyle(ControlStyles.Selectable, false);
+            TabStop = false;
+        }
+
+        protected override bool ShowFocusCues => false;
+
+        protected override void OnGotFocus(EventArgs e)
+        {
+            base.OnLostFocus(e);
+        }
+
+        protected override void WndProc(ref Message m)
+        {
+            const int WM_MOUSEACTIVATE = 0x21;
+            if (m.Msg == WM_MOUSEACTIVATE)
+            {
+                m.Result = (IntPtr)3; // MA_NOACTIVATE
+                return;
+            }
+            base.WndProc(ref m);
+        }
     }
 
     private static Bitmap BlendSprites(Bitmap sprite1, Bitmap sprite2, double progress)

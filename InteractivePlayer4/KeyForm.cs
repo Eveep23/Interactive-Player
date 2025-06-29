@@ -567,7 +567,7 @@ public static class KeyForm
     {
         if (cachedVlcHandle == IntPtr.Zero || (DateTime.Now - lastVlcHandleCheck) > vlcHandleCheckInterval)
         {
-            cachedVlcHandle = FindWindow(null, "VLC (Direct3D11 output)");
+            cachedVlcHandle = FindWindow(null, "Interactive Player   ");
             lastVlcHandleCheck = DateTime.Now;
         }
 
@@ -759,7 +759,7 @@ public static class KeyForm
         if (keepOnTopTimer == null)
         {
             keepOnTopTimer = new System.Windows.Forms.Timer();
-            keepOnTopTimer.Interval = 3000;
+            keepOnTopTimer.Interval = 1500;
             keepOnTopTimer.Tick += (s, e) =>
             {
                 if (keyPressForm != null && !keyPressForm.IsDisposed && keyPressForm.Visible)

@@ -138,12 +138,57 @@ public static class InstallInteractives
             Cursor = Cursors.Hand
         };
 
+        Label detailsLabel = new Label
+        {
+            ForeColor = Color.White,
+            BackColor = Color.Transparent,
+            AutoSize = true,
+            Font = new Font("Arial", 15, FontStyle.Bold),
+            TextAlign = ContentAlignment.BottomRight,
+            Visible = true,
+            Anchor = AnchorStyles.Bottom | AnchorStyles.Right
+        };
+        displayPictureBox.Controls.Add(detailsLabel);
+
+        detailsLabel.Paint += (s, e) =>
+        {
+            var g = e.Graphics;
+            var rect = detailsLabel.ClientRectangle;
+
+            using (var brush = new System.Drawing.Drawing2D.LinearGradientBrush(
+                rect,
+                Color.FromArgb(0, 154, 27, 43),
+                Color.FromArgb(255, 154, 27, 43),
+                System.Drawing.Drawing2D.LinearGradientMode.Horizontal))
+            {
+                g.FillRectangle(brush, rect);
+            }
+
+            TextRenderer.DrawText(
+                g,
+                detailsLabel.Text,
+                detailsLabel.Font,
+                rect,
+                detailsLabel.ForeColor,
+                TextFormatFlags.Right | TextFormatFlags.VerticalCenter | TextFormatFlags.EndEllipsis
+            );
+        };
+
+        void PositionDetailsLabel()
+        {
+            detailsLabel.Location = new Point(
+                Math.Max(0, displayPictureBox.Width - detailsLabel.Width - 67),
+                Math.Max(0, displayPictureBox.Height - detailsLabel.Height - 3)
+            );
+        }
+        displayPictureBox.Resize += (s, e) => PositionDetailsLabel();
+        detailsLabel.SizeChanged += (s, e) => PositionDetailsLabel();
+
         rightPanel.Controls.Add(actionButton);
         rightPanel.Controls.Add(descriptionLabel);
         rightPanel.Controls.Add(titleLabel);
         rightPanel.Controls.Add(displayPictureBox);
 
-        // Center the actionButton horizontally within the rightPanel
         rightPanel.Resize += (sender, e) =>
         {
             actionButton.Location = new Point((rightPanel.Width - actionButton.Width) / 2, rightPanel.Height - actionButton.Height - 10);
@@ -268,7 +313,7 @@ public static class InstallInteractives
                     MaximumSize = new Size(filePanel.Width - buttonPictureBox.Width - 15, 0),
                     Padding = new Padding(5),
                     Margin = new Padding(5),
-                    Font = new Font("Arial", 16, FontStyle.Bold),
+                    Font = new Font("Arial", 15, FontStyle.Bold),
                     TextAlign = ContentAlignment.MiddleLeft,
                     Location = new Point(buttonPictureBox.Width + 10, (filePanel.Height - 17) / 2)
                 };
@@ -284,10 +329,12 @@ public static class InstallInteractives
                         string title = jsonData["title"]?.ToString();
                         string description = jsonData["description"]?.ToString();
                         int newBuild = jsonData["build"]?.ToObject<int>() ?? 0;
+                        string details = jsonData["details"]?.ToString();
 
                         displayPictureBox.Image = Image.FromFile(pngFilePath);
                         titleLabel.Text = title;
                         descriptionLabel.Text = description;
+                        detailsLabel.Text = details;
 
                         actionButton.Image = Image.FromFile(bigButtonImagePath);
                         actionButton.Location = new Point((rightPanel.Width - actionButton.Width) / 2, rightPanel.Height - actionButton.Height - 10);
@@ -492,7 +539,6 @@ public static class InstallInteractives
                     }
                     catch (Exception ex)
                     {
-                        // Log or handle file-specific errors
                         Console.WriteLine($"Error moving file '{file}' to '{destinationFile}': {ex.Message}");
                     }
                 }

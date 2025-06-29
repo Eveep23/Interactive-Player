@@ -1,16 +1,17 @@
-﻿using System;
-using System.Collections.Generic;
-using System.IO;
-using System.Drawing;
-using Newtonsoft.Json.Linq;
-using System.Linq;
-using LibVLCSharp.Shared;
-using System.Windows.Forms;
-using System.Threading;
-using System.Net;
+﻿using LibVLCSharp.Shared;
 using Newtonsoft.Json;
+using Newtonsoft.Json.Linq;
 using SharpDX.DirectInput;
 using SharpDX.XInput;
+using System;
+using System.Collections.Generic;
+using System.Drawing;
+using System.Drawing.Printing;
+using System.IO;
+using System.Linq;
+using System.Net;
+using System.Threading;
+using System.Windows.Forms;
 
 public static class JsonParser
 {
@@ -361,6 +362,8 @@ public static class JsonParser
             bool noFakeChoicesOrDone = (segment.fakechoices == null || segment.fakechoices.Count == 0) || fakeChoiceDisplayed;
             bool noNotificationsOrDone = segment.Notification == null || segment.Notification.Count == 0 ||
                 segment.Notification.All(n => mediaPlayer.Time > n.EndMs);
+            bool subtitlesHiddenForChoice = false;
+            int? previousSpuTrackId = null;
 
             if (mediaPlayer.Time >= segment.StartTimeMs && mediaPlayer.Time < endTimeMs - 105 && noChoicesOrDone && noChoiceSetsOrDone && noTutorialOrDone && noFakeChoicesOrDone && noNotificationsOrDone)
             {
@@ -424,7 +427,34 @@ public static class JsonParser
                         }
                     }
 
+                    if (!subtitlesHiddenForChoice)
+                    {
+                        int currentSpu = mediaPlayer.Spu;
+                        if (currentSpu > 0)
+                        {
+                            previousSpuTrackId = currentSpu;
+                            mediaPlayer.SetSpu(-1);
+                            Console.WriteLine("Subtitles hidden for choice point.");
+                        }
+                        subtitlesHiddenForChoice = true;
+                    }
+
                     UIManager.ShowChoiceUI(segment.fakechoices, fakeButtonSprites, fakeButtonIcons, (int)fakeChoiceDurationMs, movieFolder, videoId, segment);
+
+                    if (subtitlesHiddenForChoice && previousSpuTrackId.HasValue)
+                    {
+                        // Restore the previous subtitle track
+                        if (mediaPlayer.SetSpu(previousSpuTrackId.Value))
+                        {
+                            Console.WriteLine("Subtitles restored after choice point.");
+                        }
+                        else
+                        {
+                            Console.WriteLine("Failed to restore subtitles after choice point.");
+                        }
+                        subtitlesHiddenForChoice = false;
+                        previousSpuTrackId = null;
+                    }
 
                     fakeChoiceDisplayed = true;
                 }
@@ -440,9 +470,9 @@ public static class JsonParser
 
                 tutorialDisplayed = true;
             }
-            
+
             if (!choiceDisplayed && segment.Choices != null && segment.Choices.Count > 0 &&
-                mediaPlayer.Time >= segment.ChoiceDisplayTimeMs)
+                mediaPlayer.Time >= (segment.ChoiceDisplayTimeMs - (videoId == "10000001" ? 1400 : 0)))
             {
                 long choiceDurationMs = segment.HideChoiceTimeMs - segment.ChoiceDisplayTimeMs;
 
@@ -708,7 +738,34 @@ public static class JsonParser
                     }
                 }
 
+                if (!subtitlesHiddenForChoice)
+                {
+                    int currentSpu = mediaPlayer.Spu;
+                    if (currentSpu > 0)
+                    {
+                        previousSpuTrackId = currentSpu;
+                        mediaPlayer.SetSpu(-1);
+                        Console.WriteLine("Subtitles hidden for choice point.");
+                    }
+                    subtitlesHiddenForChoice = true;
+                }
+
                 var (selectedSegment, choiceId) = UIManager.ShowChoiceUI(validChoices, buttonSprites, buttonIcons, (int)choiceDurationMs, movieFolder, videoId, segment, segment.HeaderText);
+
+                if (subtitlesHiddenForChoice && previousSpuTrackId.HasValue)
+                {
+                    // Restore the previous subtitle track
+                    if (mediaPlayer.SetSpu(previousSpuTrackId.Value))
+                    {
+                        Console.WriteLine("Subtitles restored after choice point.");
+                    }
+                    else
+                    {
+                        Console.WriteLine("Failed to restore subtitles after choice point.");
+                    }
+                    subtitlesHiddenForChoice = false;
+                    previousSpuTrackId = null;
+                }
 
                 SaveManager.SaveSnapshot(saveFilePath);
 
@@ -822,8 +879,7 @@ public static class JsonParser
         }
 
         // Check segment groups for the next segment
-        if (videoId == "81328829" && segment.Id != null &&
-    (segment.Id.StartsWith("sS2A") || segment.Id.StartsWith("sS2B") || segment.Id.StartsWith("sS2C") || segment.Id.StartsWith("sS2D")))
+        if (videoId == "81328829" && segment.Id != null && (segment.Id.StartsWith("sS2A") || segment.Id.StartsWith("sS2B") || segment.Id.StartsWith("sS2C") || segment.Id.StartsWith("sS2D")))
         {
             string next = HeadspaceShuffle(segment.Id, localPersistentState);
             if (!string.IsNullOrEmpty(next))
@@ -894,13 +950,12 @@ public static class JsonParser
         }
         else
         {
-            Console.WriteLine("In loop 1");
-            while (mediaPlayer.Time < endTimeMs - 85)
+            while (mediaPlayer.Time < endTimeMs - (videoId == "10000001" ? 285 : 85))
             {
                 Thread.Sleep(1);
             }
-            Console.WriteLine("In loop 2");
-            while (mediaPlayer.Time < endTimeMs - 65)
+
+            while (mediaPlayer.Time < endTimeMs - (videoId == "10000001" ? 265 : 65))
             {
                 Thread.SpinWait(20);
             }
