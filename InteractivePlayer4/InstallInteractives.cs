@@ -402,7 +402,7 @@ public static class InstallInteractives
 
                                 // Check the OptimizeInteractives setting
                                 string configFilePath = Path.Combine(Directory.GetCurrentDirectory(), "config.json");
-                                bool optimizeInteractives = true; // Default to true if the setting is missing
+                                bool optimizeInteractives = true;
 
                                 if (File.Exists(configFilePath))
                                 {
@@ -449,7 +449,7 @@ public static class InstallInteractives
 
                                             // Check the OptimizeInteractives setting
                                             string configFilePath = Path.Combine(Directory.GetCurrentDirectory(), "config.json");
-                                            bool optimizeInteractives = true; // Default to true if the setting is missing
+                                            bool optimizeInteractives = true;
 
                                             if (File.Exists(configFilePath))
                                             {
@@ -506,7 +506,7 @@ public static class InstallInteractives
         eventHandlerList.RemoveHandler(eventKey, eventHandlerList[eventKey]);
     }
 
-    private static void FlattenDirectoryStructure(string rootFolder)
+    public static void FlattenDirectoryStructure(string rootFolder)
     {
         try
         {

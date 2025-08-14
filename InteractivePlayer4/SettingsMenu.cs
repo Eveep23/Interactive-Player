@@ -1,10 +1,11 @@
-﻿using System;
-using System.Drawing;
-using System.IO;
-using System.Windows.Forms;
-using Newtonsoft.Json;
+﻿using Newtonsoft.Json;
+using System;
 using System.Diagnostics;
+using System.Drawing;
 using System.Drawing.Drawing2D;
+using System.IO;
+using System.Linq;
+using System.Windows.Forms;
 
 public static class SettingsMenu
 {
@@ -19,10 +20,10 @@ public static class SettingsMenu
         string discordLogoPath = Path.Combine(Directory.GetCurrentDirectory(), "general", "Discord_Logo.png");
         string githubLogoPath = Path.Combine(Directory.GetCurrentDirectory(), "general", "Github_Logo.png");
 
-        Form settingsForm = new Form
+        Form settingsForm = new SettingsForm
         {
             Text = "Settings",
-            Size = new Size(1400, 940),
+            Size = new Size(1400, 980),
             StartPosition = FormStartPosition.CenterScreen,
             Icon = Icon.ExtractAssociatedIcon(Application.ExecutablePath),
             BackColor = ColorTranslator.FromHtml("#141414")
@@ -194,6 +195,17 @@ public static class SettingsMenu
             RightToLeft = RightToLeft.Yes
         };
 
+        CheckBox lowEndHardwareCheckBox = new CheckBox
+        {
+            Text = "Lower End Modifications",
+            ForeColor = Color.White,
+            AutoSize = true,
+            Font = new Font("Arial", 14, FontStyle.Bold),
+            Checked = loadedSettings.LowEndHardware,
+            TextAlign = ContentAlignment.MiddleRight,
+            RightToLeft = RightToLeft.Yes
+        };
+
         CheckBox disableWindowAnimationsCheckBox = new CheckBox
         {
             Text = "Disable Window Animations",
@@ -244,7 +256,8 @@ public static class SettingsMenu
                 AudioOutput = audioOutputComboBox.SelectedItem.ToString(),
                 DisableWindowAnimations = disableWindowAnimationsCheckBox.Checked,
                 KeyboardIcon = keyboardIconComboBox.SelectedItem.ToString(),
-                ControllerIcon = controllerIconComboBox.SelectedItem.ToString()
+                ControllerIcon = controllerIconComboBox.SelectedItem.ToString(),
+                LowEndHardware = lowEndHardwareCheckBox.Checked
             };
             SaveSettings(settings);
             settingsForm.Close();
@@ -253,10 +266,11 @@ public static class SettingsMenu
         ToolTip toolTip = new ToolTip();
 
         toolTip.SetToolTip(optimizeInteractivesCheckBox, "Flatten interactive folders to remove searching times");
-        toolTip.SetToolTip(disableWindowAnimationsCheckBox, "Stop window from moving, such as flying in from bottom or the Cat Burglar ripple effects, not recommended unless animations are really laggy or choices aren't appearing");
+        toolTip.SetToolTip(disableWindowAnimationsCheckBox, "Stop window from moving, such as flying in from the bottom or the Cat Burglar ripple effects, not recommended unless animations are laggy or choices aren't appearing");
         toolTip.SetToolTip(keyboardIconComboBox, "When using a keyboard and mouse, if available, which timer icon do you want it to show?");
         toolTip.SetToolTip(controllerIconComboBox, "When using a controller, if available, which timer icon do you want it to show?");
-        toolTip.SetToolTip(customStoryChangingNotificationCheckBox, "Change things from the Netflix version (this option is for those looking for the original experience, not a better one)");
+        toolTip.SetToolTip(lowEndHardwareCheckBox, "Enable modifications for lower end hardware (changes animations and transitions)");
+        toolTip.SetToolTip(customStoryChangingNotificationCheckBox, "Change things from the Netflix version (this option is for those looking for a better experience, but not exactly an original one)");
 
         topBarPanel.Controls.Add(logoPictureBox);
         topBarPanel.Controls.Add(backPictureBox);
@@ -286,21 +300,22 @@ public static class SettingsMenu
 
         optimizationTitle.Location = new Point(leftAlignX, 390);
         optimizeInteractivesCheckBox.Location = new Point(centerX - optimizeInteractivesCheckBox.Width / 2, 440);
-        disableWindowAnimationsCheckBox.Location = new Point(centerX - disableWindowAnimationsCheckBox.Width / 2, 480);
+        lowEndHardwareCheckBox.Location = new Point(centerX - lowEndHardwareCheckBox.Width / 2, 480);
+        disableWindowAnimationsCheckBox.Location = new Point(centerX - disableWindowAnimationsCheckBox.Width / 2, 520);
 
-        extrasTitle.Location = new Point(leftAlignX, 530);
-        keyboardIconLabel.Location = new Point(centerX - keyboardIconLabel.Width / 2, 580);
-        keyboardIconComboBox.Location = new Point(centerX, 610);
+        extrasTitle.Location = new Point(leftAlignX, 570);
+        keyboardIconLabel.Location = new Point(centerX - keyboardIconLabel.Width / 2, 620);
+        keyboardIconComboBox.Location = new Point(centerX, 650);
 
-        controllerIconLabel.Location = new Point(centerX - controllerIconLabel.Width / 2, 650);
-        controllerIconComboBox.Location = new Point(centerX, 680);
+        controllerIconLabel.Location = new Point(centerX - controllerIconLabel.Width / 2, 690);
+        controllerIconComboBox.Location = new Point(centerX, 720);
 
-        customStoryChangingNotificationCheckBox.Location = new Point(centerX - customStoryChangingNotificationCheckBox.Width / 2, 720);
+        customStoryChangingNotificationCheckBox.Location = new Point(centerX - customStoryChangingNotificationCheckBox.Width / 2, 760);
 
         int logoStartX = centerX - youtubePictureBox.Width / 2;
-        youtubePictureBox.Location = new Point(logoStartX, 760);
-        discordPictureBox.Location = new Point(logoStartX + youtubePictureBox.Width + 20, 760);
-        githubPictureBox.Location = new Point(logoStartX + youtubePictureBox.Width + discordPictureBox.Width + 40, 760);
+        youtubePictureBox.Location = new Point(logoStartX, 800);
+        discordPictureBox.Location = new Point(logoStartX + youtubePictureBox.Width + 20, 800);
+        githubPictureBox.Location = new Point(logoStartX + youtubePictureBox.Width + discordPictureBox.Width + 40, 800);
 
         settingsForm.Controls.Add(audioLanguageTitle);
         settingsForm.Controls.Add(audioLabel);
@@ -312,6 +327,7 @@ public static class SettingsMenu
 
         settingsForm.Controls.Add(optimizationTitle);
         settingsForm.Controls.Add(optimizeInteractivesCheckBox);
+        settingsForm.Controls.Add(lowEndHardwareCheckBox);
         settingsForm.Controls.Add(disableWindowAnimationsCheckBox);
 
         settingsForm.Controls.Add(extrasTitle);
@@ -377,5 +393,111 @@ public class GradientLabel : Label
             this.ClientRectangle,
             this.ForeColor,
             TextFormatFlags.Left | TextFormatFlags.VerticalCenter);
+    }
+}
+public class SettingsForm : Form
+{
+    private Timer animationTimer;
+    private double ribbon1Phase = 0;
+    private double ribbon2Phase = 0;
+
+    public SettingsForm()
+    {
+        this.SetStyle(ControlStyles.AllPaintingInWmPaint | ControlStyles.UserPaint | ControlStyles.OptimizedDoubleBuffer, true);
+
+        animationTimer = new Timer();
+        animationTimer.Interval = 30;
+        animationTimer.Tick += (s, e) =>
+        {
+            ribbon1Phase += 0.018;
+            ribbon2Phase += 0.011;
+            this.Invalidate(new Rectangle(0, this.ClientSize.Height - 200, this.ClientSize.Width, 200));
+        };
+        animationTimer.Start();
+    }
+
+    protected override void OnPaintBackground(PaintEventArgs e)
+    {
+        base.OnPaintBackground(e);
+
+        Rectangle rect = this.ClientRectangle;
+        if (rect.Width == 0 || rect.Height == 0)
+            return;
+
+        using (SolidBrush bgBrush = new SolidBrush(ColorTranslator.FromHtml("#141414")))
+            e.Graphics.FillRectangle(bgBrush, rect);
+
+        DrawRibbonLayer(
+            e.Graphics,
+            rect,
+            baseY: rect.Bottom - 90,
+            amplitude: 12,
+            segments: 96, 
+            phase: ribbon1Phase,
+            gradientHeight: 80,
+            baseColor: Color.FromArgb(140, 154, 27, 43),
+            tipColor: Color.FromArgb(220, 200, 40, 60)
+        );
+        DrawRibbonLayer(
+            e.Graphics,
+            rect,
+            baseY: rect.Bottom - 50,
+            amplitude: 7,
+            segments: 96,
+            phase: ribbon2Phase,
+            gradientHeight: 60,
+            baseColor: Color.FromArgb(200, 154, 27, 43),
+            tipColor: Color.FromArgb(220, 180, 30, 50)
+        );
+    }
+
+    private void DrawRibbonLayer(Graphics g, Rectangle rect, int baseY, int amplitude, int segments, double phase, int gradientHeight, Color baseColor, Color tipColor)
+    {
+        Point[] points = new Point[segments + 1];
+        int width = rect.Width;
+        double tStep = (double)width / segments;
+
+        double tipT = (phase / (2 * Math.PI)) % 1.0;
+        if (tipT < 0) tipT += 1.0;
+        int tipIndex = (int)(tipT * segments);
+
+        for (int i = 0; i <= segments; i++)
+        {
+            double t = (double)i / segments;
+            double x = i * tStep;
+            double y = baseY
+                + Math.Sin(phase + t * 2 * Math.PI) * amplitude * 0.85
+                + Math.Sin(phase * 0.5 + t * 2 * Math.PI) * amplitude * 0.15;
+            points[i] = new Point((int)x, (int)y);
+        }
+
+        using (GraphicsPath path = new GraphicsPath())
+        {
+            path.AddLines(points);
+            path.AddLine(points[segments].X, points[segments].Y, rect.Width, rect.Bottom);
+            path.AddLine(rect.Width, rect.Bottom, 0, rect.Bottom);
+            path.AddLine(0, rect.Bottom, points[0].X, points[0].Y);
+            path.CloseFigure();
+
+            using (PathGradientBrush brush = new PathGradientBrush(path))
+            {
+                brush.CenterPoint = points[tipIndex];
+                brush.CenterColor = tipColor;
+                brush.SurroundColors = Enumerable.Repeat(baseColor, path.PointCount).ToArray();
+
+                g.SmoothingMode = SmoothingMode.AntiAlias;
+                g.FillPath(brush, path);
+            }
+        }
+    }
+
+    protected override void Dispose(bool disposing)
+    {
+        if (disposing && animationTimer != null)
+        {
+            animationTimer.Dispose();
+            animationTimer = null;
+        }
+        base.Dispose(disposing);
     }
 }

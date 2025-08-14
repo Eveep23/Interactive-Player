@@ -10,6 +10,7 @@ using System.Drawing.Printing;
 using System.IO;
 using System.Linq;
 using System.Net;
+using System.Runtime;
 using System.Threading;
 using System.Windows.Forms;
 
@@ -252,7 +253,7 @@ public static class JsonParser
 
     public static string HandleSegment(MediaPlayer mediaPlayer, Segment segment, Dictionary<string, Segment> segments, string movieFolder, string videoId, ref Dictionary<string, object> globalState, ref Dictionary<string, object> persistentState, string infoJsonFile, string saveFilePath, Dictionary<string, List<SegmentGroup>> segmentGroups, Dictionary<string, List<SegmentState>> segmentStates, bool isFirstLoad, int? overrideStartTimeMs = null)
     {
-        mediaPlayer.Pause();
+        //mediaPlayer.Pause();
 
         if (Math.Abs(mediaPlayer.Time - segment.StartTimeMs) > 422)
         {
@@ -277,6 +278,7 @@ public static class JsonParser
         string configSaveFilePath = Path.Combine(AppDomain.CurrentDomain.BaseDirectory, "config.json");
         var localGlobalState = globalState;
         var localPersistentState = persistentState;
+        var settings = JsonConvert.DeserializeObject<Settings>(File.ReadAllText(configSaveFilePath));
 
         mediaPlayer.Media.ParsedChanged += (sender, e) =>
         {
@@ -353,6 +355,8 @@ public static class JsonParser
         int endTimeMs = segment.EndTimeMs > 0 ? segment.EndTimeMs : int.MaxValue;
 
         KeyForm.InitializeKeyPressWindow(mediaPlayer, infoJsonFile, saveFilePath, segment, segments, videoId, segmentGroups,segmentStates);
+        
+        choiceDisplayed = false;
 
         while (mediaPlayer.Time < endTimeMs - 105)
         {
@@ -370,6 +374,14 @@ public static class JsonParser
                 Console.WriteLine($"Breaking due to nothing left to evaluate");
                 break;
             }
+
+            /*
+            if (!string.IsNullOrEmpty(KeyForm.RequestedJumpSegmentId))
+            {
+                // Early exit: signal to main loop to jump
+                return KeyForm.RequestedJumpSegmentId;
+            }
+            */
 
             if (videoId == "10000001")
             {
@@ -660,8 +672,6 @@ public static class JsonParser
                     }
                 }
 
-                var configFilePath = Path.Combine(AppDomain.CurrentDomain.BaseDirectory, "config.json");
-                var settings = JsonConvert.DeserializeObject<Settings>(File.ReadAllText(configFilePath));
                 bool customStoryChangingNotification = settings?.CustomStoryChangingNotification ?? false;
 
                 // Load button sprites for each valid choice
@@ -868,13 +878,35 @@ public static class JsonParser
         if (videoId == "81271335" && segment?.Id == "Ident-Head")
         {
             var controller = new SharpDX.XInput.Controller(SharpDX.XInput.UserIndex.One);
+
+            string configPath = Path.Combine(AppDomain.CurrentDomain.BaseDirectory, "config.json");
+            string configJson = File.Exists(configPath) ? File.ReadAllText(configPath) : null;
+            Settings config = !string.IsNullOrEmpty(configJson) ? JsonConvert.DeserializeObject<Settings>(configJson) : null;
+
+            // Load config to check icon preferences
             if (controller.IsConnected)
             {
-                nextSegment = "s02";
+                // Controller is connected
+                if (config != null && !string.IsNullOrEmpty(config.ControllerIcon) && config.ControllerIcon.Equals("Gamepad", StringComparison.OrdinalIgnoreCase))
+                {
+                    nextSegment = "s02";
+                }
+                else
+                {
+                    nextSegment = "s01";
+                }
             }
             else
             {
-                nextSegment = "s04";
+                // No controller connected
+                if (config != null && !string.IsNullOrEmpty(config.KeyboardIcon) && config.KeyboardIcon.Equals("Cursor", StringComparison.OrdinalIgnoreCase))
+                {
+                    nextSegment = "s04";
+                }
+                else
+                {
+                    nextSegment = "s03";
+                }
             }
         }
 
@@ -944,7 +976,7 @@ public static class JsonParser
             return null;
         }
 
-        if ((videoId == "81131714" && segment.Choices != null && segment.Choices.Any(choice => choice.Text?.Equals("EXIT TO CREDITS", StringComparison.OrdinalIgnoreCase) == true) || videoId == "81131714" && segment.LayoutType == "l69" && segment.Id == "SkipAhead" || videoId == "80988062" && segment.Choices != null && segment.Choices.Any(choice => choice.Text?.Equals("GO BACK", StringComparison.OrdinalIgnoreCase) == true) || videoId == "80988062" && segment.Choices != null && segment.Choices.Any(choice => choice.Text?.Equals("EXIT TO CREDITS", StringComparison.OrdinalIgnoreCase) == true) || videoId == "81131714" && segment.LayoutType == "l6" || videoId == "81481556" || videoId == "10000001" || videoId == "10000003" || videoId == "81251335" || videoId == "80994695" || videoId == "80135585" || videoId == "81328829" || videoId == "80227804" || videoId == "80227805" || videoId == "80227800" || videoId == "80227801" || videoId == "80227802" || videoId == "80227803" || videoId == "80227699" || videoId == "80227698" || videoId == "81319137" || videoId == "81205738" || videoId == "81205737" || videoId == "80227815" || videoId == "81250260" || videoId == "81250261" || videoId == "81250262" || videoId == "81250263" || videoId == "81250264" || videoId == "81250265" || videoId == "81250266" || videoId == "81250267") && choiceDisplayed)
+        if ((videoId == "81131714" && segment.Choices != null && segment.Choices.Any(choice => choice.Text?.Equals("EXIT TO CREDITS", StringComparison.OrdinalIgnoreCase) == true) || videoId == "81131714" && segment.LayoutType == "l69" && segment.Id == "SkipAhead" || videoId == "80988062" && segment.Choices != null && segment.Choices.Any(choice => choice.Text?.Equals("GO BACK", StringComparison.OrdinalIgnoreCase) == true) || videoId == "80988062" && segment.Choices != null && segment.Choices.Any(choice => choice.Text?.Equals("EXIT TO CREDITS", StringComparison.OrdinalIgnoreCase) == true) || videoId == "81131714" && segment.LayoutType == "l6" || videoId == "81481556" || videoId == "10000001" || videoId == "10000003" || videoId == "81251335" || videoId == "80149064" || videoId == "80994695" || videoId == "80135585" || videoId == "81328829" || videoId == "80227804" || videoId == "80227805" || videoId == "80227800" || videoId == "80227801" || videoId == "80227802" || videoId == "80227803" || videoId == "80227699" || videoId == "80227698" || videoId == "81319137" || videoId == "81205738" || videoId == "81205737" || videoId == "80227815" || videoId == "81250260" || videoId == "81250261" || videoId == "81250262" || videoId == "81250263" || videoId == "81250264" || videoId == "81250265" || videoId == "81250266" || videoId == "81250267") && choiceDisplayed)
         {
             Console.WriteLine("Skipped the wait");
         }
@@ -960,6 +992,8 @@ public static class JsonParser
                 Thread.SpinWait(20);
             }
         }
+
+        mediaPlayer.Pause();
 
         return nextSegment;
     }

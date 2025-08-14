@@ -16,7 +16,7 @@ namespace InteractivePlayer
         private static UIManager.RECT lastRect;
         private static Form activeForm;
 
-        public static void ShowChangeChoicesMenu(string saveFilePath, string infoJsonFile, Action<SaveData, int?> onSnapshotSelected)
+        public static void ShowChangeChoicesMenu(string saveFilePath, string infoJsonFile, Action<SaveData, int?> onSnapshotSelected, string snapshotType = null)
         {
             string movieFolder = Path.GetDirectoryName(saveFilePath);
             string snapshotsPath = Path.Combine(movieFolder, "snapshots.json");
@@ -86,19 +86,30 @@ namespace InteractivePlayer
                 e.DrawFocusRectangle();
             };
 
-            var filteredKeys = orderedKeys
-            .Where(key =>
+            List<string> filteredKeys;
+            if (snapshotType == "undo" || snapshotType == "bk")
             {
-                var segmentId = snapshots[key].CurrentSegment;
-                return segmentInfo.ContainsKey(segmentId) && !string.IsNullOrWhiteSpace(segmentInfo[segmentId].Description);
-            })
-            .ToList();
+                // Only show the last snapshot and a single action
+                filteredKeys = orderedKeys.Skip(orderedKeys.Count - 1).ToList();
+                string actionText = snapshotType == "bk" ? "Go back to map" : "Undo Last Choice";
+                listBox.Items.Add(actionText);
+            }
+            else
+            {
+                filteredKeys = orderedKeys
+                    .Where(key =>
+                    {
+                        var segmentId = snapshots[key].CurrentSegment;
+                        return segmentInfo.ContainsKey(segmentId) && !string.IsNullOrWhiteSpace(segmentInfo[segmentId].Description);
+                    })
+                    .ToList();
 
-            foreach (var key in filteredKeys)
-            {
-                var segmentId = snapshots[key].CurrentSegment;
-                string desc = segmentInfo[segmentId].Description;
-                listBox.Items.Add($"{desc}");
+                foreach (var key in filteredKeys)
+                {
+                    var segmentId = snapshots[key].CurrentSegment;
+                    string desc = segmentInfo[segmentId].Description;
+                    listBox.Items.Add($"{desc}");
+                }
             }
 
             listBox.Items.Add("Never mind");
@@ -113,6 +124,7 @@ namespace InteractivePlayer
                 {
                     form.DialogResult = DialogResult.Cancel;
                     form.Close();
+                    onSnapshotSelected?.Invoke(null, null);
                     return;
                 }
 
@@ -136,6 +148,10 @@ namespace InteractivePlayer
                 form.DialogResult = DialogResult.OK;
                 form.Close();
             };
+
+            listBox.IntegralHeight = false;
+            listBox.Height = listBox.Items.Count * listBox.ItemHeight;
+            form.Controls.Add(listBox);
 
             form.Controls.Add(listBox);
 
@@ -176,7 +192,7 @@ namespace InteractivePlayer
             if (alignTimer == null)
             {
                 alignTimer = new Timer();
-                alignTimer.Interval = 3000;
+                alignTimer.Interval = 1750;
                 alignTimer.Tick += (s, e) =>
                 {
                     if (activeForm == null || activeForm.IsDisposed)

@@ -297,6 +297,22 @@ public static class InteractiveDetailsMenu
                 // Delete the temporary directory
                 Directory.Delete(tempDirectory, true);
 
+                // Check the OptimizeInteractives setting
+                string configFilePath = Path.Combine(Directory.GetCurrentDirectory(), "config.json");
+                bool optimizeInteractives = true;
+
+                if (File.Exists(configFilePath))
+                {
+                    var configData = JObject.Parse(File.ReadAllText(configFilePath));
+                    optimizeInteractives = configData["OptimizeInteractives"]?.ToObject<bool>() ?? true;
+                }
+
+                if (optimizeInteractives)
+                {
+                    // Flatten the directory structure
+                    InstallInteractives.FlattenDirectoryStructure(interactiveFolder);
+                }
+
                 // Create the build.txt file
                 int newBuild = JObject.Parse(File.ReadAllText(jsonFilePath))["build"]?.ToObject<int>() ?? 0;
                 string buildJsonContent = $"{{\n  \"build\": {newBuild}\n}}";
@@ -329,6 +345,22 @@ public static class InteractiveDetailsMenu
                             // Extract the .intpak file to the interactive folder
                             string intpakFile = Path.Combine(packsDirectory, folderName + ".intpak");
                             System.IO.Compression.ZipFile.ExtractToDirectory(intpakFile, interactiveFolder);
+
+                            // Check the OptimizeInteractives setting
+                            string configFilePath = Path.Combine(Directory.GetCurrentDirectory(), "config.json");
+                            bool optimizeInteractives = true;
+
+                            if (File.Exists(configFilePath))
+                            {
+                                var configData = JObject.Parse(File.ReadAllText(configFilePath));
+                                optimizeInteractives = configData["OptimizeInteractives"]?.ToObject<bool>() ?? true;
+                            }
+
+                            if (optimizeInteractives)
+                            {
+                                // Flatten the directory structure
+                                InstallInteractives.FlattenDirectoryStructure(interactiveFolder);
+                            }
 
                             // Create the direct.json file
                             string directJsonContent = $"{{\n  \"Directory\": \"{selectedVideoFile.Replace("\\", "\\\\")}\"\n}}";

@@ -1,20 +1,22 @@
-﻿using System;
+﻿using Newtonsoft.Json.Linq;
+using System;
+using System.Collections.Generic;
 using System.Drawing;
 using System.Drawing.Drawing2D;
+using System.Drawing.Imaging;
 using System.IO;
 using System.Linq;
 using System.Windows.Forms;
-using Newtonsoft.Json;
-using Newtonsoft.Json.Linq;
-using System.Collections.Generic;
 
 public static class Utilities
 {
     public static string SelectedMovieFolder { get; private set; }
+    public static bool LowEndHardware { get; private set; }
 
+    /*
     private static Dictionary<string, Image> compositeImageCache = new Dictionary<string, Image>();
 
-    private static Image CreateCompositeImage(string backdropPath, string logoPath)
+    private static Image CreateCompositeImage(string backdropPath, string logoPath, bool centerLogo = false)
     {
         // Load the backdrop image
         using (Image backdrop = Image.FromFile(backdropPath))
@@ -32,8 +34,17 @@ public static class Utilities
                     {
                         int logoWidth = (int)(compositeImage.Width / 1.35);
                         int logoHeight = logo.Height * logoWidth / logo.Width;
-                        int logoX = (compositeImage.Width - logoWidth) / 2;
+                        int logoX;
                         int logoY = compositeImage.Height - logoHeight - 20;
+
+                        if (centerLogo)
+                        {
+                            logoX = (compositeImage.Width - logoWidth) / 2;
+                        }
+                        else
+                        {
+                            logoX = 35; // Padding from the left
+                        }
 
                         g.DrawImage(logo, logoX, logoY, logoWidth, logoHeight);
                     }
@@ -42,7 +53,7 @@ public static class Utilities
             return compositeImage;
         }
     }
-
+    */
     public static string ShowMovieSelectionMenu(string initialDirectory = null)
     {
         string currentDirectory = initialDirectory ?? Directory.GetCurrentDirectory();
@@ -60,6 +71,17 @@ public static class Utilities
         string logoPath = Path.Combine(currentDirectory, "general", "Interactive_player_logo.png");
         string settingsWheelPath = Path.Combine(currentDirectory, "general", "Settings_Wheel.png");
         string addButtonPath = Path.Combine(currentDirectory, "general", "Add_Button.png");
+        string configPath = Path.Combine(Directory.GetCurrentDirectory(), "config.json");
+
+        try
+        {
+            var config = Newtonsoft.Json.Linq.JObject.Parse(File.ReadAllText(configPath));
+            LowEndHardware = config["LowEndHardware"]?.ToObject<bool>() ?? false;
+        }
+        catch
+        {
+            LowEndHardware = false;
+        }
 
         Form form = new Form
         {
@@ -110,12 +132,12 @@ public static class Utilities
             AutoScroll = true,
             FlowDirection = FlowDirection.TopDown,
             WrapContents = false,
-            Padding = new Padding(0, 50, 0, 0)
+            Padding = new Padding(0, 30, 0, 0)
         };
 
         Label footerLabel = new Label
         {
-            Text = "Interactive Player 1.7.64 developed by Eveep23",
+            Text = "Interactive Player 2.0.46 Preview developed by Eveep23",
             Font = new Font("Arial", 10, FontStyle.Italic),
             ForeColor = Color.White,
             TextAlign = ContentAlignment.MiddleCenter,
@@ -199,10 +221,20 @@ public static class Utilities
             var packJsonFiles = Directory.GetFiles(packsDirectory, "*.json");
             foreach (var packJsonFile in packJsonFiles)
             {
+                string[] excludedGrayscalePacks = {
+                    "A Date With Markiplier",
+                    "Triviaverse",
+                    "In Space With Markiplier Part 1",
+                    "In Space With Markiplier Part 2"
+                };
+
                 var packName = Path.GetFileNameWithoutExtension(packJsonFile);
 
                 // If a folder with this name already exists, skip (it will be shown as a folder)
                 if (movieFolders.Any(f => Path.GetFileName(f).Equals(packName, StringComparison.OrdinalIgnoreCase)))
+                    continue;
+
+                if (excludedGrayscalePacks.Contains(packName, StringComparer.OrdinalIgnoreCase))
                     continue;
 
                 // Filtering logic
@@ -265,7 +297,8 @@ public static class Utilities
                     ForeColor = Color.White,
                     FlatStyle = FlatStyle.Flat,
                     FlatAppearance = { BorderSize = 0 },
-                    Tag = packName
+                    Tag = packName,
+                    IsGrayscaled = true
                 };
 
                 // Tooltip for title/description
@@ -417,7 +450,6 @@ public static class Utilities
             rowContainer.Controls.Add(rowPanel);
             mainPanel.Controls.Add(rowContainer);
 
-
             int xOffset = 0;
             foreach (var folder in group.OrderBy(f => Path.GetFileName(f)))
             {
@@ -425,40 +457,49 @@ public static class Utilities
                 string movieLogoPath = Directory.GetFiles(folder, "*logo.png").FirstOrDefault();
                 string folderName = Path.GetFileName(folder);
 
-                var subfolders = Directory.GetDirectories(folder)
-                    .Where(d => !Path.GetFileName(d).Equals("general", StringComparison.OrdinalIgnoreCase))
-                    .ToArray();
-                bool isEmptyInteractiveFolder = subfolders.Length == 0;
+                bool isSpecialFolder = folderName.Equals("BK", StringComparison.OrdinalIgnoreCase)
+                    || folderName.Equals("MCSM", StringComparison.OrdinalIgnoreCase)
+                    || folderName.Equals("TQ", StringComparison.OrdinalIgnoreCase)
+                    || folderName.Equals("YvW", StringComparison.OrdinalIgnoreCase);
 
-                // Generate or retrieve the composite image
-                Image compositeImage;
-                string cacheKey = folder + (isEmptyInteractiveFolder ? "_gray" : "_color");
-                if (!compositeImageCache.TryGetValue(cacheKey, out compositeImage))
+                bool isEmptyInteractiveFolder;
+                if (isSpecialFolder)
                 {
-                    if (isEmptyInteractiveFolder)
-                    {
-                        // Grayscale, no logo
-                        compositeImage = GrayscaleImage(CreateCompositeImage(backdropPath, null));
-                    }
-                    else
-                    {
-                        compositeImage = CreateCompositeImage(backdropPath, movieLogoPath);
-                    }
-                    compositeImageCache[cacheKey] = compositeImage;
+                    int subfolderCount = Directory.GetDirectories(folder).Length;
+                    isEmptyInteractiveFolder = subfolderCount == 1;
+                }
+                else
+                {
+                    isEmptyInteractiveFolder = !File.Exists(Path.Combine(folder, "build.txt"));
+                }
+
+                bool centerLogo = false;
+                string[] centerLogoFolders = {"YvW", "A Date With Markiplier", "You vs Wild EP1", "You vs Wild EP2", "You vs Wild EP3", "You vs Wild EP4", "You vs Wild EP5", "You vs Wild EP6", "You vs Wild EP7", "You vs Wild EP8", "MCSM", "Black Mirror Bandersnatch", "Captain Underpants Epic Choice-o-Rama"};
+                if (centerLogoFolders.Contains(folderName, StringComparer.OrdinalIgnoreCase) ||
+                    (folderName.StartsWith("You vs Wild EP", StringComparison.OrdinalIgnoreCase) &&
+                     int.TryParse(folderName.Substring("You vs Wild EP".Length), out int epNum) &&
+                     epNum >= 1 && epNum <= 8))
+                {
+                    centerLogo = true;
                 }
 
                 RoundedButton button = new RoundedButton
                 {
                     Width = buttonWidth,
                     Height = 238,
-                    BackgroundImage = compositeImage,
+                    BackgroundImage = isEmptyInteractiveFolder
+                        ? GrayscaleImage(Image.FromFile(backdropPath))
+                        : Image.FromFile(backdropPath),
                     BackgroundImageLayout = ImageLayout.Stretch,
                     TextAlign = ContentAlignment.MiddleCenter,
                     Font = new Font("Arial", 12, FontStyle.Bold),
                     ForeColor = Color.White,
                     FlatStyle = FlatStyle.Flat,
                     FlatAppearance = { BorderSize = 0 },
-                    Location = new Point(xOffset, 30)
+                    Location = new Point(xOffset, 30),
+                    IsGrayscaled = isEmptyInteractiveFolder,
+                    LogoPath = isEmptyInteractiveFolder ? null : movieLogoPath,
+                    CenterLogo = centerLogo
                 };
 
                 button.MouseDown += (sender, e) =>
@@ -748,7 +789,7 @@ public static class Utilities
                 }
             }
         }
-        return false; // No update or user passed
+        return false;
     }
 }
 
@@ -789,9 +830,112 @@ public class NaturalStringComparer : IComparer<string>
 
 public class RoundedButton : Button
 {
+    private bool _isHovered = false;
+    public bool IsGrayscaled { get; set; } = false;
+
+    private Image _cachedLogoImage = null;
+    private bool _logoLoaded = false;
+
+    private Timer _gradientTimer;
+    private float _gradientAngle = 0f;
+    private float _outlineAlpha = 0f;
+    private const float FadeSpeed = 0.2f;
+
+    public float LogoScale { get; private set; } = 0.8f;
+    private float _logoTargetScale = 0.8f;
+    private Timer _logoAnimTimer;
+    private const float LogoAnimSpeed = 0.08f;
+    public bool CenterLogo { get; set; } = false;
+
+    public string LogoPath { get; set; }
+    public string BackdropPath { get; set; }
+
+    public RoundedButton()
+    {
+        SetStyle(ControlStyles.OptimizedDoubleBuffer | ControlStyles.AllPaintingInWmPaint | ControlStyles.UserPaint, true);
+
+        _gradientTimer = new Timer();
+        _gradientTimer.Interval = 50;
+        _gradientTimer.Tick += (s, e) =>
+        {
+            if (_isHovered)
+            {
+                _gradientAngle += 3f;
+                if (_gradientAngle >= 360f) _gradientAngle -= 360f;
+            }
+
+            float target = _isHovered ? 1f : 0f;
+            if (Math.Abs(_outlineAlpha - target) > 0.01f)
+            {
+                if (_outlineAlpha < target)
+                    _outlineAlpha = Math.Min(_outlineAlpha + FadeSpeed, 1f);
+                else
+                    _outlineAlpha = Math.Max(_outlineAlpha - FadeSpeed, 0f);
+                Invalidate();
+            }
+            else
+            {
+                _outlineAlpha = target;
+                if (_outlineAlpha == 0f)
+                    _gradientTimer.Stop();
+            }
+
+            if (_isHovered || _outlineAlpha > 0f)
+                Invalidate();
+        };
+
+        _logoAnimTimer = new Timer();
+        _logoAnimTimer.Interval = 20;
+        _logoAnimTimer.Tick += (s, e) =>
+        {
+            if (Math.Abs(LogoScale - _logoTargetScale) > 0.01f)
+            {
+                LogoScale += (_logoTargetScale - LogoScale) * LogoAnimSpeed;
+                if (Math.Abs(LogoScale - _logoTargetScale) < 0.01f)
+                    LogoScale = _logoTargetScale;
+                Invalidate();
+            }
+            else
+            {
+                LogoScale = _logoTargetScale;
+                _logoAnimTimer.Stop();
+            }
+        };
+    }
+
+    protected override void OnCreateControl()
+    {
+        base.OnCreateControl();
+    }
+
+    protected override void OnMouseEnter(EventArgs e)
+    {
+        _isHovered = true;
+        if (!Utilities.LowEndHardware)
+        {
+            _logoTargetScale = 1.0f;
+            _logoAnimTimer.Start();
+        }
+        _gradientTimer.Start();
+        base.OnMouseEnter(e);
+    }
+
+    protected override void OnMouseLeave(EventArgs e)
+    {
+        _isHovered = false;
+        if (!Utilities.LowEndHardware)
+        {
+            _logoTargetScale = 0.8f;
+            _logoAnimTimer.Start();
+        }
+        _gradientTimer.Start();
+        base.OnMouseLeave(e);
+    }
+
     protected override void OnPaint(PaintEventArgs pevent)
     {
         base.OnPaint(pevent);
+
         GraphicsPath graphicsPath = new GraphicsPath();
         graphicsPath.AddArc(0, 0, 20, 20, 180, 90);
         graphicsPath.AddArc(Width - 20, 0, 20, 20, 270, 90);
@@ -799,5 +943,166 @@ public class RoundedButton : Button
         graphicsPath.AddArc(0, Height - 20, 20, 20, 90, 90);
         graphicsPath.CloseAllFigures();
         this.Region = new Region(graphicsPath);
+
+        if (_outlineAlpha > 0.01f)
+        {
+            pevent.Graphics.SmoothingMode = SmoothingMode.AntiAlias;
+            if (IsGrayscaled)
+            {
+                Rectangle rect = new Rectangle(0, 0, Width, Height);
+                Color darkerLightGray = Color.FromArgb(180, 180, 180);
+                Color darkerGray = Color.FromArgb(80, 80, 80);
+                using (var brush = new LinearGradientBrush(
+                    rect,
+                    darkerLightGray,
+                    darkerGray,
+                    _gradientAngle))
+                using (var pen = new Pen(Color.FromArgb((int)(_outlineAlpha * 255), darkerLightGray), 9))
+                {
+                    ColorBlend blend = new ColorBlend(2);
+                    blend.Colors = new Color[]
+                    {
+                    Color.FromArgb((int)(_outlineAlpha * 255), darkerLightGray),
+                    Color.FromArgb((int)(_outlineAlpha * 255), darkerGray)
+                    };
+                    blend.Positions = new float[] { 0f, 1f };
+                    brush.InterpolationColors = blend;
+
+                    pen.Brush = brush;
+                    pevent.Graphics.DrawPath(pen, graphicsPath);
+                }
+            }
+            else
+            {
+                Rectangle rect = new Rectangle(0, 0, Width, Height);
+                using (var brush = new LinearGradientBrush(
+                    rect,
+                    ColorTranslator.FromHtml("#d22230"),
+                    ColorTranslator.FromHtml("#ffffff"),
+                    _gradientAngle))
+                using (var pen = new Pen(Color.FromArgb((int)(_outlineAlpha * 255), 255, 255, 255), 9))
+                {
+                    ColorBlend blend = new ColorBlend(2);
+                    blend.Colors = new Color[]
+                    {
+                        Color.FromArgb((int)(_outlineAlpha * 255), ColorTranslator.FromHtml("#d22230")),
+                        Color.FromArgb((int)(_outlineAlpha * 255), ColorTranslator.FromHtml("#ffffff"))
+                    };
+                    blend.Positions = new float[] { 0f, 1f };
+                    brush.InterpolationColors = blend;
+
+                    pen.Brush = brush;
+                    pevent.Graphics.DrawPath(pen, graphicsPath);
+                }
+            }
+        }
+
+        // Cache logo image
+        if (!string.IsNullOrEmpty(LogoPath) && System.IO.File.Exists(LogoPath))
+        {
+            if (!_logoLoaded || _cachedLogoImage == null)
+            {
+                _cachedLogoImage?.Dispose();
+                _cachedLogoImage = Image.FromFile(LogoPath);
+                _logoLoaded = true;
+            }
+        }
+        else
+        {
+            _cachedLogoImage?.Dispose();
+            _cachedLogoImage = null;
+            _logoLoaded = false;
+        }
+
+        if (_cachedLogoImage != null)
+        {
+            int baseLogoWidth = (int)(Width / 1.35);
+            int logoWidth = (int)(baseLogoWidth * LogoScale);
+            int logoHeight = _cachedLogoImage.Height * logoWidth / _cachedLogoImage.Width;
+
+            int logoX, logoY;
+            if (CenterLogo)
+            {
+                logoX = (Width - logoWidth) / 2;
+                logoY = Height - logoHeight - 20;
+            }
+            else
+            {
+                logoX = 35 - (int)((1.0f - LogoScale) * logoWidth * 0.5f);
+                logoY = Height - logoHeight - 20;
+            }
+
+            pevent.Graphics.DrawImage(_cachedLogoImage, logoX, logoY, logoWidth, logoHeight);
+        }
+    }
+
+    protected override void Dispose(bool disposing)
+    {
+        if (disposing)
+        {
+            _cachedLogoImage?.Dispose();
+        }
+        base.Dispose(disposing);
+    }
+}
+
+public class ArrowOverlayPanel : Panel
+{
+    public Image LeftArrowImage { get; set; }
+    public Image RightArrowImage { get; set; }
+    public event EventHandler LeftArrowClick;
+    public event EventHandler RightArrowClick;
+
+    public ArrowOverlayPanel()
+    {
+        SetStyle(ControlStyles.SupportsTransparentBackColor | ControlStyles.OptimizedDoubleBuffer, true);
+        BackColor = Color.Transparent;
+    }
+
+    protected override void OnPaint(PaintEventArgs e)
+    {
+        base.OnPaint(e);
+        if (LeftArrowImage != null)
+        {
+            var leftRect = new Rectangle(0, (Height - 240) / 2, 50, 240);
+            e.Graphics.DrawImage(LeftArrowImage, leftRect);
+        }
+        if (RightArrowImage != null)
+        {
+            var rightRect = new Rectangle(Width - 50, (Height - 240) / 2, 50, 240);
+            e.Graphics.DrawImage(RightArrowImage, rightRect);
+        }
+    }
+
+    protected override void OnMouseDown(MouseEventArgs e)
+    {
+        var leftRect = new Rectangle(0, (Height - 240) / 2, 50, 240);
+        var rightRect = new Rectangle(Width - 50, (Height - 240) / 2, 50, 240);
+
+        if (leftRect.Contains(e.Location))
+            LeftArrowClick?.Invoke(this, EventArgs.Empty);
+        else if (rightRect.Contains(e.Location))
+            RightArrowClick?.Invoke(this, EventArgs.Empty);
+        else
+            base.OnMouseDown(e); // Let clicks through elsewhere
+    }
+
+    protected override void WndProc(ref Message m)
+    {
+        // Let mouse events pass through except for arrow areas
+        const int WM_NCHITTEST = 0x84;
+        if (m.Msg == WM_NCHITTEST)
+        {
+            var pos = PointToClient(Cursor.Position);
+            var leftRect = new Rectangle(0, (Height - 240) / 2, 50, 240);
+            var rightRect = new Rectangle(Width - 50, (Height - 240) / 2, 50, 240);
+
+            if (!leftRect.Contains(pos) && !rightRect.Contains(pos))
+            {
+                m.Result = (IntPtr)2; // HTTRANSPARENT
+                return;
+            }
+        }
+        base.WndProc(ref m);
     }
 }

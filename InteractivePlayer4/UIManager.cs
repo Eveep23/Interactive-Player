@@ -21,7 +21,7 @@ public static class UIManager
 
     static UIManager()
     {
-        // Load the custom font
+        // Load the Netflix font
         string fontPath = Path.Combine(Directory.GetCurrentDirectory(), "general", "NetflixSans_W_Bd.ttf");
         if (File.Exists(fontPath))
         {
@@ -90,7 +90,7 @@ public static class UIManager
 
         // Measure text
         using (var g = Graphics.FromImage(center))
-        using (var font = new Font("Arial", (float)(26 * scaleFactor)))
+        using (var font = new Font("Arial", (float)(24 * scaleFactor)))
         {
             SizeF textSize = g.MeasureString(notificationText, font);
             int padding = (int)(40 * scaleFactor);
@@ -108,8 +108,8 @@ public static class UIManager
                 // Draw left cap
                 bg.DrawImage(leftCap, new Rectangle(0, 0, leftCapWidth, notificationHeight));
 
-                // Draw center (stretched, but exclude 1px from the right edge to avoid fade)
-                Rectangle srcCenter = new Rectangle(0, 0, center.Width - 1, center.Height); // Exclude last column
+                // Draw center
+                Rectangle srcCenter = new Rectangle(0, 0, center.Width - 1, center.Height);
                 Rectangle destCenter = new Rectangle(leftCapWidth, 0, centerWidth, notificationHeight);
                 bg.DrawImage(center, destCenter, srcCenter, GraphicsUnit.Pixel);
 
@@ -127,14 +127,16 @@ public static class UIManager
                 Padding = new Padding(10)
             };
 
-            var textLabel = new Label
+            var textLabel = new ShadowLabel
             {
                 Text = notificationText,
                 AutoSize = true,
                 Font = new Font("Arial", (float)(26 * scaleFactor)),
                 ForeColor = Color.White,
                 BackColor = Color.Transparent,
-                TextAlign = ContentAlignment.MiddleCenter
+                TextAlign = ContentAlignment.MiddleCenter,
+                ShadowColor = Color.Black,
+                ShadowOffset = (int)(2 * scaleFactor)
             };
 
             notificationPanel.Controls.Add(textLabel);
@@ -271,6 +273,8 @@ public static class UIManager
     private static bool soundPlayed = false;
     private static int correctAnswersCount = 0;
 
+    private static Form activeTutorialForm;
+
     public static void ShowTutorialWindow(string headerText, string bodyText, int tutorialDurationMs, string videoId, string movieFolder)
     {
         if (videoId == "81481556")
@@ -292,6 +296,7 @@ public static class UIManager
         int vlcX = 0, vlcY = 0;
 
         IntPtr vlcHandle = FindWindow(null, "Interactive Player   ");
+
         if (vlcHandle != IntPtr.Zero && GetWindowRect(vlcHandle, out RECT rect))
         {
             int playerWidth = rect.Right - rect.Left;
@@ -326,6 +331,123 @@ public static class UIManager
             MinimizeBox = false,
             Opacity = 0
         };
+
+        bool isFadingOut = false;
+
+        activeTutorialForm = tutorialForm;
+
+        if (videoId == "10000001")
+        {
+            activeTutorialForm = tutorialForm;
+
+            baseWidth = 1020;
+            baseHeight = 240;
+
+            formWidth = baseWidth;
+            formHeight = baseHeight;
+
+            if (vlcHandle != IntPtr.Zero && GetWindowRect(vlcHandle, out rect))
+            {
+                int playerWidth = rect.Right - rect.Left;
+                int playerHeight = rect.Bottom - rect.Top;
+                formWidth = (int)(baseWidth * scaleFactor);
+                formHeight = (int)(baseHeight * scaleFactor);
+            }
+
+            string limitedPath = null;
+            var files = Directory.GetFiles(movieFolder, "limited.png", SearchOption.AllDirectories);
+            if (files.Length > 0)
+                limitedPath = files[0];
+
+            if (!string.IsNullOrEmpty(limitedPath) && File.Exists(limitedPath))
+            {
+                Bitmap limitedImage = new Bitmap(limitedPath);
+                int imgWidth = (int)(limitedImage.Width * scaleFactor * 0.7);
+                int imgHeight = (int)(limitedImage.Height * scaleFactor * 0.7);
+
+                PictureBox limitedPictureBox = new PictureBox
+                {
+                    Image = limitedImage,
+                    SizeMode = PictureBoxSizeMode.Zoom,
+                    Size = new Size(imgWidth, imgHeight),
+                    BackColor = Color.Transparent,
+                    Location = new Point((formWidth - imgWidth) / 2, (int)(4 * scaleFactor))
+                };
+                tutorialForm.Controls.Add(limitedPictureBox);
+            }
+
+            int textAreaTop = (int)(4 * scaleFactor) + (int)(40 * scaleFactor);
+            int textAreaHeight = formHeight - textAreaTop - (int)(4 * scaleFactor);
+
+            if (vlcHandle != IntPtr.Zero && GetWindowRect(vlcHandle, out rect))
+            {
+                int playerWidth = rect.Right - rect.Left;
+                int x = rect.Left + (playerWidth - formWidth) / 2;
+                int y = rect.Top + (int)(45 * scaleFactor);
+                tutorialForm.Location = new Point(x, y);
+            }
+            else
+            {
+                tutorialForm.StartPosition = FormStartPosition.CenterScreen;
+            }
+
+            tutorialForm.FormClosing += (s, e) =>
+            {
+                if (!isFadingOut && tutorialForm.Opacity > 0)
+                {
+                    e.Cancel = true;
+                    isFadingOut = true;
+                    var fadeOutTimer = new System.Windows.Forms.Timer { Interval = 15 };
+                    fadeOutTimer.Tick += (sender, args) =>
+                    {
+                        if (tutorialForm.Opacity > 0)
+                        {
+                            tutorialForm.Opacity = Math.Max(0, tutorialForm.Opacity - 0.05);
+                        }
+                        else
+                        {
+                            fadeOutTimer.Stop();
+                            tutorialForm.Close();
+                        }
+                    };
+                    fadeOutTimer.Start();
+                }
+            };
+
+            Thread tutorialThread = new Thread(() =>
+            {
+                tutorialForm.Shown += async (s, e) =>
+                {
+                    // Fade in
+                    var fadeTimer = new System.Windows.Forms.Timer { Interval = 15 };
+                    fadeTimer.Tick += (sender, args) =>
+                    {
+                        if (tutorialForm.Opacity < 1.0)
+                        {
+                            tutorialForm.Opacity = Math.Min(1.0, tutorialForm.Opacity + 0.05);
+                        }
+                        else
+                        {
+                            fadeTimer.Stop();
+                        }
+                    };
+                    fadeTimer.Start();
+
+                    await Task.Delay(tutorialDurationMs);
+                    if (tutorialForm.IsHandleCreated)
+                    {
+                        tutorialForm.Invoke(new Action(() => tutorialForm.Close()));
+                    }
+                };
+                Application.Run(tutorialForm);
+            });
+            tutorialThread.IsBackground = true;
+            tutorialThread.SetApartmentState(ApartmentState.STA);
+            tutorialThread.Start();
+
+            return;
+        }
+
         if (videoId == "81271335")
         {
             scaleFactor *= 0.37;
@@ -531,7 +653,6 @@ public static class UIManager
         }
 
         // Fade out
-        bool isFadingOut = false;
         tutorialForm.FormClosing += (s, e) =>
         {
             if (!isFadingOut && tutorialForm.Opacity > 0)
@@ -589,10 +710,26 @@ public static class UIManager
 
     public static (string segmentId, string choiceId) ShowChoiceUI(List<Choice> choices, List<Bitmap> buttonSprites, List<Bitmap> buttonIcons, int timeLimitMs, string movieFolder, string videoId, Segment segment, string headerText = null)
     {
+        if (videoId != "10000001" && activeTutorialForm != null && !activeTutorialForm.IsDisposed && activeTutorialForm.IsHandleCreated)
+        {
+            try
+            {
+                activeTutorialForm.Invoke(new Action(() =>
+                {
+                    if (!activeTutorialForm.IsDisposed)
+                        activeTutorialForm.Close();
+                }));
+            }
+            catch
+            { }
+            activeTutorialForm = null;
+        }
+
         string selectedSegmentId = null;
         string selectedChoiceId = null;
         bool inputCaptured = false;
         bool fadeInActive = false;
+        bool inStartAnimation = false;
 
         correctAnswersCount = 0;
 
@@ -667,8 +804,8 @@ public static class UIManager
         // Calculate scaling factor based on the resized form
         double scaleFactor = (double)choiceForm.Width / formWidth;
 
-        // Apply additional scaling for specific video ID
-        if (videoId == "10000001" || videoId == "10000003" || videoId == "80135585" || videoId == "81481556" || videoId == "81251335" || videoId == "81271335" || videoId == "81287545" || videoId == "80149064" || videoId == "81260654" || videoId == "80994695" || videoId == "81328829" || videoId == "81058723" || videoId == "81054409" || videoId == "81108751" || videoId == "81004016" || videoId == "80988062" || videoId == "81131714" || videoId == "81205738" || videoId == "80227804" || videoId == "80227805" || videoId == "80227800" || videoId == "80227801" || videoId == "80227802" || videoId == "80227803" || videoId == "80227699" || videoId == "80227698" || videoId == "81319137" || videoId == "81205737" || videoId == "81054415" || videoId == "81175265" || videoId == "81019938" || videoId == "80227815" || videoId == "81250260" || videoId == "81250261" || videoId == "81250262" || videoId == "81250263" || videoId == "81250264" || videoId == "81250265" || videoId == "81250266" || videoId == "81250267")
+        // Apply additional scaling
+        if (videoId == "10000001" || videoId == "10000003" || videoId == "81609455" || videoId == "80151644" || videoId == "80135585" || videoId == "81481556" || videoId == "81251335" || videoId == "81271335" || videoId == "81287545" || videoId == "80149064" || videoId == "81260654" || videoId == "80994695" || videoId == "81328829" || videoId == "81058723" || videoId == "81054409" || videoId == "81108751" || videoId == "81004016" || videoId == "80988062" || videoId == "81131714" || videoId == "81205738" || videoId == "80227804" || videoId == "80227805" || videoId == "80227800" || videoId == "80227801" || videoId == "80227802" || videoId == "80227803" || videoId == "80227699" || videoId == "80227698" || videoId == "81319137" || videoId == "81205737" || videoId == "81054415" || videoId == "81175265" || videoId == "81019938" || videoId == "80227815" || videoId == "81250260" || videoId == "81250261" || videoId == "81250262" || videoId == "81250263" || videoId == "81250264" || videoId == "81250265" || videoId == "81250266" || videoId == "81250267")
         {
             scaleFactor *= 0.75;
         }
@@ -874,6 +1011,54 @@ public static class UIManager
                     Padding = (new[] { "81004016", "81205738", "81108751", "80151644", "80227804", "80227805", "80227800", "80227801", "80227802", "80227803", "80227699", "80227698", "81319137" }.Contains(videoId)) ? new Padding((int)(buttonWidth * 0.44), 0, 0, 0) : new Padding(0)
                 };
 
+                if (videoId == "81004016")
+                {
+                    double visualCenterRatio = 0.595;
+                    int visualCenterX = (int)(buttonWidth * visualCenterRatio);
+
+                    using (var g = button.CreateGraphics())
+                    {
+                        Size textSize = TextRenderer.MeasureText(button.Text, button.Font);
+                        int textHalfWidth = textSize.Width / 2;
+
+                        int leftPadding = Math.Max(0, visualCenterX - textHalfWidth);
+
+                        button.Padding = new Padding(leftPadding, 0, 0, 0);
+                    }
+                }
+
+                if (videoId == "81108751")
+                {
+                    double visualCenterRatio = 0.59;
+                    int visualCenterX = (int)(buttonWidth * visualCenterRatio);
+
+                    using (var g = button.CreateGraphics())
+                    {
+                        Size textSize = TextRenderer.MeasureText(button.Text, button.Font);
+                        int textHalfWidth = textSize.Width / 2;
+
+                        int leftPadding = Math.Max(0, visualCenterX - textHalfWidth);
+
+                        button.Padding = new Padding(leftPadding, 0, 0, 0);
+                    }
+                }
+
+                if (videoId == "81205738" || videoId == "80151644" || videoId == "80227804" || videoId == "80227805" || videoId == "80227800" || videoId == "80227801" || videoId == "80227802" || videoId == "80227803" || videoId == "80227699" || videoId == "80227698" || videoId == "81319137")
+                {
+                    double visualCenterRatio = 0.58;
+                    int visualCenterX = (int)(buttonWidth * visualCenterRatio);
+
+                    using (var g = button.CreateGraphics())
+                    {
+                        Size textSize = TextRenderer.MeasureText(button.Text, button.Font);
+                        int textHalfWidth = textSize.Width / 2;
+
+                        int leftPadding = Math.Max(0, visualCenterX - textHalfWidth);
+
+                        button.Padding = new Padding(leftPadding, 0, 0, 0);
+                    }
+                }
+
                 button.FlatAppearance.BorderSize = 0;
                 button.FlatAppearance.MouseDownBackColor = Color.Transparent;
                 button.FlatAppearance.MouseOverBackColor = Color.Transparent;
@@ -982,12 +1167,24 @@ public static class UIManager
                         }
                         inputCaptured = true;
 
-                        if (videoId == "81328829" || videoId == "81250267" || videoId == "81250266" || videoId == "81250265" || videoId == "81250264" || videoId == "81250263" || videoId == "81250262" || videoId == "81250261" || videoId == "81250260" || videoId == "80227815" || videoId == "81271335" && segment.LayoutType == "l0" || videoId == "81205737" || videoId == "80149064" || videoId == "80994695" || videoId == "81175265" || videoId == "81251335" || videoId == "81108751" || videoId == "81319137" || videoId == "81054415" || videoId == "80135585" || videoId == "81054409" || videoId == "81058723" || videoId == "81004016" || videoId == "81205738" || videoId == "80227804" || videoId == "80227805" || videoId == "80227800" || videoId == "80227801" || videoId == "80227802" || videoId == "80227803" || videoId == "80227699" || videoId == "80227698")
+                        if (videoId == "81054409" || videoId == "81004016" || videoId == "81260654" || videoId == "81287545" || videoId == "81108751" || videoId == "80151644" || videoId == "81058723" || videoId == "81004016" || videoId == "81175265" || videoId == "81019938")
                         {
-                            var clickedPanel = clickedButton.Parent as Panel;
-                            if (clickedPanel != null)
-                                AnimatePanelShrink(clickedPanel, clickedButton);
+                            var buttonPanels = choiceForm.Controls.OfType<Panel>().Where(p => p.Controls.OfType<Button>().Any()).ToList();
+                            var selectedPanel = ((Button)sender).Parent as Panel;
+                            var panelsToAnimate = buttonPanels.Where(p => p != selectedPanel).ToList();
+
+                            AnimatePanelsBoingClose(panelsToAnimate);
                         }
+
+                        /* if (videoId == "80151644" || videoId == "81260654" || videoId == "81058723" || videoId == "81287545" || videoId == "81054409" || videoId == "81019938" || videoId == "81250267" || videoId == "81250266" || videoId == "81250265" || videoId == "81250264" || videoId == "81250263" || videoId == "81250262" || videoId == "81250261" || videoId == "81250260" || videoId == "80227815" || videoId == "81271335" && segment.LayoutType == "l0" || videoId == "81175265" || videoId == "81251335" || videoId == "81108751" || videoId == "81054415" || videoId == "81054409" || videoId == "81058723" || videoId == "81004016")
+                        {
+                            if (inStartAnimation == false)
+                            {
+                                var clickedPanel = clickedButton.Parent as Panel;
+                                if (clickedPanel != null)
+                                    AnimatePanelShrink(clickedPanel, clickedButton);
+                            }
+                        } */
 
                         if (videoId == "81481556" && segment.LayoutType == "l2" && segment.CorrectIndex.HasValue)
                         {
@@ -1060,7 +1257,15 @@ public static class UIManager
                             selectPlayer.Play();
                         }
 
-                        if (videoId == "80988062" && choices.Any(choice => choice.Text?.Equals("GO BACK", StringComparison.OrdinalIgnoreCase) == true) || videoId == "81481556" && segment.LayoutType == "l1" || videoId == "81481556" && segment.LayoutType == "l0" || videoId == "80988062" && choices.Any(choice => choice.Text?.Equals("EXIT TO CREDITS", StringComparison.OrdinalIgnoreCase) == true) || videoId == "81131714" && choices.Any(choice => choice.Text?.Equals("EXIT TO CREDITS", StringComparison.OrdinalIgnoreCase) == true) || videoId == "81131714" && segment.LayoutType == "l6" || videoId == "10000001" || videoId == "10000003" || videoId == "81251335" || videoId == "80994695" || videoId == "80135585" || videoId == "81328829" || videoId == "81205738" || videoId == "80227804" || videoId == "80227805" || videoId == "80227800" || videoId == "80227801" || videoId == "80227802" || videoId == "80227803" || videoId == "80227699" || videoId == "80227698" || videoId == "81319137" || videoId == "81205737" || videoId == "80227815" || videoId == "81250260" || videoId == "81250261" || videoId == "81250262" || videoId == "81250263" || videoId == "81250264" || videoId == "81250265" || videoId == "81250266" || videoId == "81250267")
+                        if (videoId == "10000001" && activeTutorialForm != null && activeTutorialForm.IsHandleCreated)
+                        {
+                            activeTutorialForm.Invoke(new Action(() => {
+                                if (!activeTutorialForm.IsDisposed)
+                                    activeTutorialForm.Close();
+                            }));
+                        }
+
+                        if (videoId == "80988062" && choices.Any(choice => choice.Text?.Equals("GO BACK", StringComparison.OrdinalIgnoreCase) == true) || videoId == "81481556" && segment.LayoutType == "l1" || videoId == "81481556" && segment.LayoutType == "l0" || videoId == "80988062" && choices.Any(choice => choice.Text?.Equals("EXIT TO CREDITS", StringComparison.OrdinalIgnoreCase) == true) || videoId == "81131714" && choices.Any(choice => choice.Text?.Equals("EXIT TO CREDITS", StringComparison.OrdinalIgnoreCase) == true) || videoId == "81131714" && segment.LayoutType == "l6" || videoId == "10000001" || videoId == "10000003" || videoId == "81251335" || videoId == "80149064" || videoId == "80994695" || videoId == "80135585" || videoId == "81328829" || videoId == "81205738" || videoId == "80227804" || videoId == "80227805" || videoId == "80227800" || videoId == "80227801" || videoId == "80227802" || videoId == "80227803" || videoId == "80227699" || videoId == "80227698" || videoId == "81319137" || videoId == "81205737" || videoId == "80227815" || videoId == "81250260" || videoId == "81250261" || videoId == "81250262" || videoId == "81250263" || videoId == "81250264" || videoId == "81250265" || videoId == "81250266" || videoId == "81250267")
                         {
                             choiceForm.Close(); // Close the form immediately after a choice is made
                         }
@@ -1091,7 +1296,7 @@ public static class UIManager
                 };
 
                 // Adjust height to accommodate text only if the video ID matches
-                int panelHeight = (new[] { "81054409", "81287545", "81019938", "81260654", "81054415", "81058723" }.Contains(videoId) || segment.LayoutType == "ReubenZone" || segment.LayoutType == "EnderconZone" || segment.LayoutType == "TempleZone" || segment.LayoutType == "Crafting" || segment.LayoutType == "EpisodeEnd" || segment.LayoutType == "RedstoniaZone" || segment.LayoutType == "MCSMThroneZone" || segment.LayoutType == "MCSMTownZone" || segment.LayoutType == "MCSMWoolLand" || segment.LayoutType == "MCSMLabZone" || segment.LayoutType == "MCSMGunZone" || segment.LayoutType == "IvorZone") ? buttonHeight + (int)(50 * scaleFactor) : buttonHeight;
+                int panelHeight = (new[] { "81054409", "81287545", "81019938", "80135585", "81260654", "81054415", "81058723" }.Contains(videoId) || segment.LayoutType == "ReubenZone" || segment.LayoutType == "EnderconZone" || segment.LayoutType == "TempleZone" || segment.LayoutType == "Crafting" || segment.LayoutType == "EpisodeEnd" || segment.LayoutType == "RedstoniaZone" || segment.LayoutType == "MCSMThroneZone" || segment.LayoutType == "MCSMTownZone" || segment.LayoutType == "MCSMWoolLand" || segment.LayoutType == "MCSMLabZone" || segment.LayoutType == "MCSMGunZone" || segment.LayoutType == "IvorZone") ? buttonHeight + (int)(50 * scaleFactor) : buttonHeight;
 
                 var buttonPanel = new Panel
                 {
@@ -1158,9 +1363,12 @@ public static class UIManager
                 {
                     if (button.Enabled)
                     {
-                        if (videoId == "81328829" || videoId == "81250267" || videoId == "81250266" || videoId == "81250265" || videoId == "81250264" || videoId == "81250263" || videoId == "81250262" || videoId == "81250261" || videoId == "81250260" || videoId == "80227815" || videoId == "81271335" && segment.LayoutType == "l0" || videoId == "81205737" || videoId == "80149064" || videoId == "80994695" || videoId == "81175265" || videoId == "81251335" || videoId == "81108751" || videoId == "81319137" || videoId == "81054415" || videoId == "80135585" || videoId == "81004016" || videoId == "81205738" || videoId == "80227804" || videoId == "80227805" || videoId == "80227800" || videoId == "80227801" || videoId == "80227802" || videoId == "80227803" || videoId == "80227699" || videoId == "80227698")
+                        if (videoId == "81328829" || videoId == "80151644" || videoId == "81260654" || videoId == "81058723" || videoId == "81287545" || videoId == "81054409" || videoId == "81019938" || videoId == "81250267" || videoId == "81250266" || videoId == "81250265" || videoId == "81250264" || videoId == "81250263" || videoId == "81250262" || videoId == "81250261" || videoId == "81250260" || videoId == "80227815" || videoId == "81271335" && segment.LayoutType == "l0" || videoId == "81205737" || videoId == "80149064" || videoId == "80994695" || videoId == "81175265" || videoId == "81251335" || videoId == "81108751" || videoId == "81319137" || videoId == "81054415" || videoId == "80135585" || videoId == "81004016" || videoId == "81205738" || videoId == "80227804" || videoId == "80227805" || videoId == "80227800" || videoId == "80227801" || videoId == "80227802" || videoId == "80227803" || videoId == "80227699" || videoId == "80227698")
                         {
-                            AnimatePanelGrow(buttonPanel, button);
+                            if (inStartAnimation == false)
+                            {
+                                AnimatePanelGrow(buttonPanel, button);
+                            }
                         }
                     }
                 };
@@ -1168,9 +1376,12 @@ public static class UIManager
                 {
                     if (button.Enabled)
                     {
-                        if (videoId == "81328829" || videoId == "81250267" || videoId == "81250266" || videoId == "81250265" || videoId == "81250264" || videoId == "81250263" || videoId == "81250262" || videoId == "81250261" || videoId == "81250260" || videoId == "80227815" || videoId == "81271335" && segment.LayoutType == "l0" || videoId == "81205737" || videoId == "80149064" || videoId == "80994695" || videoId == "81175265" || videoId == "81251335" || videoId == "81108751" || videoId == "81319137" || videoId == "81054415" || videoId == "80135585" || videoId == "81004016" || videoId == "81205738" || videoId == "80227804" || videoId == "80227805" || videoId == "80227800" || videoId == "80227801" || videoId == "80227802" || videoId == "80227803" || videoId == "80227699" || videoId == "80227698")
+                        if (videoId == "81328829" || videoId == "80151644" || videoId == "81260654" || videoId == "81058723" || videoId == "81287545" || videoId == "81054409" || videoId == "81019938" || videoId == "81250267" || videoId == "81250266" || videoId == "81250265" || videoId == "81250264" || videoId == "81250263" || videoId == "81250262" || videoId == "81250261" || videoId == "81250260" || videoId == "80227815" || videoId == "81271335" && segment.LayoutType == "l0" || videoId == "81205737" || videoId == "80149064" || videoId == "80994695" || videoId == "81175265" || videoId == "81251335" || videoId == "81108751" || videoId == "81319137" || videoId == "81054415" || videoId == "80135585" || videoId == "81004016" || videoId == "81205738" || videoId == "80227804" || videoId == "80227805" || videoId == "80227800" || videoId == "80227801" || videoId == "80227802" || videoId == "80227803" || videoId == "80227699" || videoId == "80227698")
                         {
-                            AnimatePanelShrink(buttonPanel, button);
+                            if (inStartAnimation == false)
+                            {
+                                AnimatePanelShrink(buttonPanel, button);
+                            }
                         }
                     }
                 };
@@ -1302,18 +1513,32 @@ public static class UIManager
                         buttonPanel.Location = new System.Drawing.Point((int)(choiceForm.Width * 0.76), (int)(choiceForm.Height * 0.15));
                     }
 
-                    var textLabel = new Label
+                    var textLabel = new ShadowLabel
                     {
                         Text = choices[i].Text,
                         AutoSize = true,
                         Font = new Font("Arial", (float)(26 * scaleFactor)),
                         ForeColor = Color.White,
                         BackColor = Color.Transparent,
-                        TextAlign = ContentAlignment.MiddleCenter
+                        TextAlign = ContentAlignment.MiddleCenter,
+                        ShadowColor = Color.Black,
+                        ShadowOffset = (int)(2 * scaleFactor)
                     };
                     buttonPanel.Controls.Add(textLabel);
 
-                    textLabel.Location = new System.Drawing.Point((buttonPanel.Width - textLabel.Width) / 2, buttonHeight + 10);
+                    int verticalOffset = (int)(10 * scaleFactor);
+                    int descenderBuffer = (int)(6 * scaleFactor);
+
+                    int minLabelSpace = textLabel.Height + verticalOffset + descenderBuffer;
+                    if (buttonPanel.Height < buttonHeight + minLabelSpace)
+                    {
+                        buttonPanel.Height = buttonHeight + minLabelSpace;
+                    }
+
+                    textLabel.Location = new System.Drawing.Point(
+                        (buttonPanel.Width - textLabel.Width) / 2,
+                        buttonHeight + verticalOffset + descenderBuffer
+                    );
                 }
 
                 // Custom positioning for "ReubenZone"
@@ -1340,20 +1565,30 @@ public static class UIManager
                         buttonPanel.Location = new System.Drawing.Point((int)(choiceForm.Width * 0.45), (int)(choiceForm.Height * 0.25));
                     }
 
-                    var textLabel = new Label
+                    var textLabel = new ShadowLabel
                     {
                         Text = choices[i].Text,
                         AutoSize = true,
                         Font = new Font("Arial", (float)(26 * scaleFactor)),
                         ForeColor = Color.White,
                         BackColor = Color.Transparent,
-                        TextAlign = ContentAlignment.MiddleCenter
+                        TextAlign = ContentAlignment.MiddleCenter,
+                        ShadowColor = Color.Black,
+                        ShadowOffset = (int)(2 * scaleFactor)
                     };
                     buttonPanel.Controls.Add(textLabel);
 
-                    int fixedOffset = 15;
+                    int fixedOffset = (int)(15 * scaleFactor);
+                    int verticalOffset = (int)(10 * scaleFactor);
+                    int descenderBuffer = (int)(6 * scaleFactor);
                     int centerOffset = (buttonPanel.Width / 2) - (textLabel.Width / 2);
-                    textLabel.Location = new System.Drawing.Point(centerOffset - fixedOffset, buttonHeight + 10);
+                    int minLabelSpace = textLabel.Height + verticalOffset + descenderBuffer;
+                    if (buttonPanel.Height < buttonHeight + minLabelSpace)
+                    {
+                        buttonPanel.Height = buttonHeight + minLabelSpace;
+                    }
+
+                    textLabel.Location = new System.Drawing.Point(centerOffset - fixedOffset, buttonHeight + verticalOffset + descenderBuffer);
                 }
 
                 // Custom positioning for "EnderconZone"
@@ -1376,20 +1611,30 @@ public static class UIManager
                         buttonPanel.Location = new System.Drawing.Point((int)(choiceForm.Width * 0.77), (int)(choiceForm.Height * 0.31));
                     }
 
-                    var textLabel = new Label
+                    var textLabel = new ShadowLabel
                     {
                         Text = choices[i].Text,
                         AutoSize = true,
                         Font = new Font("Arial", (float)(26 * scaleFactor)),
                         ForeColor = Color.White,
                         BackColor = Color.Transparent,
-                        TextAlign = ContentAlignment.MiddleCenter
+                        TextAlign = ContentAlignment.MiddleCenter,
+                        ShadowColor = Color.Black,
+                        ShadowOffset = (int)(2 * scaleFactor)
                     };
                     buttonPanel.Controls.Add(textLabel);
 
-                    int fixedOffset = 15;
+                    int fixedOffset = (int)(15 * scaleFactor);
+                    int verticalOffset = (int)(10 * scaleFactor);
+                    int descenderBuffer = (int)(6 * scaleFactor);
                     int centerOffset = (buttonPanel.Width / 2) - (textLabel.Width / 2);
-                    textLabel.Location = new System.Drawing.Point(centerOffset - fixedOffset, buttonHeight + 10);
+                    int minLabelSpace = textLabel.Height + verticalOffset + descenderBuffer;
+                    if (buttonPanel.Height < buttonHeight + minLabelSpace)
+                    {
+                        buttonPanel.Height = buttonHeight + minLabelSpace;
+                    }
+
+                    textLabel.Location = new System.Drawing.Point(centerOffset - fixedOffset, buttonHeight + verticalOffset + descenderBuffer);
                 }
 
                 // Custom positioning for "RedstoniaZone"
@@ -1420,20 +1665,30 @@ public static class UIManager
                         buttonPanel.Location = new System.Drawing.Point((int)(choiceForm.Width * 0.77), (int)(choiceForm.Height * 0.47));
                     }
 
-                    var textLabel = new Label
+                    var textLabel = new ShadowLabel
                     {
                         Text = choices[i].Text,
                         AutoSize = true,
                         Font = new Font("Arial", (float)(26 * scaleFactor)),
                         ForeColor = Color.White,
                         BackColor = Color.Transparent,
-                        TextAlign = ContentAlignment.MiddleCenter
+                        TextAlign = ContentAlignment.MiddleCenter,
+                        ShadowColor = Color.Black,
+                        ShadowOffset = (int)(2 * scaleFactor)
                     };
                     buttonPanel.Controls.Add(textLabel);
 
-                    int fixedOffset = 15;
+                    int fixedOffset = (int)(15 * scaleFactor);
+                    int verticalOffset = (int)(10 * scaleFactor);
+                    int descenderBuffer = (int)(6 * scaleFactor);
                     int centerOffset = (buttonPanel.Width / 2) - (textLabel.Width / 2);
-                    textLabel.Location = new System.Drawing.Point(centerOffset - fixedOffset, buttonHeight + 10);
+                    int minLabelSpace = textLabel.Height + verticalOffset + descenderBuffer;
+                    if (buttonPanel.Height < buttonHeight + minLabelSpace)
+                    {
+                        buttonPanel.Height = buttonHeight + minLabelSpace;
+                    }
+
+                    textLabel.Location = new System.Drawing.Point(centerOffset - fixedOffset, buttonHeight + verticalOffset + descenderBuffer);
                 }
 
                 // Custom positioning for "TempleZone"
@@ -1460,20 +1715,30 @@ public static class UIManager
                         buttonPanel.Location = new System.Drawing.Point((int)(choiceForm.Width * 0.78), (int)(choiceForm.Height * 0.36));
                     }
 
-                    var textLabel = new Label
+                    var textLabel = new ShadowLabel
                     {
                         Text = choices[i].Text,
                         AutoSize = true,
                         Font = new Font("Arial", (float)(26 * scaleFactor)),
                         ForeColor = Color.White,
                         BackColor = Color.Transparent,
-                        TextAlign = ContentAlignment.MiddleCenter
+                        TextAlign = ContentAlignment.MiddleCenter,
+                        ShadowColor = Color.Black,
+                        ShadowOffset = (int)(2 * scaleFactor)
                     };
                     buttonPanel.Controls.Add(textLabel);
 
-                    int fixedOffset = 15;
+                    int fixedOffset = (int)(15 * scaleFactor);
+                    int verticalOffset = (int)(10 * scaleFactor);
+                    int descenderBuffer = (int)(6 * scaleFactor);
                     int centerOffset = (buttonPanel.Width / 2) - (textLabel.Width / 2);
-                    textLabel.Location = new System.Drawing.Point(centerOffset - fixedOffset, buttonHeight + 10);
+                    int minLabelSpace = textLabel.Height + verticalOffset + descenderBuffer;
+                    if (buttonPanel.Height < buttonHeight + minLabelSpace)
+                    {
+                        buttonPanel.Height = buttonHeight + minLabelSpace;
+                    }
+
+                    textLabel.Location = new System.Drawing.Point(centerOffset - fixedOffset, buttonHeight + verticalOffset + descenderBuffer);
                 }
 
                 // Custom positioning for "IvorZone"
@@ -1508,20 +1773,30 @@ public static class UIManager
                         buttonPanel.Location = new System.Drawing.Point((int)(choiceForm.Width * 0.765), (int)(choiceForm.Height * 0.185));
                     }
 
-                    var textLabel = new Label
+                    var textLabel = new ShadowLabel
                     {
                         Text = choices[i].Text,
                         AutoSize = true,
                         Font = new Font("Arial", (float)(26 * scaleFactor)),
                         ForeColor = Color.White,
                         BackColor = Color.Transparent,
-                        TextAlign = ContentAlignment.MiddleCenter
+                        TextAlign = ContentAlignment.MiddleCenter,
+                        ShadowColor = Color.Black,
+                        ShadowOffset = (int)(2 * scaleFactor)
                     };
                     buttonPanel.Controls.Add(textLabel);
 
-                    int fixedOffset = 15;
+                    int fixedOffset = (int)(15 * scaleFactor);
+                    int verticalOffset = (int)(10 * scaleFactor);
+                    int descenderBuffer = (int)(6 * scaleFactor);
                     int centerOffset = (buttonPanel.Width / 2) - (textLabel.Width / 2);
-                    textLabel.Location = new System.Drawing.Point(centerOffset - fixedOffset, buttonHeight + 10);
+                    int minLabelSpace = textLabel.Height + verticalOffset + descenderBuffer;
+                    if (buttonPanel.Height < buttonHeight + minLabelSpace)
+                    {
+                        buttonPanel.Height = buttonHeight + minLabelSpace;
+                    }
+
+                    textLabel.Location = new System.Drawing.Point(centerOffset - fixedOffset, buttonHeight + verticalOffset + descenderBuffer);
                 }
 
                 // Custom positioning for "MCSMThroneZone"
@@ -1552,20 +1827,30 @@ public static class UIManager
                         buttonPanel.Location = new System.Drawing.Point((int)(choiceForm.Width * 0.740), (int)(choiceForm.Height * 0.475));
                     }
 
-                    var textLabel = new Label
+                    var textLabel = new ShadowLabel
                     {
                         Text = choices[i].Text,
                         AutoSize = true,
                         Font = new Font("Arial", (float)(26 * scaleFactor)),
                         ForeColor = Color.White,
                         BackColor = Color.Transparent,
-                        TextAlign = ContentAlignment.MiddleCenter
+                        TextAlign = ContentAlignment.MiddleCenter,
+                        ShadowColor = Color.Black,
+                        ShadowOffset = (int)(2 * scaleFactor)
                     };
                     buttonPanel.Controls.Add(textLabel);
 
-                    int fixedOffset = 15;
+                    int fixedOffset = (int)(15 * scaleFactor);
+                    int verticalOffset = (int)(10 * scaleFactor);
+                    int descenderBuffer = (int)(6 * scaleFactor);
                     int centerOffset = (buttonPanel.Width / 2) - (textLabel.Width / 2);
-                    textLabel.Location = new System.Drawing.Point(centerOffset - fixedOffset, buttonHeight + 10);
+                    int minLabelSpace = textLabel.Height + verticalOffset + descenderBuffer;
+                    if (buttonPanel.Height < buttonHeight + minLabelSpace)
+                    {
+                        buttonPanel.Height = buttonHeight + minLabelSpace;
+                    }
+
+                    textLabel.Location = new System.Drawing.Point(centerOffset - fixedOffset, buttonHeight + verticalOffset + descenderBuffer);
                 }
 
                 // Custom positioning for "MCSMTownZone"
@@ -1596,20 +1881,30 @@ public static class UIManager
                         buttonPanel.Location = new System.Drawing.Point((int)(choiceForm.Width * 0.60), (int)(choiceForm.Height * 0.23));
                     }
 
-                    var textLabel = new Label
+                    var textLabel = new ShadowLabel
                     {
                         Text = choices[i].Text,
                         AutoSize = true,
                         Font = new Font("Arial", (float)(26 * scaleFactor)),
                         ForeColor = Color.White,
                         BackColor = Color.Transparent,
-                        TextAlign = ContentAlignment.MiddleCenter
+                        TextAlign = ContentAlignment.MiddleCenter,
+                        ShadowColor = Color.Black,
+                        ShadowOffset = (int)(2 * scaleFactor)
                     };
                     buttonPanel.Controls.Add(textLabel);
 
-                    int fixedOffset = 15;
+                    int fixedOffset = (int)(15 * scaleFactor);
+                    int verticalOffset = (int)(10 * scaleFactor);
+                    int descenderBuffer = (int)(6 * scaleFactor);
                     int centerOffset = (buttonPanel.Width / 2) - (textLabel.Width / 2);
-                    textLabel.Location = new System.Drawing.Point(centerOffset - fixedOffset, buttonHeight + 10);
+                    int minLabelSpace = textLabel.Height + verticalOffset + descenderBuffer;
+                    if (buttonPanel.Height < buttonHeight + minLabelSpace)
+                    {
+                        buttonPanel.Height = buttonHeight + minLabelSpace;
+                    }
+
+                    textLabel.Location = new System.Drawing.Point(centerOffset - fixedOffset, buttonHeight + verticalOffset + descenderBuffer);
                 }
 
                 // Custom positioning for "MCSMWoolLand"
@@ -1644,20 +1939,30 @@ public static class UIManager
                         buttonPanel.Location = new System.Drawing.Point((int)(choiceForm.Width * 0.725), (int)(choiceForm.Height * 0.59));
                     }
 
-                    var textLabel = new Label
+                    var textLabel = new ShadowLabel
                     {
                         Text = choices[i].Text,
                         AutoSize = true,
                         Font = new Font("Arial", (float)(26 * scaleFactor)),
                         ForeColor = Color.White,
                         BackColor = Color.Transparent,
-                        TextAlign = ContentAlignment.MiddleCenter
+                        TextAlign = ContentAlignment.MiddleCenter,
+                        ShadowColor = Color.Black,
+                        ShadowOffset = (int)(2 * scaleFactor)
                     };
                     buttonPanel.Controls.Add(textLabel);
 
-                    int fixedOffset = 15;
+                    int fixedOffset = (int)(15 * scaleFactor);
+                    int verticalOffset = (int)(10 * scaleFactor);
+                    int descenderBuffer = (int)(6 * scaleFactor);
                     int centerOffset = (buttonPanel.Width / 2) - (textLabel.Width / 2);
-                    textLabel.Location = new System.Drawing.Point(centerOffset - fixedOffset, buttonHeight + 10);
+                    int minLabelSpace = textLabel.Height + verticalOffset + descenderBuffer;
+                    if (buttonPanel.Height < buttonHeight + minLabelSpace)
+                    {
+                        buttonPanel.Height = buttonHeight + minLabelSpace;
+                    }
+
+                    textLabel.Location = new System.Drawing.Point(centerOffset - fixedOffset, buttonHeight + verticalOffset + descenderBuffer);
                 }
 
                 // Custom positioning for "MCSMLabZone"
@@ -1688,20 +1993,30 @@ public static class UIManager
                         buttonPanel.Location = new System.Drawing.Point((int)(choiceForm.Width * 0.865), (int)(choiceForm.Height * 0.51));
                     }
 
-                    var textLabel = new Label
+                    var textLabel = new ShadowLabel
                     {
                         Text = choices[i].Text,
                         AutoSize = true,
                         Font = new Font("Arial", (float)(26 * scaleFactor)),
                         ForeColor = Color.White,
                         BackColor = Color.Transparent,
-                        TextAlign = ContentAlignment.MiddleCenter
+                        TextAlign = ContentAlignment.MiddleCenter,
+                        ShadowColor = Color.Black,
+                        ShadowOffset = (int)(2 * scaleFactor)
                     };
                     buttonPanel.Controls.Add(textLabel);
 
-                    int fixedOffset = 15;
+                    int fixedOffset = (int)(15 * scaleFactor);
+                    int verticalOffset = (int)(10 * scaleFactor);
+                    int descenderBuffer = (int)(6 * scaleFactor);
                     int centerOffset = (buttonPanel.Width / 2) - (textLabel.Width / 2);
-                    textLabel.Location = new System.Drawing.Point(centerOffset - fixedOffset, buttonHeight + 10);
+                    int minLabelSpace = textLabel.Height + verticalOffset + descenderBuffer;
+                    if (buttonPanel.Height < buttonHeight + minLabelSpace)
+                    {
+                        buttonPanel.Height = buttonHeight + minLabelSpace;
+                    }
+
+                    textLabel.Location = new System.Drawing.Point(centerOffset - fixedOffset, buttonHeight + verticalOffset + descenderBuffer);
                 }
 
                 // Custom positioning for "MCSMGunZone"
@@ -1728,20 +2043,30 @@ public static class UIManager
                         buttonPanel.Location = new System.Drawing.Point((int)(choiceForm.Width * 0.79), (int)(choiceForm.Height * 0.49));
                     }
 
-                    var textLabel = new Label
+                    var textLabel = new ShadowLabel
                     {
                         Text = choices[i].Text,
                         AutoSize = true,
                         Font = new Font("Arial", (float)(26 * scaleFactor)),
                         ForeColor = Color.White,
                         BackColor = Color.Transparent,
-                        TextAlign = ContentAlignment.MiddleCenter
+                        TextAlign = ContentAlignment.MiddleCenter,
+                        ShadowColor = Color.Black,
+                        ShadowOffset = (int)(2 * scaleFactor)
                     };
                     buttonPanel.Controls.Add(textLabel);
 
-                    int fixedOffset = 15;
+                    int fixedOffset = (int)(15 * scaleFactor);
+                    int verticalOffset = (int)(10 * scaleFactor);
+                    int descenderBuffer = (int)(6 * scaleFactor);
                     int centerOffset = (buttonPanel.Width / 2) - (textLabel.Width / 2);
-                    textLabel.Location = new System.Drawing.Point(centerOffset - fixedOffset, buttonHeight + 10);
+                    int minLabelSpace = textLabel.Height + verticalOffset + descenderBuffer;
+                    if (buttonPanel.Height < buttonHeight + minLabelSpace)
+                    {
+                        buttonPanel.Height = buttonHeight + minLabelSpace;
+                    }
+
+                    textLabel.Location = new System.Drawing.Point(centerOffset - fixedOffset, buttonHeight + verticalOffset + descenderBuffer);
                 }
 
                 // Custom positioning for "EpisodeEnd"
@@ -1756,18 +2081,32 @@ public static class UIManager
                         buttonPanel.Location = new System.Drawing.Point((int)(choiceForm.Width * 0.75), (int)(choiceForm.Height * 0.50));
                     }
 
-                    var textLabel = new Label
+                    var textLabel = new ShadowLabel
                     {
                         Text = choices[i].Text,
                         AutoSize = true,
                         Font = new Font("Arial", (float)(26 * scaleFactor)),
                         ForeColor = Color.White,
                         BackColor = Color.Transparent,
-                        TextAlign = ContentAlignment.MiddleCenter
+                        TextAlign = ContentAlignment.MiddleCenter,
+                        ShadowColor = Color.Black,
+                        ShadowOffset = (int)(2 * scaleFactor)
                     };
                     buttonPanel.Controls.Add(textLabel);
 
-                    textLabel.Location = new System.Drawing.Point((buttonPanel.Width - textLabel.Width) / 2, buttonHeight + 10);
+                    int verticalOffset = (int)(10 * scaleFactor);
+                    int descenderBuffer = (int)(6 * scaleFactor);
+
+                    int minLabelSpace = textLabel.Height + verticalOffset + descenderBuffer;
+                    if (buttonPanel.Height < buttonHeight + minLabelSpace)
+                    {
+                        buttonPanel.Height = buttonHeight + minLabelSpace;
+                    }
+
+                    textLabel.Location = new System.Drawing.Point(
+                        (buttonPanel.Width - textLabel.Width) / 2,
+                        buttonHeight + verticalOffset + descenderBuffer
+                    );
                 }
 
                 // Battle Kitty Episode 1 custom positioning
@@ -1943,20 +2282,34 @@ public static class UIManager
                 }
 
                 // Add text label underneath the button
-                if (new[] { "81054409", "81287545", "81019938", "81260654", "81054415", "81058723" }.Contains(videoId))
+                if (new[] { "81054409", "81287545", "81019938", "80135585", "81260654", "81054415", "81058723" }.Contains(videoId))
                 {
-                    var textLabel = new Label
+                    var textLabel = new ShadowLabel
                     {
                         Text = choices[i].Text,
                         AutoSize = true,
                         Font = new Font("Arial", (float)(22 * scaleFactor), FontStyle.Bold),
                         ForeColor = Color.White,
                         BackColor = Color.Transparent,
-                        TextAlign = ContentAlignment.MiddleCenter
+                        TextAlign = ContentAlignment.MiddleCenter,
+                        ShadowColor = Color.Black,
+                        ShadowOffset = (int)(2 * scaleFactor)
                     };
                     buttonPanel.Controls.Add(textLabel);
 
-                    textLabel.Location = new System.Drawing.Point((buttonPanel.Width - textLabel.Width) / 2, buttonHeight + 10);
+                    int verticalOffset = (int)(10 * scaleFactor);
+                    int descenderBuffer = (int)(6 * scaleFactor);
+
+                    int minLabelSpace = textLabel.Height + verticalOffset + descenderBuffer;
+                    if (buttonPanel.Height < buttonHeight + minLabelSpace)
+                    {
+                        buttonPanel.Height = buttonHeight + minLabelSpace;
+                    }
+
+                    textLabel.Location = new System.Drawing.Point(
+                        (buttonPanel.Width - textLabel.Width) / 2,
+                        buttonHeight + verticalOffset + descenderBuffer
+                    );
                 }
 
                 buttons.Add(button);
@@ -2024,7 +2377,7 @@ public static class UIManager
         {
             timerBarY = (int)(choiceForm.Height * 0.92);
         }
-        else if (new[] { "81054409", "81287545", "81019938", "81260654", "81054415", "81058723" }.Contains(videoId))
+        else if (new[] { "81054409", "81287545", "81019938", "80135585", "81260654", "81054415", "81058723" }.Contains(videoId))
         {
             timerBarY = buttonTopMargin + buttonHeight + (int)(90 * scaleFactor);
         }
@@ -2044,6 +2397,266 @@ public static class UIManager
                 }
             }
             return null; // Or handle the case where no file is found
+        }
+
+        if (videoId == "81054409" || videoId == "81058723" || videoId == "81205737" || videoId == "81175265" || videoId == "81251335" || videoId == "80994695" || videoId == "80149064" || videoId == "81260654" || videoId == "81019938" || videoId == "81328829" || videoId == "81287545" || videoId == "81108751" || videoId == "80151644" || videoId == "81319137" || videoId == "81054415" || videoId == "80135585" || videoId == "81205738" || videoId == "80227804" || videoId == "80227805" || videoId == "80227800" || videoId == "80227801" || videoId == "80227802" || videoId == "80227803" || videoId == "80227699" || videoId == "80227698")
+        {
+            var buttonPanels = choiceForm.Controls.OfType<Panel>().Where(p => p.Controls.OfType<Button>().Any()).ToList();
+            var originalPanelStates = buttonPanels
+                .Select(panel => new
+                {
+                    Panel = panel,
+                    Size = panel.Size,
+                    Location = panel.Location,
+                    Button = panel.Controls.OfType<Button>().FirstOrDefault(),
+                    ButtonSize = panel.Controls.OfType<Button>().FirstOrDefault()?.Size,
+                    ButtonLocation = panel.Controls.OfType<Button>().FirstOrDefault()?.Location,
+                    ButtonFont = panel.Controls.OfType<Button>().FirstOrDefault()?.Font,
+                    TextLabel = panel.Controls.OfType<Label>().FirstOrDefault(),
+                    TextLabelSize = panel.Controls.OfType<Label>().FirstOrDefault()?.Size,
+                    TextLabelLocation = panel.Controls.OfType<Label>().FirstOrDefault()?.Location,
+                    TextLabelFont = panel.Controls.OfType<Label>().FirstOrDefault()?.Font
+                })
+                .ToList();
+
+            int delayBetween = 80;
+            int animDuration = 320;
+            double boingScale = 1.18;
+
+            for (int i = 0; i < buttonPanels.Count; i++)
+            {
+                var panelState = originalPanelStates[i];
+                var panel = panelState.Panel;
+                var button = panelState.Button;
+                var textLabel = panelState.TextLabel;
+                if (panel == null || button == null) continue;
+
+                panel.Size = new Size(1, 1);
+                panel.Location = new Point(
+                    panelState.Location.X + (panelState.Size.Width - 1) / 2,
+                    panelState.Location.Y + (panelState.Size.Height - 1) / 2
+                );
+                button.Size = new Size(1, 1);
+                button.Location = new Point((panel.Size.Width - 1) / 2, (panel.Size.Height - 1) / 2);
+
+                if (textLabel != null && panelState.TextLabelSize.HasValue && panelState.TextLabelLocation.HasValue && panelState.TextLabelFont != null)
+                {
+                    textLabel.Size = panelState.TextLabelSize.Value;
+                    textLabel.Location = panelState.TextLabelLocation.Value;
+                    textLabel.Font = panelState.TextLabelFont;
+                    textLabel.Visible = true;
+                }
+
+                int startDelay = i * delayBetween;
+                System.Windows.Forms.Timer animTimer = new System.Windows.Forms.Timer { Interval = 15 };
+                int elapsed = 0;
+
+                animTimer.Tick += (s, e) =>
+                {
+                    inStartAnimation = true;
+                    elapsed += animTimer.Interval;
+                    if (elapsed < startDelay) return;
+
+                    double t = Math.Min(1.0, (double)(elapsed - startDelay) / animDuration);
+
+                    double scale;
+                    if (t < 0.5)
+                    {
+                        scale = 2 * t * boingScale;
+                    }
+                    else
+                    {
+                        scale = boingScale - (2 * (t - 0.5) * (boingScale - 1.0));
+                    }
+                    scale = Math.Min(Math.Max(scale, 0.0), boingScale);
+
+                    if (panelState.TextLabel != null && panelState.Button != null && panelState.ButtonSize.HasValue && panelState.ButtonLocation.HasValue && panelState.TextLabelLocation.HasValue)
+                    {
+                        int originalLabelOffset = panelState.TextLabelLocation.Value.Y - (panelState.ButtonLocation.Value.Y + panelState.ButtonSize.Value.Height);
+
+                        int labelY = button.Location.Y + button.Size.Height + originalLabelOffset;
+                        panelState.TextLabel.Location = new Point((panel.Width - panelState.TextLabel.Width) / 2, labelY);
+                    }
+
+                    int w = (int)(panelState.Size.Width * scale);
+                    int h = (int)(panelState.Size.Height * scale);
+                    int x = panelState.Location.X + (panelState.Size.Width - w) / 2;
+                    int y = panelState.Location.Y + (panelState.Size.Height - h) / 2;
+                    panel.Size = new Size(w, h);
+                    panel.Location = new Point(x, y);
+
+                    int finalButtonY = panelState.ButtonLocation.HasValue
+                        ? panelState.ButtonLocation.Value.Y
+                        : (panel.Size.Height - button.Size.Height) / 2;
+
+                    if (panelState.ButtonSize.HasValue && panelState.ButtonLocation.HasValue)
+                    {
+                        int bw = (int)(panelState.ButtonSize.Value.Width * scale);
+                        int bh = (int)(panelState.ButtonSize.Value.Height * scale);
+
+                        int by = (int)(panelState.ButtonLocation.Value.Y * scale);
+
+                        button.Size = new Size(bw, bh);
+                        button.Location = new Point((panel.Size.Width - bw) / 2, by);
+
+                        if (panelState.ButtonFont != null)
+                        {
+                            float fontSize = (float)(panelState.ButtonFont.Size * scale);
+                            if (fontSize < 1f) fontSize = 1f;
+                            button.Font = new Font(panelState.ButtonFont.FontFamily, fontSize, panelState.ButtonFont.Style);
+                        }
+                    }
+
+                    if (t >= 1.0)
+                    {
+                        panel.Size = panelState.Size;
+                        panel.Location = panelState.Location;
+                        if (panelState.ButtonSize.HasValue && panelState.ButtonLocation.HasValue)
+                        {
+                            button.Size = panelState.ButtonSize.Value;
+                            button.Location = panelState.ButtonLocation.Value;
+                        }
+                        if (panelState.ButtonFont != null)
+                            button.Font = panelState.ButtonFont;
+
+                        inStartAnimation = false;
+                        animTimer.Stop();
+                        animTimer.Dispose();
+                    }
+                };
+                animTimer.Start();
+            }
+
+            choiceForm.FormClosing += (s, e) =>
+            {
+                if ((choiceForm.Tag as string) == "Closing") return;
+
+                e.Cancel = true;
+
+                var closingButtonPanels = choiceForm.Controls.OfType<Panel>().Where(p => p.Controls.OfType<Button>().Any()).ToList();
+                var closingPanelStates = closingButtonPanels
+                    .Select(panel => new
+                    {
+                        Panel = panel,
+                        Size = panel.Size,
+                        Location = panel.Location,
+                        Button = panel.Controls.OfType<Button>().FirstOrDefault(),
+                        ButtonSize = panel.Controls.OfType<Button>().FirstOrDefault()?.Size,
+                        ButtonLocation = panel.Controls.OfType<Button>().FirstOrDefault()?.Location,
+                        ButtonFont = panel.Controls.OfType<Button>().FirstOrDefault()?.Font,
+                        TextLabel = panel.Controls.OfType<Label>().FirstOrDefault(),
+                        TextLabelSize = panel.Controls.OfType<Label>().FirstOrDefault()?.Size,
+                        TextLabelLocation = panel.Controls.OfType<Label>().FirstOrDefault()?.Location,
+                        TextLabelFont = panel.Controls.OfType<Label>().FirstOrDefault()?.Font
+                    })
+                    .ToList();
+
+                delayBetween = 80;
+                int closingAnimDuration = 320;
+                int interval = 15;
+                int panelsCompleted = 0;
+
+                // Fade out timer
+                int fadeElapsed = 0;
+                double initialOpacity = choiceForm.Opacity;
+                System.Windows.Forms.Timer fadeTimer = new System.Windows.Forms.Timer { Interval = interval };
+                fadeTimer.Tick += (sender, args) =>
+                {
+                    fadeElapsed += interval;
+                    double t = Math.Min(1.0, (double)fadeElapsed / (closingAnimDuration + delayBetween * (closingButtonPanels.Count - 1)));
+                    choiceForm.Opacity = initialOpacity * (1.0 - t);
+                    if (t >= 1.0)
+                    {
+                        fadeTimer.Stop();
+                        choiceForm.Opacity = 0;
+                    }
+                };
+                fadeTimer.Start();
+
+                for (int i = 0; i < closingButtonPanels.Count; i++)
+                {
+                    var panelState = closingPanelStates[i];
+                    var panel = panelState.Panel;
+                    var button = panelState.Button;
+                    if (panel == null || button == null) continue;
+
+                    int startDelay = i * delayBetween;
+                    int elapsed = 0;
+
+                    System.Windows.Forms.Timer shrinkTimer = new System.Windows.Forms.Timer { Interval = interval };
+                    shrinkTimer.Tick += (sender2, e2) =>
+                    {
+                        inStartAnimation = true;
+                        elapsed += interval;
+                        if (elapsed < startDelay) return;
+
+                        double t = Math.Min(1.0, (double)(elapsed - startDelay) / closingAnimDuration);
+
+                        double scale;
+                        if (t < 0.4)
+                        {
+                            scale = 1.0 + (0.18 * EaseOutElastic(t / 0.4));
+                        }
+                        else
+                        {
+                            double shrinkT = (t - 0.4) / 0.6;
+                            scale = 1.18 * (1.0 - EaseOutQuad(shrinkT));
+                        }
+                        scale = Math.Max(0.0, scale);
+
+                        if (panelState.TextLabel != null && panelState.Button != null && panelState.ButtonSize.HasValue && panelState.ButtonLocation.HasValue && panelState.TextLabelLocation.HasValue)
+                        {
+                            int originalLabelOffset = panelState.TextLabelLocation.Value.Y - (panelState.ButtonLocation.Value.Y + panelState.ButtonSize.Value.Height);
+                            int labelY = button.Location.Y + button.Size.Height + originalLabelOffset;
+                            panelState.TextLabel.Location = new Point((panel.Width - panelState.TextLabel.Width) / 2, labelY);
+                        }
+
+                        int w = (int)(panelState.Size.Width * scale);
+                        int h = (int)(panelState.Size.Height * scale);
+                        int x = panelState.Location.X + (panelState.Size.Width - w) / 2;
+                        int y = panelState.Location.Y + (panelState.Size.Height - h) / 2;
+                        panel.Size = new Size(w, h);
+                        panel.Location = new Point(x, y);
+
+                        if (panelState.ButtonSize.HasValue && panelState.ButtonLocation.HasValue)
+                        {
+                            int bw = (int)(panelState.ButtonSize.Value.Width * scale);
+                            int bh = (int)(panelState.ButtonSize.Value.Height * scale);
+
+                            int finalButtonY = panelState.ButtonLocation.Value.Y;
+                            int centerY = (panel.Size.Height - bh) / 2;
+                            int by = (int)(centerY + (finalButtonY - centerY) * (1.0 - scale));
+
+                            button.Size = new Size(bw, bh);
+                            button.Location = new Point((panel.Size.Width - bw) / 2, by);
+
+                            if (panelState.ButtonFont != null)
+                            {
+                                float fontSize = (float)(panelState.ButtonFont.Size * scale);
+                                if (fontSize < 1f) fontSize = 1f;
+                                button.Font = new Font(panelState.ButtonFont.FontFamily, fontSize, panelState.ButtonFont.Style);
+                            }
+                        }
+
+                        if (t >= 1.0)
+                        {
+                            shrinkTimer.Stop();
+                            shrinkTimer.Dispose();
+                            panelsCompleted++;
+                            if (panelsCompleted == closingButtonPanels.Count)
+                            {
+                                inStartAnimation = false;
+                                choiceForm.Tag = "Closing";
+                                if (choiceForm.IsHandleCreated && !choiceForm.IsDisposed)
+                                    choiceForm.BeginInvoke(new Action(() => choiceForm.Close()));
+                                else
+                                    choiceForm.Close();
+                            }
+                        }
+                    };
+                    shrinkTimer.Start();
+                }
+            };
         }
 
         // Check if a controller is connected
@@ -2360,7 +2973,7 @@ public static class UIManager
                 double easedProgress = EaseOutQuad(progress);
                 currentY = (int)(timerBarY + (choiceForm.Height - timerBarY) * (1 - easedProgress));
             }
-            else if (new[] { "80227815", "81250260", "81250261", "81250262", "81250263", "81250264", "81250265", "81250266", "81250267", "81175265", "81328829" }.Contains(videoId))
+            else if (new[] { "80227815", "81250260", "81250261", "81250262", "81250263", "81250264", "81250265", "81250266", "81250267", "81175265", "81251335", "81328829", "81054409", "81058723", "81205737", "80994695", "80149064", "81260654", "81019938", "81287545", "80227698", "80227699", "80227803", "80227802", "80227801", "80227800", "80227805", "80227804", "81205738", "80135585", "81054415", "81319137", "80151644", "81108751" }.Contains(videoId))
             {
                 // Calculate the eased Y position
                 double progress = Math.Min(1.0, (double)stopwatch.ElapsedMilliseconds / 400);
@@ -3086,9 +3699,47 @@ public static class UIManager
                 };
                 fadeTimer.Start();
             }
+            else if (videoId == "81054409" || videoId == "81058723" || videoId == "81205737" || videoId == "81175265" || videoId == "81251335" || videoId == "80994695" || videoId == "80149064" || videoId == "81260654" || videoId == "81019938" || videoId == "81328829" || videoId == "81287545" || videoId == "81108751" || videoId == "80151644" || videoId == "81319137" || videoId == "81054415" || videoId == "80135585" || videoId == "81205738" || videoId == "80227804" || videoId == "80227805" || videoId == "80227800" || videoId == "80227801" || videoId == "80227802" || videoId == "80227803" || videoId == "80227699" || videoId == "80227698")
+            {
+                int fadeDuration = 300;
+                int fadeInterval = 15;
+                int fadeElapsed = 0;
+                System.Windows.Forms.Timer fadeTimer = new System.Windows.Forms.Timer { Interval = fadeInterval };
+                fadeTimer.Tick += (s2, e2) =>
+                {
+                    fadeElapsed += fadeInterval;
+                    double progress = Math.Min(1.0, (double)fadeElapsed / fadeDuration);
+
+                    double targetOpacity = 1.0;
+                    if (videoId == "81175265")
+                        targetOpacity = 0.87;
+                    else if (videoId == "81251335")
+                        targetOpacity = 0.9;
+
+                    choiceForm.Opacity = targetOpacity * progress;
+
+                    if (progress >= 1.0)
+                    {
+                        fadeTimer.Stop();
+                        choiceForm.Opacity = targetOpacity;
+                    }
+                };
+                fadeTimer.Start();
+            }
             else
             {
-                choiceForm.Opacity = 1.0;
+                if (videoId == "81175265")
+                {
+                    choiceForm.Opacity = 0.87;
+                }
+                else if (videoId == "81251335")
+                {
+                    choiceForm.Opacity = 0.9;
+                }
+                else
+                {
+                    choiceForm.Opacity = 1.0;
+                }
             }
         };
         visibilityTimer.Start();
@@ -3109,7 +3760,7 @@ public static class UIManager
                     Console.WriteLine($"No choice made. Using timeout segment: {selectedSegmentId}");
                 }
                 // Otherwise, use the default choice if available
-                else if (segment.DefaultChoiceIndex.HasValue && segment.DefaultChoiceIndex.Value >= 0 && segment.DefaultChoiceIndex.Value < choices.Count)
+                else if (videoId != "81609455" && segment.DefaultChoiceIndex.HasValue && segment.DefaultChoiceIndex.Value >= 0 && segment.DefaultChoiceIndex.Value < choices.Count)
                 {
                     selectedSegmentId = choices[segment.DefaultChoiceIndex.Value].SegmentId;
                     Console.WriteLine($"No choice made. Defaulting to the specified choice: {selectedSegmentId}");
@@ -3218,7 +3869,7 @@ public static class UIManager
                         heightFactor = 0.18;
                         break;
                     case "80151644":
-                        heightFactor = 0.3;
+                        heightFactor = 0.22;
                         break;
                     case "81054409":
                         heightFactor = 0.35;
@@ -3251,7 +3902,7 @@ public static class UIManager
                         heightFactor = 0.305;
                         break;
                     case "80135585":
-                        heightFactor = 0.40;
+                        heightFactor = 0.35;
                         break;
                     case "81108751":
                         heightFactor = 0.23;
@@ -3587,7 +4238,7 @@ public static class UIManager
                     buttons[selectedIndex].BackgroundImage = new Bitmap(incorrectSprite, buttons[selectedIndex].Size);
                     // Show correct button as correct
                     var correctButton = buttons[segment.CorrectIndex.Value];
-                    var correctBtnSprite = ExtractSprite(buttonSprites[segment.CorrectIndex.Value], 4, 6);
+                    var correctBtnSprite = ExtractSprite(buttonSprites[segment.CorrectIndex.Value], 0, 6);
                     correctButton.BackgroundImage = new Bitmap(correctBtnSprite, correctButton.Size);
 
                     // Play incorrect sound
@@ -3638,7 +4289,15 @@ public static class UIManager
             controller.SetVibration(new Vibration { LeftMotorSpeed = 65535, RightMotorSpeed = 65535 });
             Task.Delay(300).ContinueWith(_ => controller.SetVibration(new Vibration())); // Stop rumble after 300ms
 
-            if (videoId == "81481556" && segment.LayoutType == "l1" || videoId == "80988062" && choices.Any(choice => choice.Text?.Equals("GO BACK", StringComparison.OrdinalIgnoreCase) == true) || videoId == "80988062" && choices.Any(choice => choice.Text?.Equals("EXIT TO CREDITS", StringComparison.OrdinalIgnoreCase) == true) || videoId == "81131714" && choices.Any(choice => choice.Text?.Equals("EXIT TO CREDITS", StringComparison.OrdinalIgnoreCase) == true) || videoId == "81131714" && segment.LayoutType == "l6" || videoId == "10000001" || videoId == "10000003" || videoId == "81251335" || videoId == "80994695" || videoId == "80135585" || videoId == "81328829" || videoId == "81205738" || videoId == "80227804" || videoId == "80227805" || videoId == "80227800" || videoId == "80227801" || videoId == "80227802" || videoId == "80227803" || videoId == "80227699" || videoId == "80227698" || videoId == "81319137" || videoId == "81205737" || videoId == "80227815" || videoId == "81250260" || videoId == "81250261" || videoId == "81250262" || videoId == "81250263" || videoId == "81250264" || videoId == "81250265" || videoId == "81250266" || videoId == "81250267")
+            if (videoId == "10000001" && activeTutorialForm != null && activeTutorialForm.IsHandleCreated)
+            {
+                activeTutorialForm.Invoke(new Action(() => {
+                    if (!activeTutorialForm.IsDisposed)
+                        activeTutorialForm.Close();
+                }));
+            }
+
+            if (videoId == "81481556" && segment.LayoutType == "l1" || videoId == "80988062" && choices.Any(choice => choice.Text?.Equals("GO BACK", StringComparison.OrdinalIgnoreCase) == true) || videoId == "80988062" && choices.Any(choice => choice.Text?.Equals("EXIT TO CREDITS", StringComparison.OrdinalIgnoreCase) == true) || videoId == "81131714" && choices.Any(choice => choice.Text?.Equals("EXIT TO CREDITS", StringComparison.OrdinalIgnoreCase) == true) || videoId == "81131714" && segment.LayoutType == "l6" || videoId == "10000001" || videoId == "10000003" || videoId == "81251335" || videoId == "80149064" || videoId == "80994695" || videoId == "80135585" || videoId == "81328829" || videoId == "81205738" || videoId == "80227804" || videoId == "80227805" || videoId == "80227800" || videoId == "80227801" || videoId == "80227802" || videoId == "80227803" || videoId == "80227699" || videoId == "80227698" || videoId == "81319137" || videoId == "81205737" || videoId == "80227815" || videoId == "81250260" || videoId == "81250261" || videoId == "81250262" || videoId == "81250263" || videoId == "81250264" || videoId == "81250265" || videoId == "81250266" || videoId == "81250267")
             {
                 choiceForm.Close(); // Close the form immediately after a choice is made
             }
@@ -3759,7 +4418,7 @@ public static class UIManager
     private static readonly Dictionary<Panel, System.Windows.Forms.Timer> panelAnimationTimers = new Dictionary<Panel, System.Windows.Forms.Timer>();
     private static readonly Dictionary<Panel, (Size size, Point location, Size buttonSize, float fontSize, ContentAlignment textAlign, Padding padding, Size? iconSize, Point? iconLocation)> panelOriginalBounds
     = new Dictionary<Panel, (Size, Point, Size, float, ContentAlignment, Padding, Size?, Point?)>();
-    private static void AnimatePanelGrow(Panel panel, Button button, double scale = 1.12, int durationMs = 120)
+    private static void AnimatePanelGrow(Panel panel, Button button, double scale = 1.08, int durationMs = 120)
     {
         PictureBox icon = button.Controls.OfType<PictureBox>().FirstOrDefault();
         if (!panelOriginalBounds.ContainsKey(panel))
@@ -3784,12 +4443,94 @@ public static class UIManager
         AnimatePanelSize(panel, button, panel.Size, panel.Location, originalSize, originalLocation, durationMs, originalButtonSize, originalFontSize, 1.0, originalTextAlign, originalPadding, originalIconSize, originalIconLocation);
     }
 
-    private static void AnimatePanelSize(
-    Panel panel, Button button,
-    Size fromSize, Point fromLoc, Size toSize, Point toLoc,
-    int durationMs, Size originalButtonSize, float originalFontSize, double targetScale,
-    ContentAlignment originalTextAlign, Padding originalPadding,
-    Size? originalIconSize, Point? originalIconLocation)
+    private static void AnimatePanelsBoingClose(List<Panel> panels, Action onComplete = null)
+    {
+        int delayBetween = 37;
+        int animDuration = 150;
+        int completed = 0;
+
+        var originalStates = panels.Select(panel => new
+        {
+            Panel = panel,
+            Size = panel.Size,
+            Location = panel.Location,
+            Button = panel.Controls.OfType<Button>().FirstOrDefault(),
+            ButtonSize = panel.Controls.OfType<Button>().FirstOrDefault()?.Size,
+            ButtonLocation = panel.Controls.OfType<Button>().FirstOrDefault()?.Location,
+            ButtonFont = panel.Controls.OfType<Button>().FirstOrDefault()?.Font,
+            TextLabel = panel.Controls.OfType<Label>().FirstOrDefault(),
+            TextLabelSize = panel.Controls.OfType<Label>().FirstOrDefault()?.Size,
+            TextLabelLocation = panel.Controls.OfType<Label>().FirstOrDefault()?.Location,
+            TextLabelFont = panel.Controls.OfType<Label>().FirstOrDefault()?.Font
+        }).ToList();
+
+        for (int i = 0; i < panels.Count; i++)
+        {
+            var state = originalStates[i];
+            var panel = state.Panel;
+            var button = state.Button;
+            if (panel == null || button == null) continue;
+
+            int startDelay = i * delayBetween;
+            int elapsed = 0;
+            System.Windows.Forms.Timer shrinkTimer = new System.Windows.Forms.Timer { Interval = 7 };
+            shrinkTimer.Tick += (s, e) =>
+            {
+                elapsed += shrinkTimer.Interval;
+                if (elapsed < startDelay) return;
+
+                double t = Math.Min(1.0, (double)(elapsed - startDelay) / animDuration);
+
+                double scale;
+                if (t < 0.4)
+                {
+                    scale = 1.0 + (0.18 * EaseOutElastic(t / 0.4));
+                }
+                else
+                {
+                    double shrinkT = (t - 0.4) / 0.6;
+                    scale = 1.18 * (1.0 - EaseOutQuad(shrinkT));
+                }
+                scale = Math.Max(0.0, scale);
+
+                int w = (int)(state.Size.Width * scale);
+                int h = (int)(state.Size.Height * scale);
+                int x = state.Location.X + (state.Size.Width - w) / 2;
+                int y = state.Location.Y + (state.Size.Height - h) / 2;
+                panel.Size = new Size(w, h);
+                panel.Location = new Point(x, y);
+
+                if (state.ButtonSize.HasValue && state.ButtonLocation.HasValue)
+                {
+                    int bw = (int)(state.ButtonSize.Value.Width * scale);
+                    int bh = (int)(state.ButtonSize.Value.Height * scale);
+                    int by = (int)(state.ButtonLocation.Value.Y * scale);
+                    button.Size = new Size(bw, bh);
+                    button.Location = new Point((panel.Size.Width - bw) / 2, by);
+
+                    if (state.ButtonFont != null)
+                    {
+                        float fontSize = (float)(state.ButtonFont.Size * scale);
+                        if (fontSize < 1f) fontSize = 1f;
+                        button.Font = new Font(state.ButtonFont.FontFamily, fontSize, state.ButtonFont.Style);
+                    }
+                }
+
+                if (t >= 1.0)
+                {
+                    panel.Size = new Size(1, 1);
+                    shrinkTimer.Stop();
+                    shrinkTimer.Dispose();
+                    completed++;
+                    if (completed == panels.Count && onComplete != null)
+                        onComplete();
+                }
+            };
+            shrinkTimer.Start();
+        }
+    }
+
+    private static void AnimatePanelSize(Panel panel, Button button, Size fromSize, Point fromLoc, Size toSize, Point toLoc, int durationMs, Size originalButtonSize, float originalFontSize, double targetScale, ContentAlignment originalTextAlign, Padding originalPadding, Size? originalIconSize, Point? originalIconLocation)
     {
         if (panelAnimationTimers.TryGetValue(panel, out var runningTimer))
         {
@@ -3812,6 +4553,11 @@ public static class UIManager
         Size? startIconSize = icon?.Size;
         Point? startIconLocation = icon?.Location;
 
+        var textLabel = panel.Controls.OfType<Label>().FirstOrDefault();
+
+        int originalButtonY = button.Location.Y;
+        int labelYOffsetFromButton = textLabel != null ? textLabel.Location.Y - (button.Location.Y + button.Height) : 0;
+
         timer.Tick += (s, e) =>
         {
             elapsed += timer.Interval;
@@ -3827,11 +4573,14 @@ public static class UIManager
             panel.Size = new Size(w, h);
             panel.Location = new Point(x, y);
 
-            // Interpolate button size/location
+            // Interpolate button size
             int btnW = (int)(startButtonSize.Width + (originalButtonSize.Width * targetScale - startButtonSize.Width) * eased);
             int btnH = (int)(startButtonSize.Height + (originalButtonSize.Height * targetScale - startButtonSize.Height) * eased);
+
+            int btnY = originalButtonY;
+
             button.Size = new Size(btnW, btnH);
-            button.Location = new Point((panel.Width - btnW) / 2, (panel.Height - btnH) / 2);
+            button.Location = new Point((panel.Width - btnW) / 2, btnY);
 
             // Interpolate font size
             float newFontSize = (float)(startFontSize + (originalFontSize * targetScale - startFontSize) * eased);
@@ -3860,13 +4609,20 @@ public static class UIManager
                 icon.Location = new Point(iconX, iconY);
             }
 
+            // Keep the label at the same offset below the button
+            if (textLabel != null)
+            {
+                int newLabelY = button.Location.Y + button.Height + labelYOffsetFromButton;
+                textLabel.Location = new Point((panel.Width - textLabel.Width) / 2, newLabelY);
+            }
+
             if (t >= 1.0)
             {
                 // Ensure final state is set exactly
                 panel.Size = toSize;
                 panel.Location = toLoc;
                 button.Size = new Size((int)(originalButtonSize.Width * targetScale), (int)(originalButtonSize.Height * targetScale));
-                button.Location = new Point((panel.Width - button.Width) / 2, (panel.Height - button.Height) / 2);
+                button.Location = new Point((panel.Width - button.Width) / 2, originalButtonY);
                 button.Font = new Font(button.Font.FontFamily, originalFontSize * (float)targetScale, button.Font.Style);
                 button.Padding = new Padding(
                     (int)(originalPadding.Left * targetScale),
@@ -3880,6 +4636,12 @@ public static class UIManager
                 {
                     icon.Size = new Size((int)(originalIconSize.Value.Width * targetScale), (int)(originalIconSize.Value.Height * targetScale));
                     icon.Location = new Point((int)(originalIconLocation.Value.X * targetScale), (int)(originalIconLocation.Value.Y * targetScale));
+                }
+
+                if (textLabel != null)
+                {
+                    int newLabelY = button.Location.Y + button.Height + labelYOffsetFromButton;
+                    textLabel.Location = new Point((panel.Width - textLabel.Width) / 2, newLabelY);
                 }
 
                 timer.Stop();
@@ -3924,7 +4686,7 @@ public static class UIManager
         {
             ColorMatrix colorMatrix = new ColorMatrix
             {
-                Matrix33 = (float)progress // Set the alpha value based on progress
+                Matrix33 = (float)progress
             };
 
             ImageAttributes attributes = new ImageAttributes();

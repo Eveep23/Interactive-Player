@@ -20,6 +20,9 @@ namespace InteractivePlayer
         private Image[] nextLayers = null;
         private Point mousePos = new Point(0, 0);
 
+        private Cursor customCursorNormal = null;
+        private Cursor customCursorHovered = null;
+
         private bool[] folderAvailable = new bool[6];
         private bool[] folderGrayscaled = new bool[6];
 
@@ -80,6 +83,55 @@ namespace InteractivePlayer
         private Image leftArrowHover, rightArrowHover;
         private bool leftArrowHovered = false, rightArrowHovered = false;
 
+        private void LoadCustomCursors()
+        {
+            string basePath = Path.Combine(AppDomain.CurrentDomain.BaseDirectory, "MCSM", "general");
+            string normalPath = Path.Combine(basePath, "MCSMCursorNormal.png");
+            string hoveredPath = Path.Combine(basePath, "MCSMCursorHovered.png");
+
+            // Load normal cursor
+            if (File.Exists(normalPath))
+            {
+                try
+                {
+                    using (var bmp = new Bitmap(normalPath))
+                    {
+                        IntPtr iconHandle = bmp.GetHicon();
+                        customCursorNormal = new Cursor(iconHandle);
+                    }
+                }
+                catch
+                {
+                    customCursorNormal = Cursors.Default;
+                }
+            }
+            else
+            {
+                customCursorNormal = Cursors.Default;
+            }
+
+            // Load hovered cursor
+            if (File.Exists(hoveredPath))
+            {
+                try
+                {
+                    using (var bmp = new Bitmap(hoveredPath))
+                    {
+                        IntPtr iconHandle = bmp.GetHicon();
+                        customCursorHovered = new Cursor(iconHandle);
+                    }
+                }
+                catch
+                {
+                    customCursorHovered = customCursorNormal ?? Cursors.Default;
+                }
+            }
+            else
+            {
+                customCursorHovered = customCursorNormal ?? Cursors.Default;
+            }
+        }
+
         private void SaveLastMenu()
         {
             var obj = new JObject
@@ -123,6 +175,9 @@ namespace InteractivePlayer
             LoadLastMenu();
             CheckFolders();
             LoadFolderImages();
+
+            LoadCustomCursors();
+            Cursor = customCursorNormal;
 
             SetStyle(ControlStyles.AllPaintingInWmPaint | ControlStyles.UserPaint | ControlStyles.OptimizedDoubleBuffer, true);
             UpdateStyles();
@@ -503,6 +558,8 @@ namespace InteractivePlayer
             mousePos = e.Location;
             bool needInvalidate = false;
 
+            bool anyButtonHovered = false;
+
             // Play button hover
             bool wasHovered = playButtonHovered;
             playButtonHovered = playButtonRect.Contains(mousePos);
@@ -512,6 +569,7 @@ namespace InteractivePlayer
                 if (playButtonHovered)
                     PlayHoverSound();
             }
+            if (playButtonHovered) anyButtonHovered = true;
 
             // Arrow hover
             bool wasLeftArrowHovered = leftArrowHovered;
@@ -530,6 +588,7 @@ namespace InteractivePlayer
                 if (rightArrowHovered)
                     PlayHoverSound();
             }
+            if (leftArrowHovered || rightArrowHovered) anyButtonHovered = true;
 
             bool wasContinueHovered = continueButtonHovered;
             bool wasRestartHovered = restartButtonHovered;
@@ -541,6 +600,7 @@ namespace InteractivePlayer
                 if (continueButtonHovered || restartButtonHovered)
                     PlayHoverSound();
             }
+            if (continueButtonHovered || restartButtonHovered) anyButtonHovered = true;
 
             if (currentFolderIndex == 0)
             {
@@ -554,7 +614,10 @@ namespace InteractivePlayer
                     if (tutorialButtonHovered || trailerButtonHovered)
                         PlayHoverSound();
                 }
+                if (tutorialButtonHovered || trailerButtonHovered) anyButtonHovered = true;
             }
+
+            Cursor = anyButtonHovered ? customCursorHovered : customCursorNormal;
 
             if (needInvalidate)
                 Invalidate();
@@ -876,7 +939,11 @@ namespace InteractivePlayer
             int parallaxRefY = (currentFolderIndex == 0) ? centerY : bottomY;
 
             Point parallaxOrigin = new Point(parallaxRefX, parallaxRefY);
-            Point parallaxMouse = isAnimating ? parallaxOrigin : mousePos;
+            Point parallaxMouse;
+            if (Utilities.LowEndHardware)
+                parallaxMouse = parallaxOrigin;
+            else
+                parallaxMouse = isAnimating ? parallaxOrigin : mousePos;
 
             for (int set = 0; set < (isAnimating ? 2 : 1); set++)
             {

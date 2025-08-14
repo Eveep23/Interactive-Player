@@ -10,6 +10,15 @@ using static UIManager;
 
 public static class KeyForm
 {
+    public static string RequestedJumpSegmentId { get; private set; }
+    public static long? RequestedJumpTimeMs { get; private set; }
+
+    public static void ClearJumpRequest()
+    {
+        RequestedJumpSegmentId = null;
+        RequestedJumpTimeMs = null;
+    }
+
     private static Form keyPressForm;
 
     private static System.Threading.Thread keyPressThread;
@@ -23,7 +32,7 @@ public static class KeyForm
 
     private static IntPtr cachedVlcHandle = IntPtr.Zero;
     private static DateTime lastVlcHandleCheck = DateTime.MinValue;
-    private static readonly TimeSpan vlcHandleCheckInterval = TimeSpan.FromSeconds(5);
+    private static readonly TimeSpan vlcHandleCheckInterval = TimeSpan.FromSeconds(2);
 
     public static void InitializeKeyPressWindow(MediaPlayer mediaPlayer, string infoJsonFile, string saveFilePath, Segment currentSegment, Dictionary<string, Segment> segments, string videoId, Dictionary<string, List<SegmentGroup>> segmentGroups, Dictionary<string, List<SegmentState>> segmentStates)
     {
@@ -294,7 +303,6 @@ public static class KeyForm
         fullScreenButton.FlatAppearance.MouseDownBackColor = Color.Transparent;
         fullScreenButton.FlatAppearance.MouseOverBackColor = Color.Transparent;
 
-        // Track fullscreen state
         bool isFullScreen = false;
 
         fullScreenButton.Paint += (sender, e) =>
@@ -347,20 +355,20 @@ public static class KeyForm
         changeChoicesButton.FlatAppearance.MouseDownBackColor = Color.Transparent;
         changeChoicesButton.FlatAppearance.MouseOverBackColor = Color.Transparent;
 
-        bool enableSnapshots = false;
-        try
-        {
-            string configFilePath = Path.Combine(currentDirectory, "config.json");
-            if (File.Exists(configFilePath))
-            {
-                var configJson = System.IO.File.ReadAllText(configFilePath);
-                var configObj = Newtonsoft.Json.Linq.JObject.Parse(configJson);
-                enableSnapshots = configObj["EnableSnapshots"]?.ToObject<bool>() ?? false;
-            }
-        }
-        catch
+        bool enableSnapshots = true;
+        string snapshotType = null;
+
+        if (videoId == "81481556")
         {
             enableSnapshots = false;
+        }
+        else if (videoId == "10000001" || videoId == "10000003" || videoId == "81271335" || videoId == "81609455" || videoId == "81260654" || videoId == "81004016" || videoId == "81175265")
+        {
+            snapshotType = "undo";
+        }
+        else if (videoId == "80227815" || videoId == "81250260" || videoId == "81250261" || videoId == "81250262" || videoId == "81250263" || videoId == "81250264" || videoId == "81250265" || videoId == "81250266" || videoId == "81250267")
+        {
+            snapshotType = "bk";
         }
         changeChoicesButton.Visible = enableSnapshots;
 
@@ -382,36 +390,29 @@ public static class KeyForm
         };
         changeChoicesButton.Click += (sender, e) =>
         {
-            mediaPlayer.Pause();
+            if (mediaPlayer.IsPlaying)
+                mediaPlayer.Pause();
+
             InteractivePlayer.ChangeChoices.ShowChangeChoicesMenu(saveFilePath, infoJsonFile, (selectedSnapshot, startTimeMs) =>
             {
-                if (selectedSnapshot == null) return;
-                if (segments.TryGetValue(selectedSnapshot.CurrentSegment, out var seg))
+                if (selectedSnapshot != null && startTimeMs.HasValue)
                 {
-                    currentSegment = seg;
-
-                    var globalState = selectedSnapshot.GlobalState;
-                    var persistentState = selectedSnapshot.PersistentState;
-
-                    // Run HandleSegment on a background thread
-                    Task.Run(() =>
+                    string movieFolder = Path.GetDirectoryName(saveFilePath);
+                    string fullscreenArg = isFullScreen ? " --fullscreen" : "";
+                    var startInfo = new System.Diagnostics.ProcessStartInfo
                     {
-                        var nextSegmentId = JsonParser.HandleSegment(
-                            mediaPlayer, currentSegment, segments, Path.GetDirectoryName(saveFilePath),
-                            videoId, ref globalState, ref persistentState, infoJsonFile, saveFilePath,
-                            segmentGroups, segmentStates, false, startTimeMs);
-
-                        if (!string.IsNullOrEmpty(nextSegmentId) && segments.ContainsKey(nextSegmentId))
-                        {
-                            currentSegment = segments[nextSegmentId];
-                        }
-                    });
+                        FileName = Application.ExecutablePath,
+                        Arguments = $"--skipmenus \"{movieFolder}\" {startTimeMs.Value}{fullscreenArg}"
+                    };
+                    System.Diagnostics.Process.Start(startInfo);
+                    Application.Exit();
                 }
                 else
                 {
-                    MessageBox.Show($"Segment {selectedSnapshot.CurrentSegment} not found in this interactive.");
+                    mediaPlayer.Play();
                 }
-            });
+            }, snapshotType);
+
             mediaPlayer.Play();
         };
 

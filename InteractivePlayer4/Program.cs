@@ -53,8 +53,21 @@ class Program
         }
 
         string movieFolder = null;
+        bool skipContinueMenu = false;
+        long? startTimeMs = null;
 
-        if (args.Length > 0)
+        if (args.Length > 1 && args[0] == "--skipmenus")
+        {
+            movieFolder = args[1].Trim('"');
+            skipContinueMenu = true;
+
+            // Check for a third positional argument (startTimeMs)
+            if (args.Length > 2 && long.TryParse(args[2], out long ms))
+            {
+                startTimeMs = ms;
+            }
+        }
+        else if(args.Length > 0)
         {
             movieFolder = args[0].Trim('"');
             if (!Directory.Exists(movieFolder))
@@ -73,8 +86,9 @@ class Program
             }
         }
 
-        bool skipContinueMenu = false;
-        if (movieFolder != null && Directory.GetParent(movieFolder) != null && string.Equals(Directory.GetParent(movieFolder).Name, "MCSM", StringComparison.OrdinalIgnoreCase) && File.Exists(Path.Combine(movieFolder, "save.json")))
+        bool forceFullscreen = args.Any(a => a.Equals("--fullscreen", StringComparison.OrdinalIgnoreCase));
+
+        if (movieFolder != null && Directory.GetParent(movieFolder) != null && string.Equals(Directory.GetParent(movieFolder).Name, "MCSM", StringComparison.OrdinalIgnoreCase) && File.Exists(Path.Combine(movieFolder, "save.json")) || movieFolder != null && Directory.GetParent(movieFolder) != null && Directory.GetParent(movieFolder).Name.StartsWith("BK", StringComparison.OrdinalIgnoreCase))
         {
             skipContinueMenu = true;
         }
@@ -192,6 +206,7 @@ class Program
             "--no-input-fast-seek",
             "--drop-late-frames",
             "--skip-frames",
+            "--avcodec-hw=none",
             "--video-title=Interactive Player   "
         };
         /*
@@ -204,6 +219,11 @@ class Program
         var libVLC = new LibVLC(vlcOptions.ToArray());
         var media = new Media(libVLC, new Uri(Path.GetFullPath(videoFile)));
         var mediaPlayer = new MediaPlayer(media);
+
+        if (forceFullscreen)
+        {
+            mediaPlayer.Fullscreen = true;
+        }
 
         if (loadingForm != null && loadingForm.IsHandleCreated)
         {
@@ -225,11 +245,12 @@ class Program
 
                 Console.WriteLine($"Now playing segment: {segment.Id}");
 
-                currentSegment = JsonParser.HandleSegment(mediaPlayer, segment, segments, movieFolder, videoId, ref globalState, ref persistentState, infoJsonFile, saveFilePath, segmentGroups, segmentStates, isFirstLoad);
+                currentSegment = JsonParser.HandleSegment(mediaPlayer, segment, segments, movieFolder, videoId, ref globalState, ref persistentState, infoJsonFile, saveFilePath, segmentGroups, segmentStates, isFirstLoad, startTimeMs.HasValue ? (int?)startTimeMs.Value : null);
 
                 SaveManager.SaveProgress(saveFilePath, currentSegment, globalState, persistentState);
 
                 isFirstLoad = false;
+                startTimeMs = null;
             }
 
             Console.WriteLine("Interactive finished.");
