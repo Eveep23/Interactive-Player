@@ -2319,6 +2319,7 @@ public static class UIManager
             }
         }        
 
+        /*
         if (new[] { "80227815", "81250260", "81250261", "81250262", "81250263", "81250264", "81250265", "81250266", "81250267" }.Contains(videoId))
         {
             System.Windows.Forms.Timer animationTimer = new System.Windows.Forms.Timer { Interval = 10 };
@@ -2358,6 +2359,7 @@ public static class UIManager
 
             animationTimer.Start();
         }
+        */
 
         // Adjust the timer bar position to avoid overlapping with the buttons and labels
         int timerBarY;
@@ -2553,6 +2555,266 @@ public static class UIManager
 
                 delayBetween = 80;
                 int closingAnimDuration = 320;
+                int interval = 15;
+                int panelsCompleted = 0;
+
+                // Fade out timer
+                int fadeElapsed = 0;
+                double initialOpacity = choiceForm.Opacity;
+                System.Windows.Forms.Timer fadeTimer = new System.Windows.Forms.Timer { Interval = interval };
+                fadeTimer.Tick += (sender, args) =>
+                {
+                    fadeElapsed += interval;
+                    double t = Math.Min(1.0, (double)fadeElapsed / (closingAnimDuration + delayBetween * (closingButtonPanels.Count - 1)));
+                    choiceForm.Opacity = initialOpacity * (1.0 - t);
+                    if (t >= 1.0)
+                    {
+                        fadeTimer.Stop();
+                        choiceForm.Opacity = 0;
+                    }
+                };
+                fadeTimer.Start();
+
+                for (int i = 0; i < closingButtonPanels.Count; i++)
+                {
+                    var panelState = closingPanelStates[i];
+                    var panel = panelState.Panel;
+                    var button = panelState.Button;
+                    if (panel == null || button == null) continue;
+
+                    int startDelay = i * delayBetween;
+                    int elapsed = 0;
+
+                    System.Windows.Forms.Timer shrinkTimer = new System.Windows.Forms.Timer { Interval = interval };
+                    shrinkTimer.Tick += (sender2, e2) =>
+                    {
+                        inStartAnimation = true;
+                        elapsed += interval;
+                        if (elapsed < startDelay) return;
+
+                        double t = Math.Min(1.0, (double)(elapsed - startDelay) / closingAnimDuration);
+
+                        double scale;
+                        if (t < 0.4)
+                        {
+                            scale = 1.0 + (0.18 * EaseOutElastic(t / 0.4));
+                        }
+                        else
+                        {
+                            double shrinkT = (t - 0.4) / 0.6;
+                            scale = 1.18 * (1.0 - EaseOutQuad(shrinkT));
+                        }
+                        scale = Math.Max(0.0, scale);
+
+                        if (panelState.TextLabel != null && panelState.Button != null && panelState.ButtonSize.HasValue && panelState.ButtonLocation.HasValue && panelState.TextLabelLocation.HasValue)
+                        {
+                            int originalLabelOffset = panelState.TextLabelLocation.Value.Y - (panelState.ButtonLocation.Value.Y + panelState.ButtonSize.Value.Height);
+                            int labelY = button.Location.Y + button.Size.Height + originalLabelOffset;
+                            panelState.TextLabel.Location = new Point((panel.Width - panelState.TextLabel.Width) / 2, labelY);
+                        }
+
+                        int w = (int)(panelState.Size.Width * scale);
+                        int h = (int)(panelState.Size.Height * scale);
+                        int x = panelState.Location.X + (panelState.Size.Width - w) / 2;
+                        int y = panelState.Location.Y + (panelState.Size.Height - h) / 2;
+                        panel.Size = new Size(w, h);
+                        panel.Location = new Point(x, y);
+
+                        if (panelState.ButtonSize.HasValue && panelState.ButtonLocation.HasValue)
+                        {
+                            int bw = (int)(panelState.ButtonSize.Value.Width * scale);
+                            int bh = (int)(panelState.ButtonSize.Value.Height * scale);
+
+                            int finalButtonY = panelState.ButtonLocation.Value.Y;
+                            int centerY = (panel.Size.Height - bh) / 2;
+                            int by = (int)(centerY + (finalButtonY - centerY) * (1.0 - scale));
+
+                            button.Size = new Size(bw, bh);
+                            button.Location = new Point((panel.Size.Width - bw) / 2, by);
+
+                            if (panelState.ButtonFont != null)
+                            {
+                                float fontSize = (float)(panelState.ButtonFont.Size * scale);
+                                if (fontSize < 1f) fontSize = 1f;
+                                button.Font = new Font(panelState.ButtonFont.FontFamily, fontSize, panelState.ButtonFont.Style);
+                            }
+                        }
+
+                        if (t >= 1.0)
+                        {
+                            shrinkTimer.Stop();
+                            shrinkTimer.Dispose();
+                            panelsCompleted++;
+                            if (panelsCompleted == closingButtonPanels.Count)
+                            {
+                                inStartAnimation = false;
+                                choiceForm.Tag = "Closing";
+                                if (choiceForm.IsHandleCreated && !choiceForm.IsDisposed)
+                                    choiceForm.BeginInvoke(new Action(() => choiceForm.Close()));
+                                else
+                                    choiceForm.Close();
+                            }
+                        }
+                    };
+                    shrinkTimer.Start();
+                }
+            };
+        }
+
+        if (videoId == "80227815" || videoId == "81250260" || videoId == "81250261" || videoId == "81250262" || videoId == "81250263" || videoId == "81250264" || videoId == "81250265" || videoId == "81250266" || videoId == "81250267")
+        {
+            var buttonPanels = choiceForm.Controls.OfType<Panel>().Where(p => p.Controls.OfType<Button>().Any()).ToList();
+            var originalPanelStates = buttonPanels
+                .Select(panel => new
+                {
+                    Panel = panel,
+                    Size = panel.Size,
+                    Location = panel.Location,
+                    Button = panel.Controls.OfType<Button>().FirstOrDefault(),
+                    ButtonSize = panel.Controls.OfType<Button>().FirstOrDefault()?.Size,
+                    ButtonLocation = panel.Controls.OfType<Button>().FirstOrDefault()?.Location,
+                    ButtonFont = panel.Controls.OfType<Button>().FirstOrDefault()?.Font,
+                    TextLabel = panel.Controls.OfType<Label>().FirstOrDefault(),
+                    TextLabelSize = panel.Controls.OfType<Label>().FirstOrDefault()?.Size,
+                    TextLabelLocation = panel.Controls.OfType<Label>().FirstOrDefault()?.Location,
+                    TextLabelFont = panel.Controls.OfType<Label>().FirstOrDefault()?.Font
+                })
+                .ToList();
+
+            int delayBetween = 0;
+            int animDuration = 200;
+            double boingScale = 1.23;
+
+            for (int i = 0; i < buttonPanels.Count; i++)
+            {
+                var panelState = originalPanelStates[i];
+                var panel = panelState.Panel;
+                var button = panelState.Button;
+                var textLabel = panelState.TextLabel;
+                if (panel == null || button == null) continue;
+
+                panel.Size = new Size(1, 1);
+                panel.Location = new Point(
+                    panelState.Location.X + (panelState.Size.Width - 1) / 2,
+                    panelState.Location.Y + (panelState.Size.Height - 1) / 2
+                );
+                button.Size = new Size(1, 1);
+                button.Location = new Point((panel.Size.Width - 1) / 2, (panel.Size.Height - 1) / 2);
+
+                if (textLabel != null && panelState.TextLabelSize.HasValue && panelState.TextLabelLocation.HasValue && panelState.TextLabelFont != null)
+                {
+                    textLabel.Size = panelState.TextLabelSize.Value;
+                    textLabel.Location = panelState.TextLabelLocation.Value;
+                    textLabel.Font = panelState.TextLabelFont;
+                    textLabel.Visible = true;
+                }
+
+                int startDelay = i * delayBetween;
+                System.Windows.Forms.Timer animTimer = new System.Windows.Forms.Timer { Interval = 15 };
+                int elapsed = 0;
+
+                animTimer.Tick += (s, e) =>
+                {
+                    inStartAnimation = true;
+                    elapsed += animTimer.Interval;
+                    if (elapsed < startDelay) return;
+
+                    double t = Math.Min(1.0, (double)(elapsed - startDelay) / animDuration);
+
+                    double scale;
+                    if (t < 0.5)
+                    {
+                        scale = 2 * t * boingScale;
+                    }
+                    else
+                    {
+                        scale = boingScale - (2 * (t - 0.5) * (boingScale - 1.0));
+                    }
+                    scale = Math.Min(Math.Max(scale, 0.0), boingScale);
+
+                    if (panelState.TextLabel != null && panelState.Button != null && panelState.ButtonSize.HasValue && panelState.ButtonLocation.HasValue && panelState.TextLabelLocation.HasValue)
+                    {
+                        int originalLabelOffset = panelState.TextLabelLocation.Value.Y - (panelState.ButtonLocation.Value.Y + panelState.ButtonSize.Value.Height);
+
+                        int labelY = button.Location.Y + button.Size.Height + originalLabelOffset;
+                        panelState.TextLabel.Location = new Point((panel.Width - panelState.TextLabel.Width) / 2, labelY);
+                    }
+
+                    int w = (int)(panelState.Size.Width * scale);
+                    int h = (int)(panelState.Size.Height * scale);
+                    int x = panelState.Location.X + (panelState.Size.Width - w) / 2;
+                    int y = panelState.Location.Y + (panelState.Size.Height - h) / 2;
+                    panel.Size = new Size(w, h);
+                    panel.Location = new Point(x, y);
+
+                    int finalButtonY = panelState.ButtonLocation.HasValue
+                        ? panelState.ButtonLocation.Value.Y
+                        : (panel.Size.Height - button.Size.Height) / 2;
+
+                    if (panelState.ButtonSize.HasValue && panelState.ButtonLocation.HasValue)
+                    {
+                        int bw = (int)(panelState.ButtonSize.Value.Width * scale);
+                        int bh = (int)(panelState.ButtonSize.Value.Height * scale);
+
+                        int by = (int)(panelState.ButtonLocation.Value.Y * scale);
+
+                        button.Size = new Size(bw, bh);
+                        button.Location = new Point((panel.Size.Width - bw) / 2, by);
+
+                        if (panelState.ButtonFont != null)
+                        {
+                            float fontSize = (float)(panelState.ButtonFont.Size * scale);
+                            if (fontSize < 1f) fontSize = 1f;
+                            button.Font = new Font(panelState.ButtonFont.FontFamily, fontSize, panelState.ButtonFont.Style);
+                        }
+                    }
+
+                    if (t >= 1.0)
+                    {
+                        panel.Size = panelState.Size;
+                        panel.Location = panelState.Location;
+                        if (panelState.ButtonSize.HasValue && panelState.ButtonLocation.HasValue)
+                        {
+                            button.Size = panelState.ButtonSize.Value;
+                            button.Location = panelState.ButtonLocation.Value;
+                        }
+                        if (panelState.ButtonFont != null)
+                            button.Font = panelState.ButtonFont;
+
+                        inStartAnimation = false;
+                        animTimer.Stop();
+                        animTimer.Dispose();
+                    }
+                };
+                animTimer.Start();
+            }
+
+            choiceForm.FormClosing += (s, e) =>
+            {
+                if ((choiceForm.Tag as string) == "Closing") return;
+
+                e.Cancel = true;
+
+                var closingButtonPanels = choiceForm.Controls.OfType<Panel>().Where(p => p.Controls.OfType<Button>().Any()).ToList();
+                var closingPanelStates = closingButtonPanels
+                    .Select(panel => new
+                    {
+                        Panel = panel,
+                        Size = panel.Size,
+                        Location = panel.Location,
+                        Button = panel.Controls.OfType<Button>().FirstOrDefault(),
+                        ButtonSize = panel.Controls.OfType<Button>().FirstOrDefault()?.Size,
+                        ButtonLocation = panel.Controls.OfType<Button>().FirstOrDefault()?.Location,
+                        ButtonFont = panel.Controls.OfType<Button>().FirstOrDefault()?.Font,
+                        TextLabel = panel.Controls.OfType<Label>().FirstOrDefault(),
+                        TextLabelSize = panel.Controls.OfType<Label>().FirstOrDefault()?.Size,
+                        TextLabelLocation = panel.Controls.OfType<Label>().FirstOrDefault()?.Location,
+                        TextLabelFont = panel.Controls.OfType<Label>().FirstOrDefault()?.Font
+                    })
+                    .ToList();
+
+                delayBetween = 0;
+                int closingAnimDuration = 200;
                 int interval = 15;
                 int panelsCompleted = 0;
 
@@ -3715,6 +3977,29 @@ public static class UIManager
                         targetOpacity = 0.87;
                     else if (videoId == "81251335")
                         targetOpacity = 0.9;
+
+                    choiceForm.Opacity = targetOpacity * progress;
+
+                    if (progress >= 1.0)
+                    {
+                        fadeTimer.Stop();
+                        choiceForm.Opacity = targetOpacity;
+                    }
+                };
+                fadeTimer.Start();
+            }
+            else if (videoId == "80227815" || videoId == "81250260" || videoId == "81250261" || videoId == "81250262" || videoId == "81250263" || videoId == "81250264" || videoId == "81250265" || videoId == "81250266" || videoId == "81250267")
+            {
+                int fadeDuration = 200;
+                int fadeInterval = 15;
+                int fadeElapsed = 0;
+                System.Windows.Forms.Timer fadeTimer = new System.Windows.Forms.Timer { Interval = fadeInterval };
+                fadeTimer.Tick += (s2, e2) =>
+                {
+                    fadeElapsed += fadeInterval;
+                    double progress = Math.Min(1.0, (double)fadeElapsed / fadeDuration);
+
+                    double targetOpacity = 0.97;
 
                     choiceForm.Opacity = targetOpacity * progress;
 

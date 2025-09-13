@@ -54,6 +54,18 @@ public static class Utilities
         }
     }
     */
+    public static Image LoadImageUnlocked(string path)
+    {
+        using (var fs = new FileStream(path, FileMode.Open, FileAccess.Read, FileShare.ReadWrite))
+        {
+            using (var ms = new MemoryStream())
+            {
+                fs.CopyTo(ms);
+                ms.Position = 0;
+                return Image.FromStream(ms);
+            }
+        }
+    }
     public static string ShowMovieSelectionMenu(string initialDirectory = null)
     {
         string currentDirectory = initialDirectory ?? Directory.GetCurrentDirectory();
@@ -137,7 +149,7 @@ public static class Utilities
 
         Label footerLabel = new Label
         {
-            Text = "Interactive Player 2.0.46 Preview developed by Eveep23",
+            Text = "Interactive Player 2.0.52 Preview developed by Eveep23",
             Font = new Font("Arial", 10, FontStyle.Italic),
             ForeColor = Color.White,
             TextAlign = ContentAlignment.MiddleCenter,
@@ -488,8 +500,8 @@ public static class Utilities
                     Width = buttonWidth,
                     Height = 238,
                     BackgroundImage = isEmptyInteractiveFolder
-                        ? GrayscaleImage(Image.FromFile(backdropPath))
-                        : Image.FromFile(backdropPath),
+                        ? GrayscaleImage(LoadImageUnlocked(backdropPath))
+                        : LoadImageUnlocked(backdropPath),
                     BackgroundImageLayout = ImageLayout.Stretch,
                     TextAlign = ContentAlignment.MiddleCenter,
                     Font = new Font("Arial", 12, FontStyle.Bold),
@@ -885,7 +897,7 @@ public class RoundedButton : Button
         };
 
         _logoAnimTimer = new Timer();
-        _logoAnimTimer.Interval = 20;
+        _logoAnimTimer.Interval = 15;
         _logoAnimTimer.Tick += (s, e) =>
         {
             if (Math.Abs(LogoScale - _logoTargetScale) > 0.01f)
@@ -1003,7 +1015,7 @@ public class RoundedButton : Button
             if (!_logoLoaded || _cachedLogoImage == null)
             {
                 _cachedLogoImage?.Dispose();
-                _cachedLogoImage = Image.FromFile(LogoPath);
+                _cachedLogoImage = Utilities.LoadImageUnlocked(LogoPath);
                 _logoLoaded = true;
             }
         }

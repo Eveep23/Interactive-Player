@@ -1,52 +1,9 @@
 ﻿
 Microsoft Visual Studio Solution File, Format Version 12.00
-# Visual Studio Version 17
-VisualStudioVersion = 17.13.35507.96
+# Visual Studio Version 18
+VisualStudioVersion = 18.0.11010.61 d18.0
 MinimumVisualStudioVersion = 10.0.40219.1
 Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "InteractivePlayer", "InteractivePlayer4\InteractivePlayer.csproj", "{CFE7F590-AF10-4C31-9541-194EC70E9C71}"
-EndProject
-Project("{2150E333-8FDC-42A3-9474-1A3956D46DE8}") = "general", "general", "{02EA681E-C7D8-13C7-8484-4AC65E1B71E8}"
-	ProjectSection(SolutionItems) = preProject
-		InteractivePlayer4\bin\Debug\general\Add_Button.png = InteractivePlayer4\bin\Debug\general\Add_Button.png
-		InteractivePlayer4\bin\Debug\general\Back_arrow.png = InteractivePlayer4\bin\Debug\general\Back_arrow.png
-		InteractivePlayer4\bin\Debug\general\Big_Install_Button.png = InteractivePlayer4\bin\Debug\general\Big_Install_Button.png
-		InteractivePlayer4\bin\Debug\general\Big_Uninstall_Button.png = InteractivePlayer4\bin\Debug\general\Big_Uninstall_Button.png
-		InteractivePlayer4\bin\Debug\general\Big_Update_Button.png = InteractivePlayer4\bin\Debug\general\Big_Update_Button.png
-		InteractivePlayer4\bin\Debug\general\ButtonSelected.png = InteractivePlayer4\bin\Debug\general\ButtonSelected.png
-		InteractivePlayer4\bin\Debug\general\ButtonUnselected.png = InteractivePlayer4\bin\Debug\general\ButtonUnselected.png
-		InteractivePlayer4\bin\Debug\general\Change_Choices.png = InteractivePlayer4\bin\Debug\general\Change_Choices.png
-		InteractivePlayer4\bin\Debug\general\Continue_Button.png = InteractivePlayer4\bin\Debug\general\Continue_Button.png
-		InteractivePlayer4\bin\Debug\general\Controller_icon.png = InteractivePlayer4\bin\Debug\general\Controller_icon.png
-		InteractivePlayer4\bin\Debug\general\Cursor_icon.png = InteractivePlayer4\bin\Debug\general\Cursor_icon.png
-		InteractivePlayer4\bin\Debug\general\Default_backdrop.png = InteractivePlayer4\bin\Debug\general\Default_backdrop.png
-		InteractivePlayer4\bin\Debug\general\Discord_Logo.png = InteractivePlayer4\bin\Debug\general\Discord_Logo.png
-		InteractivePlayer4\bin\Debug\general\EnterFull.png = InteractivePlayer4\bin\Debug\general\EnterFull.png
-		InteractivePlayer4\bin\Debug\general\Exit.png = InteractivePlayer4\bin\Debug\general\Exit.png
-		InteractivePlayer4\bin\Debug\general\ExitFull.png = InteractivePlayer4\bin\Debug\general\ExitFull.png
-		InteractivePlayer4\bin\Debug\general\Github_Logo.png = InteractivePlayer4\bin\Debug\general\Github_Logo.png
-		InteractivePlayer4\bin\Debug\general\Install_Button.png = InteractivePlayer4\bin\Debug\general\Install_Button.png
-		InteractivePlayer4\bin\Debug\general\Interactive_player_logo.png = InteractivePlayer4\bin\Debug\general\Interactive_player_logo.png
-		InteractivePlayer4\bin\Debug\general\Left_Arrow.png = InteractivePlayer4\bin\Debug\general\Left_Arrow.png
-		InteractivePlayer4\bin\Debug\general\Pause.png = InteractivePlayer4\bin\Debug\general\Pause.png
-		InteractivePlayer4\bin\Debug\general\Play.png = InteractivePlayer4\bin\Debug\general\Play.png
-		InteractivePlayer4\bin\Debug\general\Play_Button.png = InteractivePlayer4\bin\Debug\general\Play_Button.png
-		InteractivePlayer4\bin\Debug\general\reengagement_notification.m4a = InteractivePlayer4\bin\Debug\general\reengagement_notification.m4a
-		InteractivePlayer4\bin\Debug\general\Remote_icon.png = InteractivePlayer4\bin\Debug\general\Remote_icon.png
-		InteractivePlayer4\bin\Debug\general\Restart_Button.png = InteractivePlayer4\bin\Debug\general\Restart_Button.png
-		InteractivePlayer4\bin\Debug\general\Right_Arrow.png = InteractivePlayer4\bin\Debug\general\Right_Arrow.png
-		InteractivePlayer4\bin\Debug\general\Save_backdrop.png = InteractivePlayer4\bin\Debug\general\Save_backdrop.png
-		InteractivePlayer4\bin\Debug\general\Settings_Wheel.png = InteractivePlayer4\bin\Debug\general\Settings_Wheel.png
-		InteractivePlayer4\bin\Debug\general\SkipBackground.png = InteractivePlayer4\bin\Debug\general\SkipBackground.png
-		InteractivePlayer4\bin\Debug\general\SkipForward.png = InteractivePlayer4\bin\Debug\general\SkipForward.png
-		InteractivePlayer4\bin\Debug\general\Small_Install_Button.png = InteractivePlayer4\bin\Debug\general\Small_Install_Button.png
-		InteractivePlayer4\bin\Debug\general\Small_Uninstall_Button.png = InteractivePlayer4\bin\Debug\general\Small_Uninstall_Button.png
-		InteractivePlayer4\bin\Debug\general\Small_Update_Button.png = InteractivePlayer4\bin\Debug\general\Small_Update_Button.png
-		InteractivePlayer4\bin\Debug\general\Top_bar.png = InteractivePlayer4\bin\Debug\general\Top_bar.png
-		InteractivePlayer4\bin\Debug\general\Touch_icon.png = InteractivePlayer4\bin\Debug\general\Touch_icon.png
-		InteractivePlayer4\bin\Debug\general\Uninstall_Button.png = InteractivePlayer4\bin\Debug\general\Uninstall_Button.png
-		InteractivePlayer4\bin\Debug\general\Update_Button.png = InteractivePlayer4\bin\Debug\general\Update_Button.png
-		InteractivePlayer4\bin\Debug\general\Youtube_Logo.png = InteractivePlayer4\bin\Debug\general\Youtube_Logo.png
-	EndProjectSection
 EndProject
 Global
 	GlobalSection(SolutionConfigurationPlatforms) = preSolution
