@@ -1,10 +1,12 @@
-﻿using System;
+﻿using Newtonsoft.Json;
+using Newtonsoft.Json.Linq;
+using System;
 using System.Collections.Generic;
 using System.Drawing;
 using System.IO;
 using System.Linq;
+using System.Text.RegularExpressions;
 using System.Windows.Forms;
-using Newtonsoft.Json;
 
 public static class SaveManager
 {
@@ -49,9 +51,28 @@ public static class SaveManager
         if (!File.Exists(saveFilePath))
             return null;
 
+        string movieFolder = Path.GetDirectoryName(saveFilePath) ?? "";
+        bool isBKorTQ = movieFolder.Contains("Battle Kitty") || movieFolder.Contains("Trivia Quest");
+        string specificSaveFilePath = null;
+        if (isBKorTQ)
+        {
+            string folder = movieFolder.Contains("Battle Kitty") ? "BK" : "TQ";
+            specificSaveFilePath = Path.Combine(Directory.GetCurrentDirectory(), folder, folder == "BK" ? "bk_save.json" : "tq_save.json");
+        }
+
+        // If caller asked to skip the continue menu, read from the central BK/TQ save if present, otherwise from the episode save
+        string effectiveSaveFilePath = saveFilePath;
+        if (isBKorTQ && specificSaveFilePath != null && File.Exists(specificSaveFilePath))
+        {
+            effectiveSaveFilePath = specificSaveFilePath;
+        }
+
+        if (!File.Exists(effectiveSaveFilePath))
+            return null;
+
         if (skipContinueMenu)
         {
-            var saveData = JsonConvert.DeserializeObject<SaveData>(File.ReadAllText(saveFilePath));
+            var saveData = JsonConvert.DeserializeObject<SaveData>(File.ReadAllText(effectiveSaveFilePath));
             SelectedMovieFolder = saveData.CurrentSegment;
             return SelectedMovieFolder;
         }
@@ -158,40 +179,29 @@ public static class SaveManager
                 }
             };
 
-            // Check if the folder name contains "Battle Kitty" or "Trivia Quest"
-            if (Path.GetDirectoryName(saveFilePath).Contains("Battle Kitty") || Path.GetDirectoryName(saveFilePath).Contains("Trivia Quest"))
-            {
-                string folder = Path.GetDirectoryName(saveFilePath).Contains("Battle Kitty") ? "BK" : "TQ";
-                string specificSaveFilePath = Path.Combine(Directory.GetCurrentDirectory(), folder, folder == "BK" ? "bk_save.json" : "tq_save.json");
-
-                if (File.Exists(specificSaveFilePath))
-                {
-                    var saveData = JsonConvert.DeserializeObject<SaveData>(File.ReadAllText(specificSaveFilePath));
-                    var currentSaveData = JsonConvert.DeserializeObject<SaveData>(File.ReadAllText(saveFilePath));
-
-                    // Merge states
-                    foreach (var kvp in saveData.GlobalState)
-                    {
-                        currentSaveData.GlobalState[kvp.Key] = kvp.Value;
-                    }
-                    foreach (var kvp in saveData.PersistentState)
-                    {
-                        currentSaveData.PersistentState[kvp.Key] = kvp.Value;
-                    }
-
-                    // Save the merged data back to the current save file
-                    File.WriteAllText(saveFilePath, JsonConvert.SerializeObject(currentSaveData, Formatting.Indented));
-                }
-            }
-
             return form.ShowDialog() == DialogResult.OK ? SelectedMovieFolder : null;
     }
 
     public static SaveData LoadSaveData(string saveFilePath)
     {
-        if (File.Exists(saveFilePath))
+        string movieFolder = Path.GetDirectoryName(saveFilePath) ?? "";
+        bool isBKorTQ = movieFolder.Contains("Battle Kitty") || movieFolder.Contains("Trivia Quest");
+        string specificSaveFilePath = null;
+        if (isBKorTQ)
         {
-            return JsonConvert.DeserializeObject<SaveData>(File.ReadAllText(saveFilePath));
+            string folder = movieFolder.Contains("Battle Kitty") ? "BK" : "TQ";
+            specificSaveFilePath = Path.Combine(Directory.GetCurrentDirectory(), folder, folder == "BK" ? "bk_save.json" : "tq_save.json");
+        }
+
+        string effectiveSaveFilePath = saveFilePath;
+        if (isBKorTQ && specificSaveFilePath != null && File.Exists(specificSaveFilePath))
+        {
+            effectiveSaveFilePath = specificSaveFilePath;
+        }
+
+        if (File.Exists(effectiveSaveFilePath))
+        {
+            return JsonConvert.DeserializeObject<SaveData>(File.ReadAllText(effectiveSaveFilePath));
         }
         return null;
     }
@@ -199,6 +209,17 @@ public static class SaveManager
     public static void SaveProgress(string saveFilePath, string currentSegment, Dictionary<string, object> globalState, Dictionary<string, object> persistentState)
     {
         SaveData saveData;
+
+        string movieFolder = Path.GetDirectoryName(saveFilePath) ?? "";
+        bool isTQ = movieFolder.Contains("Trivia Quest");
+        bool isBK = movieFolder.Contains("Battle Kitty");
+
+        string specificSaveFilePath = null;
+        if (isBK || isTQ)
+        {
+            string folder = movieFolder.Contains("Battle Kitty") ? "BK" : "TQ";
+            specificSaveFilePath = Path.Combine(Directory.GetCurrentDirectory(), folder, folder == "BK" ? "bk_save.json" : "tq_save.json");
+        }
 
         if (File.Exists(saveFilePath))
         {
@@ -216,7 +237,6 @@ public static class SaveManager
         else
         {
             // Check if the movie folder is "Minecraft Story Mode Ep2", "Minecraft Story Mode Ep3", "Minecraft Story Mode Ep4", or "Minecraft Story Mode Ep5"
-            string movieFolder = Path.GetDirectoryName(saveFilePath);
             if (movieFolder.EndsWith("Minecraft Story Mode Ep2") || movieFolder.EndsWith("Minecraft Story Mode Ep3") || movieFolder.EndsWith("Minecraft Story Mode Ep4") || movieFolder.EndsWith("Minecraft Story Mode Ep5"))
             {
                 // Look for the save file in "Minecraft Story Mode Ep1"
@@ -249,23 +269,6 @@ public static class SaveManager
                         {
                             persistentState["Armor"] = ep3SaveData.PersistentState["Armor"];
                         }
-                    }
-                }
-            }
-
-            // Check if the folder name contains "Battle Kitty" or "Trivia Quest"
-            if (movieFolder.Contains("Battle Kitty") || movieFolder.Contains("Trivia Quest"))
-            {
-                string folder = movieFolder.Contains("Battle Kitty") ? "BK" : "TQ";
-                string specificSaveFilePath = Path.Combine(Directory.GetCurrentDirectory(), folder, folder == "BK" ? "bk_save.json" : "tq_save.json");
-
-                if (File.Exists(specificSaveFilePath))
-                {
-                    var specificSaveData = JsonConvert.DeserializeObject<SaveData>(File.ReadAllText(specificSaveFilePath));
-
-                    foreach (var kvp in specificSaveData.PersistentState)
-                    {
-                        persistentState[kvp.Key] = kvp.Value;
                     }
                 }
             }
@@ -322,19 +325,227 @@ public static class SaveManager
             File.WriteAllText(saveFilePath, JsonConvert.SerializeObject(saveData, Formatting.Indented));
         }
 
-        // Save the states to the Battle Kitty or Trivia Quest save file if applicable
-        if (Path.GetDirectoryName(saveFilePath).Contains("Battle Kitty") || Path.GetDirectoryName(saveFilePath).Contains("Trivia Quest"))
+        if (isTQ && specificSaveFilePath != null)
         {
-            string folder = Path.GetDirectoryName(saveFilePath).Contains("Battle Kitty") ? "BK" : "TQ";
-            string specificSaveFilePath = Path.Combine(Directory.GetCurrentDirectory(), folder, folder == "BK" ? "bk_save.json" : "tq_save.json");
-
-            var specificSaveData = new SaveData
+            try
             {
-                GlobalState = globalState,
-                PersistentState = persistentState
-            };
+                // Load existing central save (if any) and merge so we don't lose keys from other episodes
+                SaveData existingCentral = null;
+                if (File.Exists(specificSaveFilePath))
+                {
+                    try
+                    {
+                        existingCentral = JsonConvert.DeserializeObject<SaveData>(File.ReadAllText(specificSaveFilePath));
+                    }
+                    catch
+                    {
+                        existingCentral = null;
+                    }
+                }
 
-            File.WriteAllText(specificSaveFilePath, JsonConvert.SerializeObject(specificSaveData, Formatting.Indented));
+                if (existingCentral == null)
+                {
+                    existingCentral = new SaveData
+                    {
+                        GlobalState = new Dictionary<string, object>(),
+                        PersistentState = new Dictionary<string, object>()
+                    };
+                }
+                if (existingCentral.GlobalState == null) existingCentral.GlobalState = new Dictionary<string, object>();
+                if (existingCentral.PersistentState == null) existingCentral.PersistentState = new Dictionary<string, object>();
+
+                string episodeSavedKey;
+                string folderName = Path.GetFileName(movieFolder) ?? "";
+                Match m = Regex.Match(folderName, @"Ep(?:isode)?\s*(\d{1,2})", RegexOptions.IgnoreCase);
+                if (!m.Success) m = Regex.Match(folderName, @"\bE(\d{1,2})\b", RegexOptions.IgnoreCase);
+                if (!m.Success) m = Regex.Match(folderName, @"\bEp(\d{1,2})\b", RegexOptions.IgnoreCase);
+                if (m.Success)
+                    episodeSavedKey = $"Ep{m.Groups[1].Value}Saved";
+                else
+                {
+                    var sanitized = Regex.Replace(folderName, @"[^\w]", "_");
+                    episodeSavedKey = $"{sanitized}_Saved";
+                }
+
+                bool alreadyMarked = false;
+                if (existingCentral.PersistentState.TryGetValue(episodeSavedKey, out var flagObj))
+                {
+                    if (flagObj is bool b && b) alreadyMarked = true;
+                    else if (flagObj is string s && bool.TryParse(s, out bool parsed)) alreadyMarked = parsed;
+                }
+
+                if (!alreadyMarked)
+                {
+                    if (persistentState != null)
+                    {
+                        foreach (var kvp in persistentState)
+                        {
+                            if (!existingCentral.PersistentState.ContainsKey(kvp.Key))
+                                existingCentral.PersistentState[kvp.Key] = kvp.Value;
+                        }
+                    }
+
+                    if (globalState != null)
+                    {
+                        foreach (var kvp in globalState)
+                        {
+                            if (!existingCentral.GlobalState.ContainsKey(kvp.Key))
+                                existingCentral.GlobalState[kvp.Key] = kvp.Value;
+                        }
+                    }
+
+                    try
+                    {
+                        string infoJsonPath = Path.Combine(movieFolder, "info.json");
+                        if (File.Exists(infoJsonPath))
+                        {
+                            var infoJson = JObject.Parse(File.ReadAllText(infoJsonPath));
+                            var video = infoJson["jsonGraph"]?["videos"]?.First?.First;
+                            var stateHistory = video?["interactiveVideoMoments"]?["value"]?["stateHistory"];
+
+                            var initialPersistent = stateHistory?["persistent"]?.ToObject<Dictionary<string, object>>();
+                            var initialGlobal = stateHistory?["global"]?.ToObject<Dictionary<string, object>>();
+
+                            if (initialPersistent != null)
+                            {
+                                foreach (var kvp in initialPersistent)
+                                {
+                                    if (!existingCentral.PersistentState.ContainsKey(kvp.Key))
+                                        existingCentral.PersistentState[kvp.Key] = kvp.Value;
+                                }
+                            }
+
+                            if (initialGlobal != null)
+                            {
+                                foreach (var kvp in initialGlobal)
+                                {
+                                    if (!existingCentral.GlobalState.ContainsKey(kvp.Key))
+                                        existingCentral.GlobalState[kvp.Key] = kvp.Value;
+                                }
+                            }
+                        }
+                    }
+                    catch
+                    { }
+
+                    // Mark the episode as processed so this isn't repeated.
+                    existingCentral.PersistentState[episodeSavedKey] = true;
+                }
+
+                // Merge global state (preserve existing keys not present in the current episode)
+                var mergedGlobal = new Dictionary<string, object>(existingCentral.GlobalState);
+                if (globalState != null)
+                {
+                    foreach (var kvp in globalState)
+                    {
+                        mergedGlobal[kvp.Key] = kvp.Value;
+                    }
+                }
+
+                // Merge persistent state (preserve existing keys not present in the current episode)
+                var mergedPersistent = new Dictionary<string, object>(existingCentral.PersistentState);
+                if (persistentState != null)
+                {
+                    foreach (var kvp in persistentState)
+                    {
+                        mergedPersistent[kvp.Key] = kvp.Value;
+                    }
+                }
+
+                // Decide CurrentSegment for central save: prefer existing, fallback to provided
+                string centralSegment = existingCentral.CurrentSegment;
+                if (string.IsNullOrEmpty(centralSegment) && !string.IsNullOrEmpty(currentSegment))
+                    centralSegment = currentSegment;
+
+                var specificSaveData = new SaveData
+                {
+                    CurrentSegment = centralSegment,
+                    GlobalState = mergedGlobal,
+                    PersistentState = mergedPersistent
+                };
+
+                // Ensure directory exists
+                var dir = Path.GetDirectoryName(specificSaveFilePath);
+                if (!string.IsNullOrEmpty(dir) && !Directory.Exists(dir))
+                    Directory.CreateDirectory(dir);
+
+                File.WriteAllText(specificSaveFilePath, JsonConvert.SerializeObject(specificSaveData, Formatting.Indented));
+            }
+            catch
+            { }
+        }
+
+        // Save the states to the Battle Kitty or Trivia Quest save file if applicable
+        if (isBK && specificSaveFilePath != null)
+        {
+            try
+            {
+                // Load existing central save (if any) and merge so we don't lose keys from other episodes
+                SaveData existingCentral = null;
+                if (File.Exists(specificSaveFilePath))
+                {
+                    try
+                    {
+                        existingCentral = JsonConvert.DeserializeObject<SaveData>(File.ReadAllText(specificSaveFilePath));
+                    }
+                    catch
+                    {
+                        existingCentral = null;
+                    }
+                }
+
+                if (existingCentral == null)
+                {
+                    existingCentral = new SaveData
+                    {
+                        GlobalState = new Dictionary<string, object>(),
+                        PersistentState = new Dictionary<string, object>()
+                    };
+                }
+                if (existingCentral.GlobalState == null) existingCentral.GlobalState = new Dictionary<string, object>();
+                if (existingCentral.PersistentState == null) existingCentral.PersistentState = new Dictionary<string, object>();
+
+                // Merge global state (preserve existing keys not present in the current episode)
+                var mergedGlobal = new Dictionary<string, object>(existingCentral.GlobalState);
+                if (globalState != null)
+                {
+                    foreach (var kvp in globalState)
+                    {
+                        mergedGlobal[kvp.Key] = kvp.Value;
+                    }
+                }
+
+                // Merge persistent state (preserve existing keys not present in the current episode)
+                var mergedPersistent = new Dictionary<string, object>(existingCentral.PersistentState);
+                if (persistentState != null)
+                {
+                    foreach (var kvp in persistentState)
+                    {
+                        mergedPersistent[kvp.Key] = kvp.Value;
+                    }
+                }
+
+                // Decide CurrentSegment for central save: prefer existing, fallback to provided
+                string centralSegment = existingCentral.CurrentSegment;
+                if (string.IsNullOrEmpty(centralSegment) && !string.IsNullOrEmpty(currentSegment))
+                    centralSegment = currentSegment;
+
+                var specificSaveData = new SaveData
+                {
+                    CurrentSegment = centralSegment,
+                    GlobalState = mergedGlobal,
+                    PersistentState = mergedPersistent
+                };
+
+                // Ensure directory exists
+                var dir = Path.GetDirectoryName(specificSaveFilePath);
+                if (!string.IsNullOrEmpty(dir) && !Directory.Exists(dir))
+                    Directory.CreateDirectory(dir);
+
+                File.WriteAllText(specificSaveFilePath, JsonConvert.SerializeObject(specificSaveData, Formatting.Indented));
+            }
+            catch
+            { }
         }
     }
 }

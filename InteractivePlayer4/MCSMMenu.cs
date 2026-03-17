@@ -650,6 +650,40 @@ namespace InteractivePlayer
 
         private void MCSMMenu_MouseUp(object sender, MouseEventArgs e)
         {
+            if (e.Button == MouseButtons.Right)
+            {
+                // Play / Install button area
+                if (playButtonRect.Contains(e.Location) && currentFolderIndex > 0)
+                {
+                    string mcsmPath = Path.Combine(AppDomain.CurrentDomain.BaseDirectory, "MCSM");
+                    string folderName = $"Minecraft Story Mode Ep{currentFolderIndex}";
+                    string folderPath = Path.Combine(mcsmPath, folderName);
+                    PlaySelectSound();
+                    InteractiveDetailsMenu.ShowInteractiveDetailsMenu(folderPath);
+                    return;
+                }
+
+                // Continue / Restart areas
+                if (continueButtonRect.Contains(e.Location) && currentFolderIndex > 0)
+                {
+                    string mcsmPath = Path.Combine(AppDomain.CurrentDomain.BaseDirectory, "MCSM");
+                    string folderName = $"Minecraft Story Mode Ep{currentFolderIndex}";
+                    string folderPath = Path.Combine(mcsmPath, folderName);
+                    PlaySelectSound();
+                    InteractiveDetailsMenu.ShowInteractiveDetailsMenu(folderPath);
+                    return;
+                }
+                if (restartButtonRect.Contains(e.Location) && currentFolderIndex > 0)
+                {
+                    string mcsmPath = Path.Combine(AppDomain.CurrentDomain.BaseDirectory, "MCSM");
+                    string folderName = $"Minecraft Story Mode Ep{currentFolderIndex}";
+                    string folderPath = Path.Combine(mcsmPath, folderName);
+                    PlaySelectSound();
+                    InteractiveDetailsMenu.ShowInteractiveDetailsMenu(folderPath);
+                    return;
+                }
+            }
+
             if (playButtonPressed)
             {
                 playButtonPressed = false;

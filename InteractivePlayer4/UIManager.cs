@@ -1,18 +1,19 @@
-﻿using System;
+﻿using LibVLCSharp.Shared;
+using Newtonsoft.Json;
+using SharpDX.XInput;
+using System;
 using System.Collections.Generic;
+using System.Diagnostics;
 using System.Drawing;
 using System.Drawing.Imaging;
+using System.Drawing.Text;
 using System.IO;
 using System.Linq;
-using System.Drawing.Text;
-using System.Threading;
-using System.Windows.Forms;
+using System.Reflection;
 using System.Runtime.InteropServices;
-using Newtonsoft.Json;
-using LibVLCSharp.Shared;
-using System.Diagnostics;
-using SharpDX.XInput;
+using System.Threading;
 using System.Threading.Tasks;
+using System.Windows.Forms;
 public static class UIManager
 {
     private static readonly string ConfigFilePath = Path.Combine(Directory.GetCurrentDirectory(), "config.json");
@@ -282,9 +283,15 @@ public static class UIManager
             return;
         }
 
+        var settings = LoadSettings();
+
         if (headerText == "Get ready to click!" && IsControllerConnected())
         {
             headerText = "Get ready to press!";
+        }
+        else if (headerText == "Get ready to click!" && !IsControllerConnected() && string.Equals(settings.KeyboardIcon, "Hand", StringComparison.OrdinalIgnoreCase))
+        {
+            headerText = "Get ready to touch!";
         }
 
         int baseWidth = 700;
@@ -572,6 +579,12 @@ public static class UIManager
         else
         {
             string audioPath = Path.Combine(Directory.GetCurrentDirectory(), "general", "reengagement_notification.m4a");
+
+            if (videoId == "80227815" || videoId == "81250260" || videoId == "81250261" || videoId == "81250262" || videoId == "81250263" || videoId == "81250264" || videoId == "81250265" || videoId == "81250266" || videoId == "81250267")
+            {
+                audioPath = FindTexturePath(movieFolder, "sfx_tutorial.m4a");
+            }
+
             MediaPlayer tutorialPlayer = null;
             if (File.Exists(audioPath))
             {
@@ -582,13 +595,98 @@ public static class UIManager
             }
 
             string cursorIconPath;
-            if (IsControllerConnected())
+            if (headerText == "You can keep exploring," && (videoId == "80227815" || videoId == "81250260" || videoId == "81250261" || videoId == "81250262" || videoId == "81250263" || videoId == "81250264" || videoId == "81250265" || videoId == "81250266" || videoId == "81250267"))
             {
-                cursorIconPath = Path.Combine(Directory.GetCurrentDirectory(), "general", "Controller_icon.png");
+                string specialTutPath = FindTexturePath(movieFolder, "2x_tut_3_web_2x.png");
+                if (!string.IsNullOrEmpty(specialTutPath) && File.Exists(specialTutPath))
+                {
+                    cursorIconPath = specialTutPath;
+                }
+                else
+                {
+                    if (IsControllerConnected())
+                    {
+                        if (string.Equals(settings.ControllerIcon, "Remote", StringComparison.OrdinalIgnoreCase))
+                            cursorIconPath = Path.Combine(Directory.GetCurrentDirectory(), "general", "Remote_icon.png");
+                        else
+                            cursorIconPath = Path.Combine(Directory.GetCurrentDirectory(), "general", "Controller_icon.png");
+                    }
+                    else
+                    {
+                        // For keyboard preference, use Touch_icon.png when KeyboardIcon == "Hand"
+                        if (string.Equals(settings.KeyboardIcon, "Hand", StringComparison.OrdinalIgnoreCase))
+                            cursorIconPath = Path.Combine(Directory.GetCurrentDirectory(), "general", "Touch_icon.png");
+                        else
+                            cursorIconPath = Path.Combine(Directory.GetCurrentDirectory(), "general", "Cursor_icon.png");
+                    }
+                }
+            }
+            else if (headerText == "Get ready to interact!" && (videoId == "80227815" || videoId == "81250260" || videoId == "81250261" || videoId == "81250262" || videoId == "81250263" || videoId == "81250264" || videoId == "81250265" || videoId == "81250266" || videoId == "81250267"))
+            {
+                string specialTutPath = FindTexturePath(movieFolder, "2x_tut_2_web_2x.png");
+                if (!string.IsNullOrEmpty(specialTutPath) && File.Exists(specialTutPath))
+                {
+                    cursorIconPath = specialTutPath;
+                }
+                else
+                {
+                    if (IsControllerConnected())
+                    {
+                        if (string.Equals(settings.ControllerIcon, "Remote", StringComparison.OrdinalIgnoreCase))
+                            cursorIconPath = Path.Combine(Directory.GetCurrentDirectory(), "general", "Remote_icon.png");
+                        else
+                            cursorIconPath = Path.Combine(Directory.GetCurrentDirectory(), "general", "Controller_icon.png");
+                    }
+                    else
+                    {
+                        if (string.Equals(settings.KeyboardIcon, "Hand", StringComparison.OrdinalIgnoreCase))
+                            cursorIconPath = Path.Combine(Directory.GetCurrentDirectory(), "general", "Touch_icon.png");
+                        else
+                            cursorIconPath = Path.Combine(Directory.GetCurrentDirectory(), "general", "Cursor_icon.png");
+                    }
+                }
+            }
+            else if (headerText == "Get ready to click!" && (videoId == "80227815" || videoId == "81250260" || videoId == "81250261" || videoId == "81250262" || videoId == "81250263" || videoId == "81250264" || videoId == "81250265" || videoId == "81250266" || videoId == "81250267"))
+            {
+                string specialTutPath = FindTexturePath(movieFolder, "2x_tut_1_web_2x.png");
+                if (!string.IsNullOrEmpty(specialTutPath) && File.Exists(specialTutPath))
+                {
+                    cursorIconPath = specialTutPath;
+                }
+                else
+                {
+                    if (IsControllerConnected())
+                    {
+                        if (string.Equals(settings.ControllerIcon, "Remote", StringComparison.OrdinalIgnoreCase))
+                            cursorIconPath = Path.Combine(Directory.GetCurrentDirectory(), "general", "Remote_icon.png");
+                        else
+                            cursorIconPath = Path.Combine(Directory.GetCurrentDirectory(), "general", "Controller_icon.png");
+                    }
+                    else
+                    {
+                        if (string.Equals(settings.KeyboardIcon, "Hand", StringComparison.OrdinalIgnoreCase))
+                            cursorIconPath = Path.Combine(Directory.GetCurrentDirectory(), "general", "Touch_icon.png");
+                        else
+                            cursorIconPath = Path.Combine(Directory.GetCurrentDirectory(), "general", "Cursor_icon.png");
+                    }
+                }
             }
             else
             {
-                cursorIconPath = Path.Combine(Directory.GetCurrentDirectory(), "general", "Cursor_icon.png");
+                if (IsControllerConnected())
+                {
+                    if (string.Equals(settings.ControllerIcon, "Remote", StringComparison.OrdinalIgnoreCase))
+                        cursorIconPath = Path.Combine(Directory.GetCurrentDirectory(), "general", "Remote_icon.png");
+                    else
+                        cursorIconPath = Path.Combine(Directory.GetCurrentDirectory(), "general", "Controller_icon.png");
+                }
+                else
+                {
+                    if (string.Equals(settings.KeyboardIcon, "Hand", StringComparison.OrdinalIgnoreCase))
+                        cursorIconPath = Path.Combine(Directory.GetCurrentDirectory(), "general", "Touch_icon.png");
+                    else
+                        cursorIconPath = Path.Combine(Directory.GetCurrentDirectory(), "general", "Cursor_icon.png");
+                }
             }
             int iconSize = (int)(100 * scaleFactor);
             PictureBox cursorPictureBox = new PictureBox
@@ -708,7 +806,7 @@ public static class UIManager
         t.Start();
     }
 
-    public static (string segmentId, string choiceId) ShowChoiceUI(List<Choice> choices, List<Bitmap> buttonSprites, List<Bitmap> buttonIcons, int timeLimitMs, string movieFolder, string videoId, Segment segment, string headerText = null)
+    public static (string segmentId, string choiceId, bool wasDefault) ShowChoiceUI(List<Choice> choices, List<Bitmap> buttonSprites, List<Bitmap> buttonIcons, int timeLimitMs, string movieFolder, string videoId, Segment segment, string headerText = null)
     {
         if (videoId != "10000001" && activeTutorialForm != null && !activeTutorialForm.IsDisposed && activeTutorialForm.IsHandleCreated)
         {
@@ -727,6 +825,7 @@ public static class UIManager
 
         string selectedSegmentId = null;
         string selectedChoiceId = null;
+        bool wasDefault = false;
         bool inputCaptured = false;
         bool fadeInActive = false;
         bool inStartAnimation = false;
@@ -734,6 +833,11 @@ public static class UIManager
         correctAnswersCount = 0;
 
         soundPlayed = false;
+
+        if (videoId == "80988062")
+        {
+            timeLimitMs = Math.Max(0, timeLimitMs - 3640);
+        }
 
         int formWidth = 1900;
 
@@ -798,13 +902,11 @@ public static class UIManager
             }
         }
 
-        // Load settings
         var settings = LoadSettings();
 
-        // Calculate scaling factor based on the resized form
+        // Scaling factor based on the resized form
         double scaleFactor = (double)choiceForm.Width / formWidth;
 
-        // Apply additional scaling
         if (videoId == "10000001" || videoId == "10000003" || videoId == "81609455" || videoId == "80151644" || videoId == "80135585" || videoId == "81481556" || videoId == "81251335" || videoId == "81271335" || videoId == "81287545" || videoId == "80149064" || videoId == "81260654" || videoId == "80994695" || videoId == "81328829" || videoId == "81058723" || videoId == "81054409" || videoId == "81108751" || videoId == "81004016" || videoId == "80988062" || videoId == "81131714" || videoId == "81205738" || videoId == "80227804" || videoId == "80227805" || videoId == "80227800" || videoId == "80227801" || videoId == "80227802" || videoId == "80227803" || videoId == "80227699" || videoId == "80227698" || videoId == "81319137" || videoId == "81205737" || videoId == "81054415" || videoId == "81175265" || videoId == "81019938" || videoId == "80227815" || videoId == "81250260" || videoId == "81250261" || videoId == "81250262" || videoId == "81250263" || videoId == "81250264" || videoId == "81250265" || videoId == "81250266" || videoId == "81250267")
         {
             scaleFactor *= 0.75;
@@ -817,7 +919,9 @@ public static class UIManager
         List<int> buttonWidths = new List<int>();
         List<Button> buttons = new List<Button>();
 
-        // Add header image for video ID 81271335
+        List<Color> targetButtonForeColors = new List<Color>();
+        List<Color?> targetLabelForeColors = new List<Color?>();
+
         if (videoId == "81271335" && segment.HeaderImage != null && !string.IsNullOrEmpty(segment.HeaderImage.Url))
         {
             string headerImagePath = FindTexturePath(movieFolder, new[] { Path.GetFileName(new Uri(segment.HeaderImage.Url).LocalPath) });
@@ -926,7 +1030,6 @@ public static class UIManager
 
         int currentX;
 
-        // Adjust spacing and starting position for specific video ID
         if (videoId == "10000001")
         {
             spacing /= 4;
@@ -977,6 +1080,17 @@ public static class UIManager
                     focusedSprite = spriteSheet;
                     selectedSprite = spriteSheet;
                 }
+                else if (videoId == "81609455" && segment.LayoutType == "l11")
+                {
+                    var hitButtonPath = FindTexturePath(movieFolder, new[] { "hit_button.png" });
+                    Bitmap hitButtonSpriteSheet = LoadBitmap(hitButtonPath);
+
+                    correctSprite = ExtractSprite(hitButtonSpriteSheet, 0, 4);
+                    defaultSprite = ExtractSprite(hitButtonSpriteSheet, 1, 4);
+                    focusedSprite = ExtractSprite(hitButtonSpriteSheet, 2, 4);
+                    incorrectSprite = ExtractSprite(hitButtonSpriteSheet, 3, 4);
+                    selectedSprite = incorrectSprite;
+                }
                 else
                 {
                     defaultSprite = ExtractSprite(spriteSheet, 0);
@@ -1001,14 +1115,14 @@ public static class UIManager
                     TabStop = false,
                     Font = ((videoId == "81205737" || videoId == "81260654" || videoId == "80994695" || videoId == "81271335" || videoId == "81175265" || videoId == "81251335" || videoId == "81328829" || videoId == "81108751" || videoId == "80151644" || videoId == "81319137" || videoId == "81004016" || videoId == "81205738" || videoId == "80227698" || videoId == "80227699" || videoId == "80227803" || videoId == "80227802" || videoId == "80227801" || videoId == "80227800" || videoId == "80227805" || videoId == "80227804") && netflixFontFamily != null)
                             ? new Font(netflixFontFamily, (float)(23 * scaleFactor), FontStyle.Bold)
-                            : new Font("Arial", (float)(videoId == "10000001" ? 28 * scaleFactor : 22 * scaleFactor), videoId == "10000001" ? FontStyle.Regular : FontStyle.Bold),
+                            : new Font("Arial", (float)((videoId == "10000001") ? 28 * scaleFactor : (videoId == "81609455" && (segment.LayoutType == "l0" || segment.LayoutType == "l1") ? 40 * scaleFactor : 22 * scaleFactor)), videoId == "10000001" ? FontStyle.Regular : FontStyle.Bold),
                     ForeColor = (videoId == "81481556") ? Color.Black :
                                 (videoId == "81328829" && segment.LayoutType == "l2") ? Color.White :
                                 (videoId == "81328829") ? Color.Black :
                                 (new[] { "80227804", "80227805", "80227800", "80227801", "80227802", "80227803", "80227699", "80227698" }.Contains(videoId)) ? ColorTranslator.FromHtml("#27170a") :
                                 (videoId == "81131714" ? ColorTranslator.FromHtml("#7705ad") : Color.White),
-                    TextAlign = (new[] { "81004016", "81205738", "81108751", "80151644", "80227804", "80227805", "80227800", "80227801", "80227802", "80227803", "80227699", "80227698", "81319137" }.Contains(videoId)) ? ContentAlignment.MiddleLeft : ContentAlignment.MiddleCenter,
-                    Padding = (new[] { "81004016", "81205738", "81108751", "80151644", "80227804", "80227805", "80227800", "80227801", "80227802", "80227803", "80227699", "80227698", "81319137" }.Contains(videoId)) ? new Padding((int)(buttonWidth * 0.44), 0, 0, 0) : new Padding(0)
+                    TextAlign = (new[] { "81004016", "81205738", "81205737", "81108751", "80151644", "80227804", "80227805", "80227800", "80227801", "80227802", "80227803", "80227699", "80227698", "81319137" }.Contains(videoId)) ? ContentAlignment.MiddleLeft : ContentAlignment.MiddleCenter,
+                    Padding = (new[] { "81004016", "81205738", "81205737", "81108751", "80151644", "80227804", "80227805", "80227800", "80227801", "80227802", "80227803", "80227699", "80227698", "81319137" }.Contains(videoId)) ? new Padding((int)(buttonWidth * 0.44), 0, 0, 0) : new Padding(0)
                 };
 
                 if (videoId == "81004016")
@@ -1043,7 +1157,7 @@ public static class UIManager
                     }
                 }
 
-                if (videoId == "81205738" || videoId == "80151644" || videoId == "80227804" || videoId == "80227805" || videoId == "80227800" || videoId == "80227801" || videoId == "80227802" || videoId == "80227803" || videoId == "80227699" || videoId == "80227698" || videoId == "81319137")
+                if (videoId == "81205738" || videoId == "81205737" || videoId == "80151644" || videoId == "80227804" || videoId == "80227805" || videoId == "80227800" || videoId == "80227801" || videoId == "80227802" || videoId == "80227803" || videoId == "80227699" || videoId == "80227698" || videoId == "81319137")
                 {
                     double visualCenterRatio = 0.58;
                     int visualCenterX = (int)(buttonWidth * visualCenterRatio);
@@ -1265,7 +1379,7 @@ public static class UIManager
                             }));
                         }
 
-                        if (videoId == "80988062" && choices.Any(choice => choice.Text?.Equals("GO BACK", StringComparison.OrdinalIgnoreCase) == true) || videoId == "81481556" && segment.LayoutType == "l1" || videoId == "81481556" && segment.LayoutType == "l0" || videoId == "80988062" && choices.Any(choice => choice.Text?.Equals("EXIT TO CREDITS", StringComparison.OrdinalIgnoreCase) == true) || videoId == "81131714" && choices.Any(choice => choice.Text?.Equals("EXIT TO CREDITS", StringComparison.OrdinalIgnoreCase) == true) || videoId == "81131714" && segment.LayoutType == "l6" || videoId == "10000001" || videoId == "10000003" || videoId == "81251335" || videoId == "80149064" || videoId == "80994695" || videoId == "80135585" || videoId == "81328829" || videoId == "81205738" || videoId == "80227804" || videoId == "80227805" || videoId == "80227800" || videoId == "80227801" || videoId == "80227802" || videoId == "80227803" || videoId == "80227699" || videoId == "80227698" || videoId == "81319137" || videoId == "81205737" || videoId == "80227815" || videoId == "81250260" || videoId == "81250261" || videoId == "81250262" || videoId == "81250263" || videoId == "81250264" || videoId == "81250265" || videoId == "81250266" || videoId == "81250267")
+                        if (videoId == "80988062" && choices.Any(choice => choice.Text?.Equals("GO BACK", StringComparison.OrdinalIgnoreCase) == true) || videoId == "81609455" && segment.LayoutType == "l3" || videoId == "81609455" && segment.LayoutType == "l4" || videoId == "81481556" && segment.LayoutType == "l1" || videoId == "81481556" && segment.LayoutType == "l0" || videoId == "80988062" && choices.Any(choice => choice.Text?.Equals("EXIT TO CREDITS", StringComparison.OrdinalIgnoreCase) == true) || videoId == "81131714" && choices.Any(choice => choice.Text?.Equals("EXIT TO CREDITS", StringComparison.OrdinalIgnoreCase) == true) || videoId == "81131714" && segment.LayoutType == "l6" || videoId == "10000001" || videoId == "10000003" || videoId == "81251335" || videoId == "80149064" || videoId == "80994695" || videoId == "80135585" || videoId == "81328829" || videoId == "81205738" || videoId == "80227804" || videoId == "80227805" || videoId == "80227800" || videoId == "80227801" || videoId == "80227802" || videoId == "80227803" || videoId == "80227699" || videoId == "80227698" || videoId == "81319137" || videoId == "81205737" || videoId == "80227815" || videoId == "81250260" || videoId == "81250261" || videoId == "81250262" || videoId == "81250263" || videoId == "81250264" || videoId == "81250265" || videoId == "81250266" || videoId == "81250267" || videoId == "81609455" && segment.LayoutType == "l0" || videoId == "81609455" && segment.LayoutType == "l1")
                         {
                             choiceForm.Close(); // Close the form immediately after a choice is made
                         }
@@ -1363,7 +1477,7 @@ public static class UIManager
                 {
                     if (button.Enabled)
                     {
-                        if (videoId == "81328829" || videoId == "80151644" || videoId == "81260654" || videoId == "81058723" || videoId == "81287545" || videoId == "81054409" || videoId == "81019938" || videoId == "81250267" || videoId == "81250266" || videoId == "81250265" || videoId == "81250264" || videoId == "81250263" || videoId == "81250262" || videoId == "81250261" || videoId == "81250260" || videoId == "80227815" || videoId == "81271335" && segment.LayoutType == "l0" || videoId == "81205737" || videoId == "80149064" || videoId == "80994695" || videoId == "81175265" || videoId == "81251335" || videoId == "81108751" || videoId == "81319137" || videoId == "81054415" || videoId == "80135585" || videoId == "81004016" || videoId == "81205738" || videoId == "80227804" || videoId == "80227805" || videoId == "80227800" || videoId == "80227801" || videoId == "80227802" || videoId == "80227803" || videoId == "80227699" || videoId == "80227698")
+                        if (videoId == "81328829" || videoId == "81287545" || videoId == "80151644" || videoId == "81260654" || videoId == "81058723" || videoId == "81287545" || videoId == "81054409" || videoId == "81019938" || videoId == "81250267" || videoId == "81250266" || videoId == "81250265" || videoId == "81250264" || videoId == "81250263" || videoId == "81250262" || videoId == "81250261" || videoId == "81250260" || videoId == "80227815" || videoId == "81271335" && segment.LayoutType == "l0" || videoId == "81205737" || videoId == "80149064" || videoId == "80994695" || videoId == "81175265" || videoId == "81251335" || videoId == "81108751" || videoId == "81319137" || videoId == "81054415" || videoId == "80135585" || videoId == "81004016" || videoId == "81205738" || videoId == "80227804" || videoId == "80227805" || videoId == "80227800" || videoId == "80227801" || videoId == "80227802" || videoId == "80227803" || videoId == "80227699" || videoId == "80227698" || videoId == "81609455" && segment.LayoutType == "l0" || videoId == "81609455" && segment.LayoutType == "l1" || videoId == "81609455" && segment.LayoutType == "l3" || videoId == "81609455" && segment.LayoutType == "l4")
                         {
                             if (inStartAnimation == false)
                             {
@@ -1376,7 +1490,7 @@ public static class UIManager
                 {
                     if (button.Enabled)
                     {
-                        if (videoId == "81328829" || videoId == "80151644" || videoId == "81260654" || videoId == "81058723" || videoId == "81287545" || videoId == "81054409" || videoId == "81019938" || videoId == "81250267" || videoId == "81250266" || videoId == "81250265" || videoId == "81250264" || videoId == "81250263" || videoId == "81250262" || videoId == "81250261" || videoId == "81250260" || videoId == "80227815" || videoId == "81271335" && segment.LayoutType == "l0" || videoId == "81205737" || videoId == "80149064" || videoId == "80994695" || videoId == "81175265" || videoId == "81251335" || videoId == "81108751" || videoId == "81319137" || videoId == "81054415" || videoId == "80135585" || videoId == "81004016" || videoId == "81205738" || videoId == "80227804" || videoId == "80227805" || videoId == "80227800" || videoId == "80227801" || videoId == "80227802" || videoId == "80227803" || videoId == "80227699" || videoId == "80227698")
+                        if (videoId == "81328829" || videoId == "81287545" || videoId == "80151644" || videoId == "81260654" || videoId == "81058723" || videoId == "81287545" || videoId == "81054409" || videoId == "81019938" || videoId == "81250267" || videoId == "81250266" || videoId == "81250265" || videoId == "81250264" || videoId == "81250263" || videoId == "81250262" || videoId == "81250261" || videoId == "81250260" || videoId == "80227815" || videoId == "81271335" && segment.LayoutType == "l0" || videoId == "81205737" || videoId == "80149064" || videoId == "80994695" || videoId == "81175265" || videoId == "81251335" || videoId == "81108751" || videoId == "81319137" || videoId == "81054415" || videoId == "80135585" || videoId == "81004016" || videoId == "81205738" || videoId == "80227804" || videoId == "80227805" || videoId == "80227800" || videoId == "80227801" || videoId == "80227802" || videoId == "80227803" || videoId == "80227699" || videoId == "80227698" || videoId == "81609455" && segment.LayoutType == "l0" || videoId == "81609455" && segment.LayoutType == "l1" || videoId == "81609455" && segment.LayoutType == "l3" || videoId == "81609455" && segment.LayoutType == "l4")
                         {
                             if (inStartAnimation == false)
                             {
@@ -1506,7 +1620,7 @@ public static class UIManager
                     }
                     else if (choices[i].Text == "Craft Diamond Pickaxe")
                     {
-                        buttonPanel.Location = new System.Drawing.Point((int)(choiceForm.Width * 0.76), (int)(choiceForm.Height * 0.15));
+                        buttonPanel.Location = new System.Drawing.Point((int)(choiceForm.Width * 0.725), (int)(choiceForm.Height * 0.15));
                     }
                     else if (choices[i].Text == "Craft Boots")
                     {
@@ -2109,6 +2223,43 @@ public static class UIManager
                     );
                 }
 
+                // Triviaverse custom positioning
+                // Custom positioning for menu
+                if (segment.LayoutType == "l0" && videoId == "81609455" || segment.LayoutType == "l1" && videoId == "81609455")
+                {
+                    if (choices[i].Text == "1-Player Mode")
+                    {
+                        buttonPanel.Location = new System.Drawing.Point((int)(choiceForm.Width * 0.275), (int)(choiceForm.Height * 0.45));
+                    }
+                    else if (choices[i].Text == "2-Player Mode")
+                    {
+                        buttonPanel.Location = new System.Drawing.Point((int)(choiceForm.Width * 0.275), (int)(choiceForm.Height * 0.65));
+                    }
+                }
+
+                // Custom positioning for game
+                if (segment.LayoutType == "l11" && videoId == "81609455")
+                {
+                    switch (i)
+                    {
+                        case 0:
+                            buttonPanel.Location = new System.Drawing.Point((int)(choiceForm.Width * 0.025), (int)(choiceForm.Height * 0.7));
+                            break;
+                        case 1:
+                            buttonPanel.Location = new System.Drawing.Point((int)(choiceForm.Width * 0.525), (int)(choiceForm.Height * 0.7));
+                            break;
+                        case 2:
+                            buttonPanel.Location = new System.Drawing.Point((int)(choiceForm.Width * 0.275), (int)(choiceForm.Height * 0.55));
+                            break;
+                        case 3:
+                            buttonPanel.Location = new System.Drawing.Point((int)(choiceForm.Width * 0.275), (int)(choiceForm.Height * 0.85));
+                            break;
+                        default:
+                            buttonPanel.Location = new System.Drawing.Point(currentX, buttonTopMargin);
+                            break;
+                    }
+                }
+
                 // Battle Kitty Episode 1 custom positioning
                 // Custom positioning for Episode 1 Shore
                 Console.WriteLine($"LayoutType: {segment.LayoutType}, VideoId: {videoId}");
@@ -2164,6 +2315,27 @@ public static class UIManager
                 }
 
                 // Battle Kitty Episode 2 custom positioning
+                // Custom positioning for Episode 3 Open Map
+                if (segment.LayoutType == "l5" && videoId == "81250260")
+                {
+                    if (choices[i].Text == "[E3] Mount Spicy Ice")
+                    {
+                        buttonPanel.Location = new System.Drawing.Point((int)(choiceForm.Width * 0.075), (int)(choiceForm.Height * 0.60));
+                    }
+                    else if (choices[i].Text == "[E4] Cashino Woods")
+                    {
+                        buttonPanel.Location = new System.Drawing.Point((int)(choiceForm.Width * 0.305), (int)(choiceForm.Height * 0.70));
+                    }
+                    else if (choices[i].Text == "Guardian Gate 2")
+                    {
+                        buttonPanel.Location = new System.Drawing.Point((int)(choiceForm.Width * 0.53), (int)(choiceForm.Height * 0.30));
+                    }
+                    else if (choices[i].Text == "[E5] Neon Cove")
+                    {
+                        buttonPanel.Location = new System.Drawing.Point((int)(choiceForm.Width * 0.76), (int)(choiceForm.Height * 0.50));
+                    }
+                }
+
                 // Custom positioning for Episode 2 Open Map
                 if (segment.LayoutType == "l4" && videoId == "81250260")
                 {
@@ -2260,6 +2432,72 @@ public static class UIManager
                         buttonPanel.Location = new System.Drawing.Point((int)(choiceForm.Width * 0.735), (int)(choiceForm.Height * 0.47));
                     }
                 }
+                /*
+                // Battle Kitty Episode 3 custom positioning
+                // Custom positioning for Episode 3 Open Map
+                if (segment.LayoutType == "l5" && videoId == "81250261")
+                {
+                    if (choices[i].Text == "Mount Spicy Ice")
+                    {
+                        buttonPanel.Location = new System.Drawing.Point((int)(choiceForm.Width * 0.075), (int)(choiceForm.Height * 0.60));
+                    }
+                    else if (choices[i].Text == "[E4] Cashino Woods")
+                    {
+                        buttonPanel.Location = new System.Drawing.Point((int)(choiceForm.Width * 0.305), (int)(choiceForm.Height * 0.70));
+                    }
+                    else if (choices[i].Text == "Guardian Gate 2")
+                    {
+                        buttonPanel.Location = new System.Drawing.Point((int)(choiceForm.Width * 0.53), (int)(choiceForm.Height * 0.30));
+                    }
+                    else if (choices[i].Text == "[E5] Neon Cove")
+                    {
+                        buttonPanel.Location = new System.Drawing.Point((int)(choiceForm.Width * 0.76), (int)(choiceForm.Height * 0.50));
+                    }
+                }
+
+                // Battle Kitty Episode 4 custom positioning
+                // Custom positioning for Episode 4 Open Map
+                if (segment.LayoutType == "l5" && videoId == "81250262")
+                {
+                    if (choices[i].Text == "[E3] Mount Spicy Ice")
+                    {
+                        buttonPanel.Location = new System.Drawing.Point((int)(choiceForm.Width * 0.075), (int)(choiceForm.Height * 0.60));
+                    }
+                    else if (choices[i].Text == "Cashino Woods")
+                    {
+                        buttonPanel.Location = new System.Drawing.Point((int)(choiceForm.Width * 0.305), (int)(choiceForm.Height * 0.70));
+                    }
+                    else if (choices[i].Text == "Guardian Gate 2")
+                    {
+                        buttonPanel.Location = new System.Drawing.Point((int)(choiceForm.Width * 0.53), (int)(choiceForm.Height * 0.30));
+                    }
+                    else if (choices[i].Text == "[E5] Neon Cove")
+                    {
+                        buttonPanel.Location = new System.Drawing.Point((int)(choiceForm.Width * 0.76), (int)(choiceForm.Height * 0.50));
+                    }
+                }
+
+                // Battle Kitty Episode 5 custom positioning
+                // Custom positioning for Episode 5 Open Map
+                if (segment.LayoutType == "l5" && videoId == "81250263")
+                {
+                    if (choices[i].Text == "[E3] Mount Spicy Ice")
+                    {
+                        buttonPanel.Location = new System.Drawing.Point((int)(choiceForm.Width * 0.075), (int)(choiceForm.Height * 0.60));
+                    }
+                    else if (choices[i].Text == "[E4] Cashino Woods")
+                    {
+                        buttonPanel.Location = new System.Drawing.Point((int)(choiceForm.Width * 0.305), (int)(choiceForm.Height * 0.70));
+                    }
+                    else if (choices[i].Text == "Guardian Gate 2")
+                    {
+                        buttonPanel.Location = new System.Drawing.Point((int)(choiceForm.Width * 0.53), (int)(choiceForm.Height * 0.30));
+                    }
+                    else if (choices[i].Text == "Neon Cove")
+                    {
+                        buttonPanel.Location = new System.Drawing.Point((int)(choiceForm.Width * 0.76), (int)(choiceForm.Height * 0.50));
+                    }
+                }*/
 
                 buttonPanel.Controls.Add(button);
 
@@ -2314,6 +2552,45 @@ public static class UIManager
 
                 buttons.Add(button);
                 choiceForm.Controls.Add(buttonPanel);
+
+                if (videoId == "80988062")
+                {
+                    fadeInActive = true;
+
+                    Color finalButtonColor =
+                        (videoId == "81481556") ? Color.Black :
+                        (videoId == "81328829" && segment.LayoutType == "l2") ? Color.White :
+                        (videoId == "81328829") ? Color.Black :
+                        (new[] { "80227804", "80227805", "80227800", "80227801", "80227802", "80227803", "80227699", "80227698" }.Contains(videoId)) ? ColorTranslator.FromHtml("#27170a") :
+                        (videoId == "81131714" ? ColorTranslator.FromHtml("#7705ad") : Color.White);
+
+                    using (var tmp = new Bitmap(Math.Max(1, button.Width), Math.Max(1, button.Height), PixelFormat.Format32bppArgb))
+                    using (var g = Graphics.FromImage(tmp))
+                    {
+                        g.Clear(Color.Transparent);
+                        button.BackgroundImage = new Bitmap(tmp);
+                    }
+
+                    button.ForeColor = Color.Black;
+
+                    targetButtonForeColors.Add(finalButtonColor);
+
+                    var lbl = buttonPanel.Controls.OfType<Label>().FirstOrDefault();
+                    if (lbl != null)
+                    {
+                        var finalLabelColor = lbl.ForeColor;
+
+                        lbl.ForeColor = Color.Black;
+                        targetLabelForeColors.Add(finalLabelColor);
+                    }
+                    else
+                    {
+                        targetLabelForeColors.Add(null);
+                    }
+
+                    foreach (var pic in button.Controls.OfType<PictureBox>())
+                        pic.Visible = false;
+                }
 
                 currentX += buttonWidth + spacing;
             }
@@ -2398,10 +2675,10 @@ public static class UIManager
                     return files[0];
                 }
             }
-            return null; // Or handle the case where no file is found
+            return null; // Or handle where no file is found
         }
 
-        if (videoId == "81054409" || videoId == "81058723" || videoId == "81205737" || videoId == "81175265" || videoId == "81251335" || videoId == "80994695" || videoId == "80149064" || videoId == "81260654" || videoId == "81019938" || videoId == "81328829" || videoId == "81287545" || videoId == "81108751" || videoId == "80151644" || videoId == "81319137" || videoId == "81054415" || videoId == "80135585" || videoId == "81205738" || videoId == "80227804" || videoId == "80227805" || videoId == "80227800" || videoId == "80227801" || videoId == "80227802" || videoId == "80227803" || videoId == "80227699" || videoId == "80227698")
+        if (videoId == "81054409" || videoId == "81287545" || videoId == "81058723" || videoId == "81205737" || videoId == "81175265" || videoId == "81251335" || videoId == "80994695" || videoId == "80149064" || videoId == "81260654" || videoId == "81019938" || videoId == "81328829" || videoId == "81287545" || videoId == "81108751" || videoId == "80151644" || videoId == "81319137" || videoId == "81054415" || videoId == "80135585" || videoId == "81205738" || videoId == "80227804" || videoId == "80227805" || videoId == "80227800" || videoId == "80227801" || videoId == "80227802" || videoId == "80227803" || videoId == "80227699" || videoId == "80227698" || videoId == "81609455" && segment.LayoutType == "l0" || videoId == "81609455" && segment.LayoutType == "l1")
         {
             var buttonPanels = choiceForm.Controls.OfType<Panel>().Where(p => p.Controls.OfType<Button>().Any()).ToList();
             var originalPanelStates = buttonPanels
@@ -2658,6 +2935,36 @@ public static class UIManager
                     };
                     shrinkTimer.Start();
                 }
+            };
+        }
+
+        if (videoId == "81609455" && segment.LayoutType == "l3" || videoId == "81609455" && segment.LayoutType == "l4")
+        {
+            choiceForm.FormClosing += (s, e) =>
+            {
+                if ((choiceForm.Tag as string) == "Closing") return;
+
+                e.Cancel = true;
+
+                int closingAnimDuration = 320;
+                int interval = 15;
+
+                // Fade out timer
+                int fadeElapsed = 0;
+                double initialOpacity = choiceForm.Opacity;
+                System.Windows.Forms.Timer fadeTimer = new System.Windows.Forms.Timer { Interval = interval };
+                fadeTimer.Tick += (sender, args) =>
+                {
+                    fadeElapsed += interval;
+                    double t = Math.Min(1.0, (double)fadeElapsed / (closingAnimDuration));
+                    choiceForm.Opacity = initialOpacity * (1.0 - t);
+                    if (t >= 1.0)
+                    {
+                        fadeTimer.Stop();
+                        choiceForm.Opacity = 0;
+                    }
+                };
+                fadeTimer.Start();
             };
         }
 
@@ -3203,10 +3510,55 @@ public static class UIManager
         Bitmap webSprite = LoadBitmap(webPath);
 
         int initialWidth = (int)(1700 * scaleFactor);
+        double timerBrightness = 1.0;
+        if (videoId == "80988062" || videoId == "81131714")
+        {
+            timerBrightness = 0.0;
+            initialWidth = (int)(2800 * scaleFactor);
+        }
         int timerBarHeight = (int)((timerFillSprite?.Height ?? 20) * scaleFactor);
         int formCenterX = choiceForm.Width / 2;
 
-        // Create a DoubleBufferedPanel
+        Action<Graphics, Bitmap, Rectangle> DrawWithBrightness = (gfx, bmp, dest) =>
+        {
+            if (bmp == null) return;
+            if (Math.Abs(timerBrightness - 1.0) < 0.0001)
+            {
+                gfx.DrawImage(bmp, dest, 0, 0, bmp.Width, bmp.Height, GraphicsUnit.Pixel);
+                return;
+            }
+
+            using (var ia = new ImageAttributes())
+            {
+                var cm = new ColorMatrix(new float[][]
+                {
+            new float[] { (float)timerBrightness, 0, 0, 0, 0 },
+            new float[] { 0, (float)timerBrightness, 0, 0, 0 },
+            new float[] { 0, 0, (float)timerBrightness, 0, 0 },
+            new float[] { 0, 0, 0, 1f, 0 },
+            new float[] { 0, 0, 0, 0, 1f }
+                });
+                ia.SetColorMatrix(cm, ColorMatrixFlag.Default, ColorAdjustType.Bitmap);
+                gfx.DrawImage(bmp, dest, 0, 0, bmp.Width, bmp.Height, GraphicsUnit.Pixel, ia);
+            }
+        };
+
+        Action<Graphics, Bitmap, Rectangle?, Rectangle> DrawSprite = (gfx, src, srcRect, destRect) =>
+        {
+            if (src == null) return;
+            if (srcRect.HasValue)
+            {
+                using (var frame = src.Clone(srcRect.Value, src.PixelFormat))
+                {
+                    DrawWithBrightness(gfx, frame, destRect);
+                }
+            }
+            else
+            {
+                DrawWithBrightness(gfx, src, destRect);
+            }
+        };
+
         DoubleBufferedPanel drawingPanel = new DoubleBufferedPanel
         {
             Location = new System.Drawing.Point(0, 0),
@@ -3215,7 +3567,8 @@ public static class UIManager
         };
 
         Stopwatch stopwatch = new Stopwatch();
-        stopwatch.Start();
+        if (videoId != "80988062")
+            stopwatch.Start();
 
         drawingPanel.Paint += (sender, e) =>
         {
@@ -3225,19 +3578,16 @@ public static class UIManager
 
             if (videoId == "10000001" && fadeInActive)
             {
-                // Keep the timer bar at its starting position (offscreen/bottom)
                 currentY = choiceForm.Height + timerBarY;
             }
             else if (videoId == "10000001")
             {
-                // Calculate the eased Y position
                 double progress = Math.Min(1.0, (double)stopwatch.ElapsedMilliseconds / 370);
                 double easedProgress = EaseOutQuad(progress);
                 currentY = (int)(timerBarY + (choiceForm.Height - timerBarY) * (1 - easedProgress));
             }
             else if (new[] { "80227815", "81250260", "81250261", "81250262", "81250263", "81250264", "81250265", "81250266", "81250267", "81175265", "81251335", "81328829", "81054409", "81058723", "81205737", "80994695", "80149064", "81260654", "81019938", "81287545", "80227698", "80227699", "80227803", "80227802", "80227801", "80227800", "80227805", "80227804", "81205738", "80135585", "81054415", "81319137", "80151644", "81108751" }.Contains(videoId))
             {
-                // Calculate the eased Y position
                 double progress = Math.Min(1.0, (double)stopwatch.ElapsedMilliseconds / 400);
                 double easedProgress = EaseOutQuad(progress);
                 currentY = (int)(timerBarY + (choiceForm.Height - timerBarY) * (1 - easedProgress));
@@ -3256,7 +3606,6 @@ public static class UIManager
 
                     g.DrawImage(timerFillSprite, destRect, sourceRect, GraphicsUnit.Pixel);
 
-                    // Draw overlay
                     if (webSprite != null)
                     {
                         int webY = currentY + ((int)(frameHeight * scaleFactor) / 2) - (int)(webSprite.Height * scaleFactor / 2);
@@ -3272,11 +3621,11 @@ public static class UIManager
                     int usedRows = 19;  // Rows used for countdown
                     int frameHeight = timerFillSprite.Height / totalRows;
 
-                    // Calculate the current frame based on elapsed time
+                    // Calculate the current frame
                     int currentFrame = (int)((double)stopwatch.ElapsedMilliseconds / timeLimitMs * usedRows);
                     currentFrame = Math.Min(currentFrame, usedRows - 1);
 
-                    // Determine the 19th frame based on correctAnswersCount
+                    // Figure out the 19th frame based on correctAnswersCount
                     if (currentFrame == 18) // 19th frame
                     {
                         currentFrame = correctAnswersCount == 3 ? 18 : 19;
@@ -3288,12 +3637,10 @@ public static class UIManager
 
                         if (currentFrame == 18 && correctAnswersCount == 3)
                         {
-                            // Play the success sound if all answers are correct
                             soundPath = FindTexturePath(movieFolder, new[] { "sfx_timer_end_pass.m4a" });
                         }
                         else if (currentFrame == 19 && correctAnswersCount != 3)
                         {
-                            // Play the fail sound if not all answers are correct
                             soundPath = FindTexturePath(movieFolder, new[] { "sfx_timer_end_fail.m4a" });
                         }
 
@@ -3303,14 +3650,11 @@ public static class UIManager
                             soundPlayer.Play();
                         }
 
-                        // Mark the sound as played
                         soundPlayed = true;
                     }
 
-                    // Define the source rectangle for the current frame
                     Rectangle sourceRect = new Rectangle(0, currentFrame * frameHeight, timerFillSprite.Width, frameHeight);
 
-                    // Define the destination rectangle for rendering
                     Rectangle destRect = new Rectangle(
                         (choiceForm.Width - (int)(timerFillSprite.Width * scaleFactor)) / 2,
                         timerBarY,
@@ -3318,7 +3662,6 @@ public static class UIManager
                         (int)(frameHeight * scaleFactor)
                     );
 
-                    // Draw the current frame
                     g.DrawImage(timerFillSprite, destRect, sourceRect, GraphicsUnit.Pixel);
                 }
             }
@@ -3330,14 +3673,12 @@ public static class UIManager
                     int usedRows = 18;  // Rows used for countdown
                     int frameHeight = timerFillSprite.Height / totalRows;
 
-                    // Calculate the current frame based on elapsed time
+                    // Calculate the current frame
                     int currentFrame = (int)((double)stopwatch.ElapsedMilliseconds / timeLimitMs * usedRows);
                     currentFrame = Math.Min(currentFrame, usedRows - 1);
 
-                    // Define the source rectangle for the current frame
                     Rectangle sourceRect = new Rectangle(0, currentFrame * frameHeight, timerFillSprite.Width, frameHeight);
 
-                    // Define the destination rectangle for rendering
                     Rectangle destRect = new Rectangle(
                         (choiceForm.Width - (int)(timerFillSprite.Width * scaleFactor)) / 2,
                         timerBarY,
@@ -3345,8 +3686,96 @@ public static class UIManager
                         (int)(frameHeight * scaleFactor)
                     );
 
-                    // Draw the current frame
                     g.DrawImage(timerFillSprite, destRect, sourceRect, GraphicsUnit.Pixel);
+                }
+            }
+            else if (videoId == "80988062")
+            {
+                // Draw timer bottom
+                if (timerBottomSprite != null)
+                {
+                    DrawSprite(g, timerBottomSprite, null, new Rectangle((choiceForm.Width - (int)(1800 * scaleFactor)) / 2, currentY, (int)(1800 * scaleFactor), (int)(50 * scaleFactor)));
+                }
+
+                // Draw timer fill
+                if (timerFillSprite != null)
+                {
+                    int leftEdgeWidth = (int)(10 * scaleFactor);
+                    int rightEdgeWidth = (int)(10 * scaleFactor);
+                    int middleWidth = Math.Max(0, initialWidth - leftEdgeWidth - rightEdgeWidth);
+                    int totalWidth = leftEdgeWidth + middleWidth + rightEdgeWidth;
+                    int destX = (choiceForm.Width - totalWidth) / 2;
+                    int destY = currentY;
+                    int destHeight = timerBarHeight;
+
+                    using (var temp = new Bitmap(totalWidth, destHeight, PixelFormat.Format32bppArgb))
+                    using (var tg = Graphics.FromImage(temp))
+                    {
+                        tg.InterpolationMode = System.Drawing.Drawing2D.InterpolationMode.HighQualityBicubic;
+                        tg.PixelOffsetMode = System.Drawing.Drawing2D.PixelOffsetMode.HighQuality;
+                        tg.SmoothingMode = System.Drawing.Drawing2D.SmoothingMode.None;
+                        tg.Clear(Color.Transparent);
+
+                        using (var ia = new ImageAttributes())
+                        {
+                            var cm = new ColorMatrix(new float[][]
+                            {
+                                new float[] { (float)timerBrightness, 0, 0, 0, 0 },
+                                new float[] { 0, (float)timerBrightness, 0, 0, 0 },
+                                new float[] { 0, 0, (float)timerBrightness, 0, 0 },
+                                new float[] { 0, 0, 0, 1f, 0 },
+                                new float[] { 0, 0, 0, 0, 1f }
+                            });
+                            ia.SetColorMatrix(cm, ColorMatrixFlag.Default, ColorAdjustType.Bitmap);
+                            ia.SetWrapMode(System.Drawing.Drawing2D.WrapMode.Clamp, Color.Transparent);
+
+                            Rectangle leftSrc = new Rectangle(0, 0, leftEdgeWidth, timerFillSprite.Height);
+                            Rectangle middleSrc = new Rectangle(leftEdgeWidth, 0, timerFillSprite.Width - leftEdgeWidth - rightEdgeWidth, timerFillSprite.Height);
+                            Rectangle rightSrc = new Rectangle(timerFillSprite.Width - rightEdgeWidth, 0, rightEdgeWidth, timerFillSprite.Height);
+
+                            tg.DrawImage(timerFillSprite,
+                                new Rectangle(0, 0, leftEdgeWidth, destHeight),
+                                leftSrc.X, leftSrc.Y, leftSrc.Width, leftSrc.Height,
+                                GraphicsUnit.Pixel, ia);
+
+                            tg.DrawImage(timerFillSprite,
+                                new Rectangle(leftEdgeWidth, 0, middleWidth, destHeight),
+                                middleSrc.X, middleSrc.Y, middleSrc.Width, middleSrc.Height,
+                                GraphicsUnit.Pixel, ia);
+
+                            tg.DrawImage(timerFillSprite,
+                                new Rectangle(leftEdgeWidth + middleWidth, 0, rightEdgeWidth, destHeight),
+                                rightSrc.X, rightSrc.Y, rightSrc.Width, rightSrc.Height,
+                                GraphicsUnit.Pixel, ia);
+                        }
+
+                        g.DrawImage(temp, destX, destY, totalWidth, destHeight);
+                    }
+                }
+
+                // Draw left cap
+                if (timerCapLSprite != null)
+                {
+                    DrawSprite(g, timerCapLSprite, null, new Rectangle((choiceForm.Width - initialWidth) / 2 - (int)(timerCapLSprite.Width * scaleFactor), currentY, (int)(timerCapLSprite.Width * scaleFactor), timerBarHeight));
+                }
+
+                // Draw right cap
+                if (timerCapRSprite != null)
+                {
+                    DrawSprite(g, timerCapRSprite, null, new Rectangle((choiceForm.Width + initialWidth) / 2, currentY, (int)(timerCapRSprite.Width * scaleFactor), timerBarHeight));
+                }
+
+                // Draw timer top
+                if (timerTopSprite != null)
+                {
+                    DrawSprite(g, timerTopSprite, null, new Rectangle((choiceForm.Width - (int)(1800 * scaleFactor)) / 2, currentY, (int)(1800 * scaleFactor), (int)(50 * scaleFactor)));
+                }
+
+                // Draw overlay
+                if (webSprite != null)
+                {
+                    int webY = currentY + (timerBarHeight / 2) - (int)(webSprite.Height * scaleFactor / 2);
+                    DrawSprite(g, webSprite, null, new Rectangle((choiceForm.Width - (int)(webSprite.Width * scaleFactor)) / 2, webY, (int)(webSprite.Width * scaleFactor), (int)(webSprite.Height * scaleFactor)));
                 }
             }
             else
@@ -3416,11 +3845,23 @@ public static class UIManager
 
         Task.Run(async () =>
         {
-            while (stopwatch.ElapsedMilliseconds < timeLimitMs)
+            if (videoId == "80988062" || videoId == "81131714")
             {
-                initialWidth = (int)((double)(1650 * scaleFactor) * (timeLimitMs - stopwatch.ElapsedMilliseconds) / timeLimitMs);
-                drawingPanel.Invalidate();
-                await Task.Delay(11); // Update approximately every 16ms (~60 FPS)
+                while (stopwatch.ElapsedMilliseconds < timeLimitMs)
+                {
+                    initialWidth = (int)((double)(2750 * scaleFactor) * (timeLimitMs - stopwatch.ElapsedMilliseconds) / timeLimitMs);
+                    drawingPanel.Invalidate();
+                    await Task.Delay(11); // Update approximately every 16ms (~60 FPS)
+                }
+            }
+            else 
+            {
+                while (stopwatch.ElapsedMilliseconds < timeLimitMs)
+                {
+                    initialWidth = (int)((double)(1650 * scaleFactor) * (timeLimitMs - stopwatch.ElapsedMilliseconds) / timeLimitMs);
+                    drawingPanel.Invalidate();
+                    await Task.Delay(11); // Update approximately every 16ms (~60 FPS)
+                }
             }
 
             if (!inputCaptured && File.Exists(timeoutSoundPath))
@@ -3470,7 +3911,6 @@ public static class UIManager
                     var state = controller.GetState();
                     var gamepad = state.Gamepad;
 
-                    // Only allow input if ready
                     if (staggerReady)
                     {
                         int baseIndex = staggerStage * 2;
@@ -3478,15 +3918,13 @@ public static class UIManager
                         {
                             if (gamepad.Buttons.HasFlag(GamepadButtonFlags.DPadLeft) || gamepad.LeftThumbX < -5000)
                             {
-                                // Simulate click on left button of current pair
-                                buttons[baseIndex].PerformClick();
+                                ForceInvokeClick(buttons[baseIndex]);
                                 staggerReady = false;
                                 staggerTimer.Restart();
                             }
                             else if (gamepad.Buttons.HasFlag(GamepadButtonFlags.DPadRight) || gamepad.LeftThumbX > 5000)
                             {
-                                // Simulate click on right button of current pair
-                                buttons[baseIndex + 1].PerformClick();
+                                ForceInvokeClick(buttons[baseIndex + 1]);
                                 staggerReady = false;
                                 staggerTimer.Restart();
                             }
@@ -3516,15 +3954,31 @@ public static class UIManager
             {
                 int selectedIndex = (segment.DefaultChoiceIndex.HasValue && segment.DefaultChoiceIndex.Value >= 0 && segment.DefaultChoiceIndex.Value < choices.Count) ? segment.DefaultChoiceIndex.Value : 0; // Initialize selected index for controller input
 
-                while (stopwatch.ElapsedMilliseconds < timeLimitMs)
+                if (videoId == "80988062" || videoId == "81131714")
                 {
-                    initialWidth = (int)((double)(1650 * scaleFactor) * (timeLimitMs - stopwatch.ElapsedMilliseconds) / timeLimitMs);
-                    drawingPanel.Invalidate();
+                    while (stopwatch.ElapsedMilliseconds < timeLimitMs)
+                    {
+                        initialWidth = (int)((double)(2750 * scaleFactor) * (timeLimitMs - stopwatch.ElapsedMilliseconds) / timeLimitMs);
+                        drawingPanel.Invalidate();
 
-                    // Handle controller input
-                    HandleControllerInput(ref selectedIndex, buttons, buttonSprites, ref inputCaptured, ref selectedSegmentId, choiceForm, selectSoundPath, hoverSoundPath, libVLC, videoId, choices, segment, movieFolder, fadeInActive);
+                        // Handle controller inputs
+                        HandleControllerInput(ref selectedIndex, buttons, buttonSprites, ref inputCaptured, ref selectedSegmentId, choiceForm, selectSoundPath, hoverSoundPath, libVLC, videoId, choices, segment, movieFolder, fadeInActive);
 
-                    await Task.Delay(16); // Update approximately every 16ms (~60 FPS)
+                        await Task.Delay(16); // Update approximately every 16ms (~60 FPS)
+                    }
+                }
+                else
+                {
+                    while (stopwatch.ElapsedMilliseconds < timeLimitMs)
+                    {
+                        initialWidth = (int)((double)(1650 * scaleFactor) * (timeLimitMs - stopwatch.ElapsedMilliseconds) / timeLimitMs);
+                        drawingPanel.Invalidate();
+
+                        // Handle controller inputs
+                        HandleControllerInput(ref selectedIndex, buttons, buttonSprites, ref inputCaptured, ref selectedSegmentId, choiceForm, selectSoundPath, hoverSoundPath, libVLC, videoId, choices, segment, movieFolder, fadeInActive);
+
+                        await Task.Delay(16); // Update approximately every 16ms (~60 FPS)
+                    }
                 }
 
                 if (!inputCaptured && File.Exists(timeoutSoundPath))
@@ -3686,7 +4140,6 @@ public static class UIManager
                         }
                     };
 
-                    // Set layered style
                     int exStyle2 = GetWindowLong(choiceForm.Handle, GWL_EXSTYLE);
                     SetWindowLong(choiceForm.Handle, GWL_EXSTYLE, exStyle2 | WS_EX_LAYERED);
 
@@ -3694,7 +4147,6 @@ public static class UIManager
 
                     choiceForm.FormClosing += (s, e) =>
                     {
-                        // Prevent recursive closing
                         if ((choiceForm.Tag as string) == "Closing") return;
 
                         e.Cancel = true;
@@ -3961,6 +4413,111 @@ public static class UIManager
                 };
                 fadeTimer.Start();
             }
+            else if (videoId == "80988062")
+            {
+                choiceForm.Opacity = 1.0;
+
+                Task.Run(async () =>
+                {
+                    fadeInActive = true;
+                    await Task.Delay(3640);
+
+                    stopwatch.Restart();
+
+                    if (!choiceForm.IsHandleCreated || choiceForm.IsDisposed) return;
+
+                    choiceForm.Invoke(new Action(() =>
+                    {
+                        int fadeDuration = 360;
+                        int fadeInterval = 15;
+                        int fadeElapsed = 0;
+
+                        var defaultSprites = new Bitmap[buttons.Count];
+                        for (int i = 0; i < buttons.Count; i++)
+                        {
+                            if (i < buttonSprites.Count && buttonSprites[i] != null)
+                                defaultSprites[i] = ExtractSprite(buttonSprites[i], 0) ?? new Bitmap(1, 1, PixelFormat.Format32bppArgb);
+                            else
+                                defaultSprites[i] = null;
+                        }
+
+                        System.Windows.Forms.Timer fadeTimer = new System.Windows.Forms.Timer { Interval = fadeInterval };
+                        fadeTimer.Tick += (s2, e2) =>
+                        {
+                            fadeElapsed += fadeInterval;
+                            double progress = Math.Min(1.0, (double)fadeElapsed / fadeDuration);
+
+                            timerBrightness = progress;
+                            drawingPanel.Invalidate();
+
+                            for (int i = 0; i < buttons.Count; i++)
+                            {
+                                var btn = buttons[i];
+                                var def = defaultSprites[i];
+
+                                if (def != null)
+                                {
+                                    var bmp = new Bitmap(def.Width, def.Height, PixelFormat.Format32bppArgb);
+                                    using (var g2 = Graphics.FromImage(bmp))
+                                    {
+                                        var ia = new ImageAttributes();
+                                        var cm = new ColorMatrix { Matrix33 = (float)progress };
+                                        ia.SetColorMatrix(cm, ColorMatrixFlag.Default, ColorAdjustType.Bitmap);
+                                        g2.DrawImage(def, new Rectangle(0, 0, def.Width, def.Height), 0, 0, def.Width, def.Height, GraphicsUnit.Pixel, ia);
+                                    }
+                                    btn.BackgroundImage = new Bitmap(bmp, btn.Size);
+                                    bmp.Dispose();
+                                }
+
+                                Color target = (i < targetButtonForeColors.Count) ? targetButtonForeColors[i] : Color.White;
+                                int r = (int)(target.R * progress);
+                                int gCol = (int)(target.G * progress);
+                                int bCol = (int)(target.B * progress);
+                                btn.ForeColor = Color.FromArgb(ClampByte(r), ClampByte(gCol), ClampByte(bCol));
+                            }
+
+                            if (progress >= 1.0)
+                            {
+                                fadeTimer.Stop();
+                                fadeTimer.Dispose();
+
+                                timerBrightness = 1.0;
+                                drawingPanel.Invalidate();
+
+                                for (int i = 0; i < buttons.Count; i++)
+                                {
+                                    var btn = buttons[i];
+                                    if (defaultSprites[i] != null)
+                                        btn.BackgroundImage = new Bitmap(defaultSprites[i], btn.Size);
+
+                                    Color final = (i < targetButtonForeColors.Count) ? targetButtonForeColors[i] : Color.White;
+                                    btn.ForeColor = final;
+
+                                    var pics = btn.Controls.OfType<PictureBox>().ToList();
+                                    foreach (var pic in pics)
+                                        pic.Visible = true;
+                                }
+
+                                fadeInActive = false;
+
+                                for (int i = 0; i < buttons.Count; i++)
+                                {
+                                    var b = buttons[i];
+                                    if (b.Bounds.Contains(b.Parent.PointToClient(Control.MousePosition)) && File.Exists(hoverSoundPath))
+                                    {
+                                        var hoverPlayer = new MediaPlayer(new Media(libVLC, hoverSoundPath, FromType.FromPath));
+                                        hoverPlayer.Play();
+                                    }
+                                }
+                            }
+                        };
+
+                        fadeTimer.Start();
+                    }));
+                });
+
+                int ClampByte(int v) => Math.Min(255, Math.Max(0, v));
+            }
             else if (videoId == "81054409" || videoId == "81058723" || videoId == "81205737" || videoId == "81175265" || videoId == "81251335" || videoId == "80994695" || videoId == "80149064" || videoId == "81260654" || videoId == "81019938" || videoId == "81328829" || videoId == "81287545" || videoId == "81108751" || videoId == "80151644" || videoId == "81319137" || videoId == "81054415" || videoId == "80135585" || videoId == "81205738" || videoId == "80227804" || videoId == "80227805" || videoId == "80227800" || videoId == "80227801" || videoId == "80227802" || videoId == "80227803" || videoId == "80227699" || videoId == "80227698")
             {
                 int fadeDuration = 300;
@@ -4000,6 +4557,29 @@ public static class UIManager
                     double progress = Math.Min(1.0, (double)fadeElapsed / fadeDuration);
 
                     double targetOpacity = 0.97;
+
+                    choiceForm.Opacity = targetOpacity * progress;
+
+                    if (progress >= 1.0)
+                    {
+                        fadeTimer.Stop();
+                        choiceForm.Opacity = targetOpacity;
+                    }
+                };
+                fadeTimer.Start();
+            }
+            else if (videoId == "81609455")
+            {
+                int fadeDuration = 200;
+                int fadeInterval = 15;
+                int fadeElapsed = 0;
+                System.Windows.Forms.Timer fadeTimer = new System.Windows.Forms.Timer { Interval = fadeInterval };
+                fadeTimer.Tick += (s2, e2) =>
+                {
+                    fadeElapsed += fadeInterval;
+                    double progress = Math.Min(1.0, (double)fadeElapsed / fadeDuration);
+
+                    double targetOpacity = 0.85;
 
                     choiceForm.Opacity = targetOpacity * progress;
 
@@ -4055,6 +4635,8 @@ public static class UIManager
                     Console.WriteLine("No choice made. No default choice or timeout segment specified.");
                 }
 
+                wasDefault = true;
+                Console.WriteLine("nowsettingfalse.");
                 choiceForm.Invoke(new Action(() => choiceForm.Close()));
             }
         });
@@ -4075,7 +4657,7 @@ public static class UIManager
             }
         }
 
-        return (selectedSegmentId, selectedChoiceId);
+        return (selectedSegmentId, selectedChoiceId, wasDefault);
     }
 
     private static Settings LoadSettings()
@@ -4092,7 +4674,6 @@ public static class UIManager
         };
     }
 
-    // Align the UI window with the video player
     private static void AlignWithVideoPlayer(Form choiceForm, string videoId, Segment segment)
     {
         IntPtr videoPlayerHandle = FindWindow(null, "Interactive Player   ");
@@ -4125,6 +4706,13 @@ public static class UIManager
                         if (segment.LayoutType == "l0")
                         {
                             heightFactor = 0.25;
+                        }
+                        break;
+                    case "81609455":
+                        heightFactor = 1;
+                        if (segment.LayoutType == "l3" || segment.LayoutType == "l4")
+                        {
+                            heightFactor = 0.17;
                         }
                         break;
                     case "81328829":
@@ -4458,6 +5046,32 @@ public static class UIManager
                     var hoverPlayer = new MediaPlayer(new Media(libVLC, hoverSoundPath, FromType.FromPath));
                     hoverPlayer.Play();
                 }
+
+                if (videoId == "81328829" || videoId == "81287545" || videoId == "80151644" || videoId == "81260654" || videoId == "81058723" || videoId == "81287545" || videoId == "81054409" || videoId == "81019938" || videoId == "81250267" || videoId == "81250266" || videoId == "81250265" || videoId == "81250264" || videoId == "81250263" || videoId == "81250262" || videoId == "81250261" || videoId == "81250260" || videoId == "80227815" || videoId == "81271335" && segment.LayoutType == "l0" || videoId == "81205737" || videoId == "80149064" || videoId == "80994695" || videoId == "81175265" || videoId == "81251335" || videoId == "81108751" || videoId == "81319137" || videoId == "81054415" || videoId == "80135585" || videoId == "81004016" || videoId == "81205738" || videoId == "80227804" || videoId == "80227805" || videoId == "80227800" || videoId == "80227801" || videoId == "80227802" || videoId == "80227803" || videoId == "80227699" || videoId == "80227698" || videoId == "81609455" && segment.LayoutType == "l0" || videoId == "81609455" && segment.LayoutType == "l3" || videoId == "81609455" && segment.LayoutType == "l4" || videoId == "81609455" && segment.LayoutType == "l1")
+                {
+                    if (choiceForm.IsHandleCreated && !choiceForm.IsDisposed)
+                    {
+                        int prevIdxSnapshot = previousIndex;
+                        int currIdxSnapshot = selectedIndex;
+
+                        try
+                        {
+                            choiceForm.BeginInvoke((Action)(() =>
+                            {
+                                var prevBtn = buttons[prevIdxSnapshot];
+                                var prevPanel = prevBtn?.Parent as Panel;
+                                if (prevPanel != null)
+                                    AnimatePanelShrink(prevPanel, prevBtn);
+
+                                var currBtn = buttons[currIdxSnapshot];
+                                var currPanel = currBtn?.Parent as Panel;
+                                if (currPanel != null)
+                                    AnimatePanelGrow(currPanel, currBtn);
+                            }));
+                        }
+                        catch { }
+                    }
+                }
             }
 
             // Highlight the selected button
@@ -4494,6 +5108,26 @@ public static class UIManager
         {
             selectedSegmentId = (string)buttons[selectedIndex].Tag;
             inputCaptured = true;
+
+            int selectedIndexSnapshot = selectedIndex;
+
+            if (videoId == "81054409" || videoId == "81004016" || videoId == "81260654" || videoId == "81287545" || videoId == "81108751" || videoId == "80151644" || videoId == "81058723" || videoId == "81004016" || videoId == "81175265" || videoId == "81019938")
+            {
+                if (choiceForm.IsHandleCreated && !choiceForm.IsDisposed)
+                {
+                    choiceForm.BeginInvoke((Action)(() =>
+                    {
+                        try
+                        {
+                            var buttonPanels = choiceForm.Controls.OfType<Panel>().Where(p => p.Controls.OfType<Button>().Any()).ToList();
+                            var selectedPanel = buttons[selectedIndexSnapshot].Parent as Panel;
+                            var panelsToAnimate = buttonPanels.Where(p => p != selectedPanel).ToList();
+                            AnimatePanelsBoingClose(panelsToAnimate);
+                        }
+                        catch { }
+                    }));
+                }
+            }
 
             Bitmap selectedSprite = null;
             Bitmap correctSprite = null;
@@ -4582,7 +5216,7 @@ public static class UIManager
                 }));
             }
 
-            if (videoId == "81481556" && segment.LayoutType == "l1" || videoId == "80988062" && choices.Any(choice => choice.Text?.Equals("GO BACK", StringComparison.OrdinalIgnoreCase) == true) || videoId == "80988062" && choices.Any(choice => choice.Text?.Equals("EXIT TO CREDITS", StringComparison.OrdinalIgnoreCase) == true) || videoId == "81131714" && choices.Any(choice => choice.Text?.Equals("EXIT TO CREDITS", StringComparison.OrdinalIgnoreCase) == true) || videoId == "81131714" && segment.LayoutType == "l6" || videoId == "10000001" || videoId == "10000003" || videoId == "81251335" || videoId == "80149064" || videoId == "80994695" || videoId == "80135585" || videoId == "81328829" || videoId == "81205738" || videoId == "80227804" || videoId == "80227805" || videoId == "80227800" || videoId == "80227801" || videoId == "80227802" || videoId == "80227803" || videoId == "80227699" || videoId == "80227698" || videoId == "81319137" || videoId == "81205737" || videoId == "80227815" || videoId == "81250260" || videoId == "81250261" || videoId == "81250262" || videoId == "81250263" || videoId == "81250264" || videoId == "81250265" || videoId == "81250266" || videoId == "81250267")
+            if (videoId == "81481556" && segment.LayoutType == "l1" || videoId == "81609455" && segment.LayoutType == "l3" || videoId == "81609455" && segment.LayoutType == "l4" || videoId == "80988062" && choices.Any(choice => choice.Text?.Equals("GO BACK", StringComparison.OrdinalIgnoreCase) == true) || videoId == "80988062" && choices.Any(choice => choice.Text?.Equals("EXIT TO CREDITS", StringComparison.OrdinalIgnoreCase) == true) || videoId == "81131714" && choices.Any(choice => choice.Text?.Equals("EXIT TO CREDITS", StringComparison.OrdinalIgnoreCase) == true) || videoId == "81131714" && segment.LayoutType == "l6" || videoId == "10000001" || videoId == "10000003" || videoId == "81251335" || videoId == "80149064" || videoId == "80994695" || videoId == "80135585" || videoId == "81328829" || videoId == "81205738" || videoId == "80227804" || videoId == "80227805" || videoId == "80227800" || videoId == "80227801" || videoId == "80227802" || videoId == "80227803" || videoId == "80227699" || videoId == "80227698" || videoId == "81319137" || videoId == "81205737" || videoId == "80227815" || videoId == "81250260" || videoId == "81250261" || videoId == "81250262" || videoId == "81250263" || videoId == "81250264" || videoId == "81250265" || videoId == "81250266" || videoId == "81250267" || videoId == "81609455" && segment.LayoutType == "l0" || videoId == "81609455" && segment.LayoutType == "l1")
             {
                 choiceForm.Close(); // Close the form immediately after a choice is made
             }
@@ -4661,6 +5295,37 @@ public static class UIManager
         };
 
         easingTimer.Start();
+    }
+
+    private static void ForceInvokeClick(Button btn)
+    {
+        if (btn == null) return;
+        try
+        {
+            if (btn.InvokeRequired)
+            {
+                btn.Invoke((Action)(() => ForceInvokeClick(btn)));
+                return;
+            }
+
+            if (btn.IsDisposed || !btn.IsHandleCreated)
+            {
+                return;
+            }
+
+            bool wasEnabled = btn.Enabled;
+            if (!wasEnabled) btn.Enabled = true;
+
+            MethodInfo onClick = btn.GetType().GetMethod("OnClick", BindingFlags.Instance | BindingFlags.NonPublic)
+                             ?? typeof(Control).GetMethod("OnClick", BindingFlags.Instance | BindingFlags.NonPublic);
+            if (onClick != null)
+            {
+                onClick.Invoke(btn, new object[] { EventArgs.Empty });
+            }
+
+            if (!wasEnabled) btn.Enabled = false;
+        }
+        catch { }
     }
 
     private static double EaseOutQuad(double t)

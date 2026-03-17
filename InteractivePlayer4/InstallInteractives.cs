@@ -22,6 +22,7 @@ public static class InstallInteractives
         string bigInstallButtonPath = Path.Combine(currentDirectory, "general", "Big_Install_Button.png");
         string bigUninstallButtonPath = Path.Combine(currentDirectory, "general", "Big_Uninstall_Button.png");
         string bigUpdateButtonPath = Path.Combine(currentDirectory, "general", "Big_Update_Button.png");
+        string settingsButtonPath = Path.Combine(currentDirectory, "general", "Big_Settings_Button.png");
 
         Form form = new Form
         {
@@ -138,6 +139,30 @@ public static class InstallInteractives
             Cursor = Cursors.Hand
         };
 
+        PictureBox settingsButton = null;
+
+        void PositionRightPanelButtons()
+        {
+            const int spacing = 20;
+            if (settingsButton != null && rightPanel.Controls.Contains(settingsButton))
+            {
+                int totalWidth = actionButton.Width + spacing + settingsButton.Width;
+                int startX = Math.Max(0, (rightPanel.Width - totalWidth) / 2);
+                int yAction = Math.Max(0, (rightPanel.Height - actionButton.Height) - 10);
+                int ySettings = Math.Max(0, (rightPanel.Height - settingsButton.Height) - 10);
+
+                actionButton.Location = new Point(startX, yAction);
+                settingsButton.Location = new Point(startX + actionButton.Width + spacing, ySettings);
+            }
+            else
+            {
+                actionButton.Location = new Point((rightPanel.Width - actionButton.Width) / 2, rightPanel.Height - actionButton.Height - 10);
+            }
+
+            if (settingsButton != null)
+                settingsButton.BringToFront();
+        }
+
         Label detailsLabel = new Label
         {
             ForeColor = Color.White,
@@ -191,7 +216,7 @@ public static class InstallInteractives
 
         rightPanel.Resize += (sender, e) =>
         {
-            actionButton.Location = new Point((rightPanel.Width - actionButton.Width) / 2, rightPanel.Height - actionButton.Height - 10);
+            PositionRightPanelButtons();
         };
 
         // Add .intpak files to the left panel
@@ -339,8 +364,56 @@ public static class InstallInteractives
                         actionButton.Image = Image.FromFile(bigButtonImagePath);
                         actionButton.Location = new Point((rightPanel.Width - actionButton.Width) / 2, rightPanel.Height - actionButton.Height - 10);
 
-                        // Remove previous event handlers
                         ClearClickEventHandlers(actionButton);
+
+                        if (settingsButton != null)
+                        {
+                            try
+                            {
+                                ClearClickEventHandlers(settingsButton);
+                                if (rightPanel.Controls.Contains(settingsButton))
+                                    rightPanel.Controls.Remove(settingsButton);
+                                settingsButton.Dispose();
+                            }
+                            catch { }
+                            settingsButton = null;
+                        }
+
+                        if (Directory.Exists(correspondingFolder))
+                        {
+                            settingsButton = new PictureBox
+                            {
+                                SizeMode = PictureBoxSizeMode.AutoSize,
+                                BackColor = Color.Transparent,
+                                Cursor = Cursors.Hand
+                            };
+
+                            try
+                            {
+                                settingsButton.Image = Image.FromFile(settingsButtonPath);
+                            }
+                            catch
+                            { }
+
+                            settingsButton.Click += (sb, se) =>
+                            {
+                                try
+                                {
+                                    using (var win = new InteractiveSettingsForm(correspondingFolder))
+                                    {
+                                        win.ShowDialog(form);
+                                    }
+                                }
+                                catch (Exception ex)
+                                {
+                                    MessageBox.Show(form, "Failed to open settings window: " + ex.Message);
+                                }
+                            };
+
+                            rightPanel.Controls.Add(settingsButton);
+                        }
+
+                        PositionRightPanelButtons();
 
                         actionButton.Click += (s, ev) =>
                         {

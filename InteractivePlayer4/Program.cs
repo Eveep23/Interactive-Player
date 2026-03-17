@@ -16,6 +16,9 @@ class Program
 
     private static LoadingForm loadingForm;
 
+    public static bool ExternalSubtitleAttached = false;
+    public static bool ExternalAudioAttached = false;
+
     static void Main(string[] args)
     {
         discordClient = new DiscordRpcClient("1374146925128847370");
@@ -88,7 +91,7 @@ class Program
 
         bool forceFullscreen = args.Any(a => a.Equals("--fullscreen", StringComparison.OrdinalIgnoreCase));
 
-        if (movieFolder != null && Directory.GetParent(movieFolder) != null && string.Equals(Directory.GetParent(movieFolder).Name, "MCSM", StringComparison.OrdinalIgnoreCase) && File.Exists(Path.Combine(movieFolder, "save.json")) || movieFolder != null && Directory.GetParent(movieFolder) != null && Directory.GetParent(movieFolder).Name.StartsWith("BK", StringComparison.OrdinalIgnoreCase))
+        if (movieFolder != null && Directory.GetParent(movieFolder) != null && string.Equals(Directory.GetParent(movieFolder).Name, "MCSM", StringComparison.OrdinalIgnoreCase) && File.Exists(Path.Combine(movieFolder, "save.json")) || movieFolder != null && Directory.GetParent(movieFolder) != null && Directory.GetParent(movieFolder).Name.StartsWith("BK", StringComparison.OrdinalIgnoreCase) && File.Exists(Path.Combine(movieFolder, "save.json")))
         {
             skipContinueMenu = true;
         }
@@ -175,6 +178,11 @@ class Program
         // Merge moments into segments
         JsonParser.MergeMomentsIntoSegments(segments, momentsBySegment, videoId);
 
+        if (!string.IsNullOrEmpty(movieFolder) && Path.GetFileName(movieFolder).IndexOf("Battle Kitty", StringComparison.OrdinalIgnoreCase) >= 0)
+        {
+            currentSegment = initialSegment ?? segments.Values.FirstOrDefault(s => s.IsStartingSegment)?.Id ?? segments.Keys.First();
+        }
+
         // Set starting segment if not continuing
         if (currentSegment == null)
         {
@@ -189,7 +197,27 @@ class Program
             persistentState = saveData.PersistentState;
         }
 
-        // Initialize LibVLC with subtitle options
+        bool fileCachingEnabled = true;
+        try
+        {
+            string directJsonFile = Directory.GetFiles(movieFolder, "direct.json").FirstOrDefault();
+            if (directJsonFile != null)
+            {
+                var directJson = JObject.Parse(File.ReadAllText(directJsonFile));
+                JToken token = directJson["File Caching"] ?? directJson["FileCaching"];
+                bool? parsed = token?.ToObject<bool?>();
+                if (parsed.HasValue)
+                {
+                    fileCachingEnabled = parsed.Value;
+                }
+            }
+        }
+        catch (Exception ex)
+        {
+            Console.WriteLine($"Warning: Unable to read direct.json for file caching setting: {ex.Message}");
+            fileCachingEnabled = true;
+        }
+
         var vlcOptions = new List<string>
         {
             "--freetype-font=" + Path.Combine(Directory.GetCurrentDirectory(), "general", "NetflixSans_W_Md.ttf"),
@@ -199,7 +227,7 @@ class Program
             "--sub-margin=90",
             "--no-stats",
             "--quiet",
-            "--file-caching=100",
+            //"--file-caching=100",
             "--network-caching=100",
             "--live-caching=100",
             "--disc-caching=100",
@@ -207,8 +235,13 @@ class Program
             "--drop-late-frames",
             "--skip-frames",
             "--avcodec-hw=none",
+            //"--avcodec-threads=4",
             "--video-title=Interactive Player   "
         };
+        if (fileCachingEnabled)
+        {
+            vlcOptions.Insert(8, "--file-caching=100");
+        }
         /*
         if (movieFolder == null || !movieFolder.Contains("Minecraft Story Mode Ep"))
         {
@@ -218,6 +251,72 @@ class Program
         */
         var libVLC = new LibVLC(vlcOptions.ToArray());
         var media = new Media(libVLC, new Uri(Path.GetFullPath(videoFile)));
+
+        try
+        {
+            string directJsonFile = Directory.GetFiles(movieFolder, "direct.json").FirstOrDefault();
+            if (directJsonFile != null)
+            {
+                var directJson = JObject.Parse(File.ReadAllText(directJsonFile));
+
+                Func<string, string> resolvePath = (p) =>
+                {
+                    if (string.IsNullOrWhiteSpace(p)) return null;
+                    if (p.StartsWith("file://", StringComparison.OrdinalIgnoreCase))
+                        return p;
+                    if (Path.IsPathRooted(p))
+                        return Path.GetFullPath(p);
+                    var combined = Path.Combine(movieFolder, p);
+                    return Path.GetFullPath(combined);
+                };
+
+                string subtitleRaw = directJson["Subtitle"]?.ToString();
+                string audioRaw = directJson["Audio"]?.ToString();
+
+                string subtitlePath = resolvePath(subtitleRaw);
+                string audioPath = resolvePath(audioRaw);
+
+                if (!string.IsNullOrEmpty(subtitlePath))
+                {
+                    if (subtitlePath.StartsWith("file://", StringComparison.OrdinalIgnoreCase) || File.Exists(subtitlePath))
+                    {
+                        media.AddOption($":sub-file={subtitlePath}");
+                        ExternalSubtitleAttached = true;
+                        Console.WriteLine($"Using external subtitle: {subtitlePath}");
+                    }
+                    else
+                    {
+                        Console.WriteLine($"Warning: Subtitle file specified in direct.json not found: {subtitlePath}");
+                    }
+                }
+
+                if (!string.IsNullOrEmpty(audioPath))
+                {
+                    if (audioPath.StartsWith("file://", StringComparison.OrdinalIgnoreCase) || File.Exists(audioPath))
+                    {
+                        media.AddOption($":input-slave={audioPath}");
+                        ExternalAudioAttached = true;
+                        Console.WriteLine($"Using external audio: {audioPath}");
+                    }
+                    else
+                    {
+                        Console.WriteLine($"Warning: Audio file specified in direct.json not found: {audioPath}");
+                    }
+                }
+
+                if (Program.ExternalSubtitleAttached || Program.ExternalAudioAttached)
+                {
+                    Console.WriteLine("External tracks provided by direct.json will be used. Saved audio/subtitle settings will be skipped for attached track types.");
+                }
+            }
+        }
+        catch (Exception ex)
+        {
+            Console.WriteLine($"Warning: Unable to apply direct.json audio/subtitle options: {ex.Message}");
+            ExternalSubtitleAttached = false;
+            ExternalAudioAttached = false;
+        }
+
         var mediaPlayer = new MediaPlayer(media);
 
         if (forceFullscreen)

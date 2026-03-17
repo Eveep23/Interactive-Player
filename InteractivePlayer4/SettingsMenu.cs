@@ -102,7 +102,7 @@ public static class SettingsMenu
             DropDownStyle = ComboBoxStyle.DropDownList,
             Font = new Font("Arial", 14)
         };
-        audioComboBox.Items.AddRange(new string[] { "Arabic", "Czech", "German", "English", "Latin American - Spanish", "European - Spanish", "French", "Hindi", "Hungarian", "Indonesian", "Italian", "Polish", "Brazilian - Portuguese", "European - Portuguese", "Thai", "Turkish", "Ukrainian" });
+        audioComboBox.Items.AddRange(new string[] { "Arabic", "Chinese", "Czech", "Danish", "Dutch", "English", "Finnish", "French", "German", "Hebrew", "Hindi", "Hungarian", "Indonesian", "Italian", "Japanese", "Korean", "Norwegian Bokmaal", "Polish", "Brazilian - Portuguese", "European - Portuguese", "Romanian", "Russian", "European - Spanish", "Latin American - Spanish", "Swedish", "Thai", "Turkish", "Ukrainian" });
         audioComboBox.SelectedItem = loadedSettings.AudioLanguage;
 
         Label subtitleLabel = new Label

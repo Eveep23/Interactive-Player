@@ -5,6 +5,7 @@ using SharpDX.DirectInput;
 using SharpDX.XInput;
 using System;
 using System.Collections.Generic;
+using System.Diagnostics;
 using System.Drawing;
 using System.Drawing.Printing;
 using System.IO;
@@ -196,7 +197,8 @@ public static class JsonParser
 
                     if (videoId == "80988062")
                     {
-                        segment.ChoiceDisplayTimeMs = choiceMoment.uiInteractionStartMS ?? 0;
+                        //segment.ChoiceDisplayTimeMs = choiceMoment.uiInteractionStartMS ?? 0;
+                        segment.ChoiceDisplayTimeMs = choiceMoment.StartMs ?? 0;
                         segment.HideChoiceTimeMs = choiceMoment.uiHideMS ?? segment.EndTimeMs;
                     }
                     else
@@ -271,6 +273,7 @@ public static class JsonParser
         bool choiceDisplayed = false;
         bool fakeChoiceDisplayed = false;
         bool tutorialDisplayed = false;
+        bool lastChoiceWasDefault = false;
 
         string defaultButtonTexturePath = FindDefaultButtonTexture(movieFolder, segment.Choices ?? new List<Choice>());
 
@@ -282,10 +285,32 @@ public static class JsonParser
 
         mediaPlayer.Media.ParsedChanged += (sender, e) =>
         {
-            if (e.ParsedStatus == MediaParsedStatus.Done)
+            if (e.ParsedStatus != MediaParsedStatus.Done)
+                return;
+
+            try
             {
-                AudioManager.LoadAudioTrackFromSaveFile(mediaPlayer, mediaPlayer.Media, configSaveFilePath);
-                SubtitleManager.LoadSubtitleTrackFromSaveFile(mediaPlayer, mediaPlayer.Media, configSaveFilePath);
+                if (!Program.ExternalAudioAttached)
+                {
+                    AudioManager.LoadAudioTrackFromSaveFile(mediaPlayer, mediaPlayer.Media, configSaveFilePath);
+                }
+                else
+                {
+                    Console.WriteLine("External audio attached by direct.json; skipping saved audio track selection.");
+                }
+
+                if (!Program.ExternalSubtitleAttached)
+                {
+                    SubtitleManager.LoadSubtitleTrackFromSaveFile(mediaPlayer, mediaPlayer.Media, configSaveFilePath);
+                }
+                else
+                {
+                    Console.WriteLine("External subtitle attached by direct.json; skipping saved subtitle track selection.");
+                }
+            }
+            catch (Exception ex)
+            {
+                Console.WriteLine($"Warning applying saved audio/subtitle selection: {ex.Message}");
             }
         };
 
@@ -760,7 +785,7 @@ public static class JsonParser
                     subtitlesHiddenForChoice = true;
                 }
 
-                var (selectedSegment, choiceId) = UIManager.ShowChoiceUI(validChoices, buttonSprites, buttonIcons, (int)choiceDurationMs, movieFolder, videoId, segment, segment.HeaderText);
+                var (selectedSegment, choiceId, wasDefault) = UIManager.ShowChoiceUI(validChoices, buttonSprites, buttonIcons, (int)choiceDurationMs, movieFolder, videoId, segment, segment.HeaderText);
 
                 if (subtitlesHiddenForChoice && previousSpuTrackId.HasValue)
                 {
@@ -778,6 +803,8 @@ public static class JsonParser
                 }
 
                 SaveManager.SaveSnapshot(saveFilePath);
+
+                lastChoiceWasDefault = wasDefault;
 
                 if (!string.IsNullOrEmpty(selectedSegment))
                 {
@@ -952,8 +979,16 @@ public static class JsonParser
         {
             // Extract episode number
             string episodeNumber = new string(nextSegment.Where(char.IsDigit).ToArray());
-            string message = $"To Continue, Play Episode {episodeNumber}";
 
+            if (int.TryParse(episodeNumber, out int epNum))
+            {
+                if (TryRestartToNextEpisode(movieFolder, epNum, mediaPlayer.Fullscreen))
+                {
+                    return null;
+                }
+            }
+
+            string message = $"To Continue, Install Episode {episodeNumber}";
             MessageBox.Show(message, "Episode Required", MessageBoxButtons.OK, MessageBoxIcon.Information, MessageBoxDefaultButton.Button1, MessageBoxOptions.DefaultDesktopOnly);
             return null; // Return null to indicate the current interactive should stop
         }
@@ -966,17 +1001,23 @@ public static class JsonParser
             if (episodeSuffix != null && int.TryParse(episodeSuffix.Substring(1), out episodeNum))
             {
                 int nextEpisode = episodeNum + 1;
-                string message = $"To Continue, Play Episode {nextEpisode:D2}";
+
+                if (TryRestartToNextEpisode(movieFolder, nextEpisode, mediaPlayer.Fullscreen))
+                {
+                    return null;
+                }
+
+                string message = $"To Continue, Install Episode {nextEpisode:D2}";
                 MessageBox.Show(message, "Episode Required", MessageBoxButtons.OK, MessageBoxIcon.Information, MessageBoxDefaultButton.Button1, MessageBoxOptions.DefaultDesktopOnly);
             }
             else
             {
-                MessageBox.Show("To Continue, Play the Next Episode", "Episode Required", MessageBoxButtons.OK, MessageBoxIcon.Information, MessageBoxDefaultButton.Button1, MessageBoxOptions.DefaultDesktopOnly);
+                MessageBox.Show("To Continue, Install the Next Episode", "Episode Required", MessageBoxButtons.OK, MessageBoxIcon.Information, MessageBoxDefaultButton.Button1, MessageBoxOptions.DefaultDesktopOnly);
             }
             return null;
         }
 
-        if ((videoId == "81131714" && segment.Choices != null && segment.Choices.Any(choice => choice.Text?.Equals("EXIT TO CREDITS", StringComparison.OrdinalIgnoreCase) == true) || videoId == "81131714" && segment.LayoutType == "l69" && segment.Id == "SkipAhead" || videoId == "80988062" && segment.Choices != null && segment.Choices.Any(choice => choice.Text?.Equals("GO BACK", StringComparison.OrdinalIgnoreCase) == true) || videoId == "80988062" && segment.Choices != null && segment.Choices.Any(choice => choice.Text?.Equals("EXIT TO CREDITS", StringComparison.OrdinalIgnoreCase) == true) || videoId == "81131714" && segment.LayoutType == "l6" || videoId == "81481556" || videoId == "10000001" || videoId == "10000003" || videoId == "81251335" || videoId == "80149064" || videoId == "80994695" || videoId == "80135585" || videoId == "81328829" || videoId == "80227804" || videoId == "80227805" || videoId == "80227800" || videoId == "80227801" || videoId == "80227802" || videoId == "80227803" || videoId == "80227699" || videoId == "80227698" || videoId == "81319137" || videoId == "81205738" || videoId == "81205737" || videoId == "80227815" || videoId == "81250260" || videoId == "81250261" || videoId == "81250262" || videoId == "81250263" || videoId == "81250264" || videoId == "81250265" || videoId == "81250266" || videoId == "81250267") && choiceDisplayed)
+        if (((videoId == "81131714" && segment.Choices != null && segment.Choices.Any(choice => choice.Text?.Equals("EXIT TO CREDITS", StringComparison.OrdinalIgnoreCase) == true) || videoId == "81609455" && segment.LayoutType == "l3" || videoId == "81609455" && segment.LayoutType == "l4" || videoId == "81131714" && segment.LayoutType == "l69" && segment.Id == "SkipAhead" || videoId == "80988062" && segment.Choices != null && segment.Choices.Any(choice => choice.Text?.Equals("GO BACK", StringComparison.OrdinalIgnoreCase) == true) || videoId == "80988062" && segment.Choices != null && segment.Choices.Any(choice => choice.Text?.Equals("EXIT TO CREDITS", StringComparison.OrdinalIgnoreCase) == true) || videoId == "81131714" && segment.LayoutType == "l6" || videoId == "81481556" || videoId == "10000001" || videoId == "10000003" || videoId == "81251335" || videoId == "80149064" || videoId == "80994695" || videoId == "80135585" || videoId == "81328829" || videoId == "80227804" || videoId == "80227805" || videoId == "80227800" || videoId == "80227801" || videoId == "80227802" || videoId == "80227803" || videoId == "80227699" || videoId == "80227698" || videoId == "81319137" || videoId == "81205738" || videoId == "81205737" || videoId == "80227815" || videoId == "81250260" || videoId == "81250261" || videoId == "81250262" || videoId == "81250263" || videoId == "81250264" || videoId == "81250265" || videoId == "81250266" || videoId == "81250267") && choiceDisplayed || videoId == "81609455" && segment.LayoutType == "l0" || videoId == "81609455" && segment.LayoutType == "l1") && !lastChoiceWasDefault)
         {
             Console.WriteLine("Skipped the wait");
         }
@@ -1113,5 +1154,53 @@ public static class JsonParser
             return files[0];
         }
         return null;
+    }
+
+    private static bool TryRestartToNextEpisode(string currentMovieFolder, int episodeNumber, bool keepFullscreen)
+    {
+        try
+        {
+            var parentDir = Directory.GetParent(currentMovieFolder);
+            if (parentDir == null) return false;
+
+            int epNum = episodeNumber;
+            string epPad2 = epNum.ToString("D2");
+
+            var candidate = Directory.GetDirectories(parentDir.FullName)
+                .FirstOrDefault(d =>
+                {
+                    var name = Path.GetFileName(d);
+                    if (string.IsNullOrEmpty(name)) return false;
+                    if (name.IndexOf($"E{epPad2}", StringComparison.OrdinalIgnoreCase) >= 0) return true;
+                    if (name.IndexOf($"Episode {epNum}", StringComparison.OrdinalIgnoreCase) >= 0) return true;
+                    if (name.IndexOf($"Ep{epNum}", StringComparison.OrdinalIgnoreCase) >= 0) return true;
+                    if (name.IndexOf(epNum.ToString(), StringComparison.OrdinalIgnoreCase) >= 0) return true;
+                    return false;
+                });
+
+            if (string.IsNullOrEmpty(candidate) || !Directory.Exists(candidate))
+                return false;
+
+            string exe = Process.GetCurrentProcess().MainModule.FileName;
+            string args = $"--skipmenus \"{candidate}\"";
+            if (keepFullscreen)
+            {
+                args += " --fullscreen";
+            }
+
+            var psi = new ProcessStartInfo(exe, args)
+            {
+                UseShellExecute = true
+            };
+
+            Process.Start(psi);
+
+            Environment.Exit(0);
+            return true;
+        }
+        catch
+        {
+            return false;
+        }
     }
 }

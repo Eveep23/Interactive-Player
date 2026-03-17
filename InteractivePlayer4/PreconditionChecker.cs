@@ -170,9 +170,83 @@ public static class PreconditionChecker
                 int mult = EvaluateMultiplication(logic.Skip(1), persistentState, globalState, preconditionResults, infoJsonFile);
                 preconditionResults[logic[1].ToString()] = mult; // Store the multiplication result in preconditionResults
                 return true; // Multiplication operation itself is always true
+            case "max":
+                int max = EvaluateMax(logic.Skip(1), persistentState, globalState, preconditionResults, infoJsonFile);
+                preconditionResults[logic[1].ToString()] = max; // Store the max result in preconditionResults
+                return true; // Max operation itself is always true
             default:
                 throw new NotImplementedException($"Unsupported operation: {operation}");
         }
+    }
+
+    static int EvaluateNumericToken(JToken token, JObject persistentState, JObject globalState, Dictionary<string, int> preconditionResults, string infoJsonFile)
+    {
+        if (token == null)
+            throw new ArgumentNullException(nameof(token));
+
+        // Simple literal number
+        if (token.Type == JTokenType.Integer || token.Type == JTokenType.Float)
+        {
+            return token.ToObject<int>();
+        }
+
+        // Array expression, e.g. ["precondition","p_multi_p1_total_score"], ["sum", ...], etc.
+        if (token.Type == JTokenType.Array)
+        {
+            var arr = (JArray)token;
+            if (arr.Count == 0)
+                throw new ArgumentException("Empty numeric expression array.");
+
+            string opType = arr[0].ToString();
+
+            if (opType == "persistentState" || opType == "globalState")
+            {
+                string key = arr[1].ToString();
+                JToken actualValue = opType == "persistentState" ? persistentState?[key] : globalState?[key];
+                if (actualValue == null || (actualValue.Type != JTokenType.Integer && actualValue.Type != JTokenType.Float))
+                    return 0;
+                return actualValue.ToObject<int>();
+            }
+
+            if (opType == "precondition")
+            {
+                string preconditionKey = arr[1].ToString();
+                if (!preconditionResults.TryGetValue(preconditionKey, out int preconditionValue))
+                {
+                    var preconditions = LoadPreconditionsFromInfoJson(infoJsonFile);
+                    if (preconditions != null && preconditions.TryGetValue(preconditionKey, out var preconditionLogic))
+                    {
+                        // If the referenced precondition is a numeric op, evaluate numerically
+                        string referencedOp = preconditionLogic[0].ToString();
+                        if (referencedOp == "sum")
+                            preconditionValue = EvaluateSum(preconditionLogic.Skip(1), persistentState, globalState, preconditionResults, infoJsonFile);
+                        else if (referencedOp == "mult")
+                            preconditionValue = EvaluateMultiplication(preconditionLogic.Skip(1), persistentState, globalState, preconditionResults, infoJsonFile);
+                        else if (referencedOp == "max")
+                            preconditionValue = EvaluateMax(preconditionLogic.Skip(1), persistentState, globalState, preconditionResults, infoJsonFile);
+                        else
+                            preconditionValue = EvaluatePrecondition(preconditionLogic, persistentState, globalState, preconditionResults, infoJsonFile) ? 1 : 0;
+                        preconditionResults[preconditionKey] = preconditionValue;
+                    }
+                    else
+                    {
+                        throw new ArgumentException($"Unknown precondition: {preconditionKey}");
+                    }
+                }
+                return preconditionValue;
+            }
+
+            if (opType == "sum")
+                return EvaluateSum(arr.Skip(1), persistentState, globalState, preconditionResults, infoJsonFile);
+            if (opType == "mult")
+                return EvaluateMultiplication(arr.Skip(1), persistentState, globalState, preconditionResults, infoJsonFile);
+            if (opType == "max")
+                return EvaluateMax(arr.Skip(1), persistentState, globalState, preconditionResults, infoJsonFile);
+
+            throw new ArgumentException($"Unsupported numeric expression type: {opType}");
+        }
+
+        throw new ArgumentException($"Unsupported numeric token type: {token.Type}");
     }
 
     static int EvaluateMultiplication(IEnumerable<JToken> operands, JObject persistentState, JObject globalState, Dictionary<string, int> preconditionResults, string infoJsonFile)
@@ -201,7 +275,7 @@ public static class PreconditionChecker
                         if (preconditions != null && preconditions.TryGetValue(preconditionKey, out var preconditionLogic))
                         {
                             bool preconditionResult = EvaluatePrecondition(preconditionLogic, persistentState, globalState, preconditionResults, infoJsonFile);
-                            preconditionValue = preconditionResult ? 1 : 0; // Assuming precondition result is boolean
+                            preconditionValue = preconditionResult ? 1 : 0; 
                             preconditionResults[preconditionKey] = preconditionValue;
                         }
                         else
@@ -210,6 +284,10 @@ public static class PreconditionChecker
                         }
                     }
                     result *= preconditionValue;
+                }
+                else if (subOperation == "max")
+                {
+                    result *= EvaluateMax(operand.Skip(1), persistentState, globalState, preconditionResults, infoJsonFile);
                 }
                 else
                 {
@@ -229,6 +307,8 @@ public static class PreconditionChecker
     {
         string stateType = path[0].ToString();
         string key = path[1].ToString();
+
+        bool isTriviaverseProfile = string.Equals(Path.GetFileName(Path.GetDirectoryName(infoJsonFile)), "Triviaverse", StringComparison.OrdinalIgnoreCase);
 
         JToken actualValue = null;
         if (stateType == "persistentState")
@@ -256,6 +336,12 @@ public static class PreconditionChecker
                     throw new ArgumentException($"Unknown precondition: {key}");
                 }
             }
+            if (isTriviaverseProfile)
+            {
+                int expected = EvaluateNumericToken(expectedValue, persistentState, globalState, preconditionResults, infoJsonFile);
+                return preconditionValue > expected;
+            }
+
             return preconditionValue == expectedValue.ToObject<int>();
         }
         else if (stateType == "sum")
@@ -322,6 +408,8 @@ public static class PreconditionChecker
         string stateType = path[0].ToString();
         string key = path[1].ToString();
 
+        bool isTriviaverseProfile = string.Equals(Path.GetFileName(Path.GetDirectoryName(infoJsonFile)), "Triviaverse", StringComparison.OrdinalIgnoreCase);
+
         JToken actualValue = null;
         if (stateType == "persistentState")
         {
@@ -348,6 +436,12 @@ public static class PreconditionChecker
                     throw new ArgumentException($"Unknown precondition: {key}");
                 }
             }
+            if (isTriviaverseProfile)
+            {
+                int expected = EvaluateNumericToken(expectedValue, persistentState, globalState, preconditionResults, infoJsonFile);
+                return preconditionValue > expected;
+            }
+
             return preconditionValue > expectedValue.ToObject<int>();
         }
         else if (stateType == "sum")
@@ -514,6 +608,11 @@ public static class PreconditionChecker
                     // Nested multiplication
                     sum += EvaluateMultiplication(arr.Skip(1), persistentState, globalState, preconditionResults, infoJsonFile);
                 }
+                else if (stateType == "max")
+                {
+                    // Nested max
+                    sum += EvaluateMax(arr.Skip(1), persistentState, globalState, preconditionResults, infoJsonFile);
+                }
                 else
                 {
                     throw new ArgumentException($"Unknown state type: {stateType}");
@@ -526,5 +625,102 @@ public static class PreconditionChecker
         }
 
         return sum;
+    }
+
+    static int EvaluateMax(IEnumerable<JToken> operands, JObject persistentState, JObject globalState, Dictionary<string, int> preconditionResults, string infoJsonFile)
+    {
+        int max = int.MinValue;
+        bool found = false;
+
+        foreach (var operand in operands)
+        {
+            int candidate = 0;
+            bool candidateSet = false;
+
+            if (operand.Type == JTokenType.Integer || operand.Type == JTokenType.Float)
+            {
+                candidate = operand.ToObject<int>();
+                candidateSet = true;
+            }
+            else if (operand.Type == JTokenType.Array)
+            {
+                var arr = (JArray)operand;
+                if (arr.Count == 0)
+                    continue;
+
+                string opType = arr[0].ToString();
+
+                if (opType == "persistentState" || opType == "globalState")
+                {
+                    string key = arr[1].ToString();
+                    JToken actualValue = opType == "persistentState" ? persistentState?[key] : globalState?[key];
+                    if (actualValue != null && actualValue.Type == JTokenType.Integer)
+                    {
+                        candidate = (int)actualValue;
+                        candidateSet = true;
+                    }
+                }
+                else if (opType == "precondition")
+                {
+                    string preconditionKey = arr[1].ToString();
+                    if (!preconditionResults.TryGetValue(preconditionKey, out int preconditionValue))
+                    {
+                        var preconditions = LoadPreconditionsFromInfoJson(infoJsonFile);
+                        if (preconditions != null && preconditions.TryGetValue(preconditionKey, out var preconditionLogic))
+                        {
+                            if (preconditionLogic[0].ToString() == "sum")
+                                preconditionValue = EvaluateSum(preconditionLogic.Skip(1), persistentState, globalState, preconditionResults, infoJsonFile);
+                            else if (preconditionLogic[0].ToString() == "mult")
+                                preconditionValue = EvaluateMultiplication(preconditionLogic.Skip(1), persistentState, globalState, preconditionResults, infoJsonFile);
+                            else if (preconditionLogic[0].ToString() == "max")
+                                preconditionValue = EvaluateMax(preconditionLogic.Skip(1), persistentState, globalState, preconditionResults, infoJsonFile);
+                            else
+                                preconditionValue = EvaluatePrecondition(preconditionLogic, persistentState, globalState, preconditionResults, infoJsonFile) ? 1 : 0;
+                            preconditionResults[preconditionKey] = preconditionValue;
+                        }
+                        else
+                        {
+                            throw new ArgumentException($"Unknown precondition: {preconditionKey}");
+                        }
+                    }
+                    candidate = preconditionValue;
+                    candidateSet = true;
+                }
+                else if (opType == "sum")
+                {
+                    candidate = EvaluateSum(arr.Skip(1), persistentState, globalState, preconditionResults, infoJsonFile);
+                    candidateSet = true;
+                }
+                else if (opType == "mult")
+                {
+                    candidate = EvaluateMultiplication(arr.Skip(1), persistentState, globalState, preconditionResults, infoJsonFile);
+                    candidateSet = true;
+                }
+                else if (opType == "max")
+                {
+                    candidate = EvaluateMax(arr.Skip(1), persistentState, globalState, preconditionResults, infoJsonFile);
+                    candidateSet = true;
+                }
+                else
+                {
+                    throw new ArgumentException($"Unsupported operand type in max: {opType}");
+                }
+            }
+            else
+            {
+                throw new ArgumentException($"Unsupported operand type in max: {operand.Type}");
+            }
+
+            if (candidateSet)
+            {
+                if (!found || candidate > max)
+                {
+                    max = candidate;
+                    found = true;
+                }
+            }
+        }
+
+        return found ? max : 0;
     }
 }

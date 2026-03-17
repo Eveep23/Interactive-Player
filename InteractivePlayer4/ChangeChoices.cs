@@ -67,23 +67,36 @@ namespace InteractivePlayer
 
             listBox.DrawItem += (sender, e) =>
             {
-                e.DrawBackground();
-                if (e.Index >= 0)
+                if (e.Index < 0)
                 {
-                    string text = listBox.Items[e.Index].ToString();
-                    using (Brush brush = new SolidBrush(listBox.ForeColor))
-                    using (StringFormat sf = new StringFormat { Alignment = StringAlignment.Center, LineAlignment = StringAlignment.Center })
-                    {
-                        e.Graphics.DrawString(
-                            text,
-                            listBox.Font,
-                            brush,
-                            e.Bounds,
-                            sf
-                        );
-                    }
+                    return;
                 }
-                e.DrawFocusRectangle();
+
+                bool selected = (e.State & DrawItemState.Selected) == DrawItemState.Selected;
+
+                Color selectedBack = ColorTranslator.FromHtml("#d22230");
+                Color backColor = selected ? selectedBack : listBox.BackColor;
+                Color foreColor = selected ? Color.White : listBox.ForeColor;
+
+                using (Brush bgBrush = new SolidBrush(backColor))
+                using (Brush fgBrush = new SolidBrush(foreColor))
+                using (StringFormat sf = new StringFormat { Alignment = StringAlignment.Center, LineAlignment = StringAlignment.Center })
+                {
+                    e.Graphics.FillRectangle(bgBrush, e.Bounds);
+
+                    string text = listBox.Items[e.Index].ToString();
+                    e.Graphics.DrawString(
+                        text,
+                        listBox.Font,
+                        fgBrush,
+                        e.Bounds,
+                        sf
+                    );
+                }
+
+                // Draw focus rectangle if needed
+                if ((e.State & DrawItemState.Focus) == DrawItemState.Focus)
+                    e.DrawFocusRectangle();
             };
 
             List<string> filteredKeys;

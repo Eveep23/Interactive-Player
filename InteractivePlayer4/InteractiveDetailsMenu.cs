@@ -18,6 +18,7 @@ public static class InteractiveDetailsMenu
         string installButtonPath = Path.Combine(currentDirectory, "general", "Big_Install_Button.png");
         string uninstallButtonPath = Path.Combine(currentDirectory, "general", "Big_Uninstall_Button.png");
         string updateButtonPath = Path.Combine(currentDirectory, "general", "Big_Update_Button.png");
+        string settingsButtonPath = Path.Combine(currentDirectory, "general", "Big_Settings_Button.png");
 
         Form detailsForm = new Form
         {
@@ -202,6 +203,8 @@ public static class InteractiveDetailsMenu
             Cursor = Cursors.Hand
         };
 
+        PictureBox settingsButton = null;
+
         // Determine the action (install, update, or uninstall)
         bool isInstalled = Directory.Exists(interactiveFolder);
         string buttonImagePath = installButtonPath;
@@ -232,10 +235,63 @@ public static class InteractiveDetailsMenu
             {
                 buttonImagePath = uninstallButtonPath;
             }
+
+            settingsButton = new PictureBox
+            {
+                SizeMode = PictureBoxSizeMode.AutoSize,
+                BackColor = Color.Transparent,
+                Cursor = Cursors.Hand
+            };
+
+            settingsButton.Image = Image.FromFile(settingsButtonPath);
+            settingsButton.Click += (s, e) =>
+            {
+                try
+                {
+                    using (var win = new InteractiveSettingsForm(interactiveFolder))
+                    {
+                        win.ShowDialog(detailsForm);
+                    }
+                }
+                catch (Exception ex)
+                {
+                    MessageBox.Show(detailsForm, "Failed to open settings window: " + ex.Message);
+                }
+            };
         }
 
         actionButton.Image = Image.FromFile(buttonImagePath);
-        actionButton.Location = new Point((rightPanel.Width - actionButton.Width) / 2, rightPanel.Height - actionButton.Height - 10);
+
+        rightPanel.Controls.Add(actionButton);
+        if (settingsButton != null)
+        {
+            rightPanel.Controls.Add(settingsButton);
+        }
+
+        void PositionRightPanelButtons()
+        {
+            const int spacing = 20;
+            if (settingsButton != null)
+            {
+                int totalWidth = actionButton.Width + spacing + settingsButton.Width;
+                int startX = Math.Max(0, (rightPanel.Width - totalWidth) / 2);
+                int yAction = Math.Max(0, (rightPanel.Height - actionButton.Height) / 2);
+                int ySettings = Math.Max(0, (rightPanel.Height - settingsButton.Height) / 2);
+
+                actionButton.Location = new Point(startX, yAction);
+                settingsButton.Location = new Point(startX + actionButton.Width + spacing, ySettings);
+            }
+            else
+            {
+                actionButton.Location = new Point(
+                    (rightPanel.Width - actionButton.Width) / 2,
+                    (rightPanel.Height - actionButton.Height) / 2
+                );
+            }
+        }
+
+        rightPanel.Resize += (sender, e) => PositionRightPanelButtons();
+        detailsForm.Shown += (s, e) => PositionRightPanelButtons();
 
         actionButton.Click += (sender, e) =>
         {
@@ -382,20 +438,305 @@ public static class InteractiveDetailsMenu
                 thread.Start();
             }
         };
-
-        rightPanel.Controls.Add(actionButton);
-        rightPanel.Resize += (sender, e) =>
-        {
-            actionButton.Location = new Point(
-                (rightPanel.Width - actionButton.Width) / 2,
-                (rightPanel.Height - actionButton.Height) / 2
-            );
-        };
-
+        
         mainPanel.Controls.Add(leftPanel, 0, 0);
         mainPanel.Controls.Add(rightPanel, 1, 0);
         detailsForm.Controls.Add(mainPanel);
 
         detailsForm.ShowDialog();
+    }
+}
+
+public class InteractiveSettingsForm : SettingsForm
+{
+    public string MovieFolder { get; }
+
+    public InteractiveSettingsForm(string movieFolder)
+    {
+        MovieFolder = movieFolder;
+
+        string currentDirectory = Directory.GetCurrentDirectory();
+        string topBarPath = Path.Combine(currentDirectory, "general", "Top_bar.png");
+        string logoPath = Path.Combine(currentDirectory, "general", "Interactive_player_logo.png");
+
+        Text = "Interactive Settings";
+        Size = new Size(500, 420);
+        StartPosition = FormStartPosition.CenterParent;
+        Icon = Icon.ExtractAssociatedIcon(Application.ExecutablePath);
+        BackColor = ColorTranslator.FromHtml("#141414");
+        FormBorderStyle = FormBorderStyle.FixedDialog;
+        MaximizeBox = false;
+
+        Panel topBarPanel = new Panel
+        {
+            Dock = DockStyle.Top,
+            Height = 100,
+            BackgroundImage = File.Exists(topBarPath) ? Image.FromFile(topBarPath) : null,
+            BackgroundImageLayout = ImageLayout.Stretch,
+            BackColor = Color.Transparent
+        };
+
+        PictureBox logoPictureBox = new PictureBox
+        {
+            Image = File.Exists(logoPath) ? Image.FromFile(logoPath) : null,
+            SizeMode = PictureBoxSizeMode.AutoSize,
+            BackColor = Color.Transparent
+        };
+
+        topBarPanel.Controls.Add(logoPictureBox);
+        topBarPanel.Resize += (s, e) =>
+        {
+            logoPictureBox.Location = new Point((topBarPanel.Width - logoPictureBox.Width) / 2, (topBarPanel.Height - logoPictureBox.Height) / 2);
+        };
+        logoPictureBox.Location = new Point((topBarPanel.Width - logoPictureBox.Width) / 2, (topBarPanel.Height - logoPictureBox.Height) / 2);
+
+        Controls.Add(topBarPanel);
+
+        var contentPanel = new DoubleBufferedPanel
+        {
+            Dock = DockStyle.Fill,
+            BackColor = Color.Transparent
+        };
+
+        var titleLabel = new Label
+        {
+            Text = "Interactive Settings",
+            ForeColor = Color.White,
+            AutoSize = false,
+            Font = new Font("Arial", 18, FontStyle.Bold),
+            TextAlign = ContentAlignment.MiddleLeft,
+            Size = new Size(420, 28),
+            BackColor = Color.Transparent
+        };
+
+        var directoryLabel = new Label
+        {
+            Text = "Directory:",
+            ForeColor = Color.White,
+            Font = new Font("Arial", 14, FontStyle.Bold),
+            AutoSize = true
+        };
+
+        var directoryTextBox = new TextBox
+        {
+            Width = 320,
+            ReadOnly = true,
+            BackColor = Color.White,
+            Font = new Font("Arial", 12),
+        };
+
+        var directoryBrowse = new Button
+        {
+            Text = "Browse...",
+            Width = 100,
+            Height = 30,
+            FlatStyle = FlatStyle.Flat,
+            BackColor = ColorTranslator.FromHtml("#d22230"),
+            ForeColor = Color.White
+        };
+        directoryBrowse.FlatAppearance.BorderSize = 0;
+
+        directoryBrowse.Click += (s, e) =>
+        {
+            string selected = ShowOpenFileDialogSta("Select Video File", "Video Files|*.mkv;*.mp4|All Files|*.*");
+            if (!string.IsNullOrEmpty(selected))
+            {
+                directoryTextBox.Text = selected;
+            }
+        };
+
+        var overrideLabel = new Label
+        {
+            Text = "Override Subtitles:",
+            ForeColor = Color.White,
+            Font = new Font("Arial", 14, FontStyle.Bold),
+            AutoSize = true
+        };
+
+        var overrideComboBox = new ComboBox
+        {
+            Width = 320,
+            DropDownStyle = ComboBoxStyle.DropDownList,
+            Font = new Font("Arial", 12)
+        };
+
+        overrideComboBox.Items.Add("No");
+        overrideComboBox.Items.Add("Choose File...");
+        overrideComboBox.SelectedIndex = 0;
+
+        int previousSubtitleIndex = overrideComboBox.SelectedIndex;
+
+        overrideComboBox.SelectedIndexChanged += (s, e) =>
+        {
+            if (overrideComboBox.SelectedItem != null && overrideComboBox.SelectedItem.ToString() == "Choose File...")
+            {
+                string path = ShowOpenFileDialogSta("Select Subtitle File", "Subtitle Files|*.srt;*.vtt;*.ass;*.sub|All Files|*.*");
+                if (!string.IsNullOrEmpty(path))
+                {
+                    if (!overrideComboBox.Items.Contains(path))
+                    {
+                        int insertIndex = Math.Max(overrideComboBox.Items.Count - 1, 1);
+                        overrideComboBox.Items.Insert(insertIndex, path);
+                    }
+                    overrideComboBox.SelectedItem = path;
+                    previousSubtitleIndex = overrideComboBox.SelectedIndex;
+                }
+                else
+                {
+                    overrideComboBox.SelectedIndex = previousSubtitleIndex;
+                }
+            }
+            else
+            {
+                previousSubtitleIndex = overrideComboBox.SelectedIndex;
+            }
+        };
+
+        var fileCachingCheckBox = new CheckBox
+        {
+            Text = "File Caching",
+            ForeColor = Color.White,
+            Font = new Font("Arial", 14, FontStyle.Bold),
+            AutoSize = true,
+            Checked = true
+        };
+
+        var saveButton = new Button
+        {
+            Text = "Save",
+            Width = 140,
+            Height = 36,
+            Anchor = AnchorStyles.Bottom,
+            BackColor = ColorTranslator.FromHtml("#d22230"),
+            ForeColor = Color.White,
+            FlatStyle = FlatStyle.Flat
+        };
+        saveButton.FlatAppearance.BorderSize = 0;
+
+        try
+        {
+            string directJsonPath = Path.Combine(MovieFolder, "direct.json");
+            if (File.Exists(directJsonPath))
+            {
+                var direct = JObject.Parse(File.ReadAllText(directJsonPath));
+                var dirVal = direct["Directory"]?.ToString() ?? string.Empty;
+                directoryTextBox.Text = dirVal;
+
+                var subtitleVal = direct["Subtitle"]?.ToString();
+                if (!string.IsNullOrWhiteSpace(subtitleVal))
+                {
+                    if (!overrideComboBox.Items.Contains(subtitleVal))
+                        overrideComboBox.Items.Insert(Math.Max(overrideComboBox.Items.Count - 1, 1), subtitleVal);
+                    overrideComboBox.SelectedItem = subtitleVal;
+                    previousSubtitleIndex = overrideComboBox.SelectedIndex;
+                }
+                else
+                {
+                    overrideComboBox.SelectedIndex = 0; // "No"
+                    previousSubtitleIndex = 0;
+                }
+
+                bool? cached = direct["File Caching"]?.ToObject<bool?>() ?? direct["FileCaching"]?.ToObject<bool?>();
+                if (cached.HasValue)
+                    fileCachingCheckBox.Checked = cached.Value;
+            }
+        }
+        catch
+        { }
+
+        saveButton.Click += (s, e) =>
+        {
+            try
+            {
+                var direct = new JObject
+                {
+                    ["Directory"] = directoryTextBox.Text ?? string.Empty,
+                    ["Subtitle"] = (overrideComboBox.SelectedItem != null && overrideComboBox.SelectedItem.ToString() != "No" && overrideComboBox.SelectedItem.ToString() != "Choose File...")
+                                    ? overrideComboBox.SelectedItem.ToString()
+                                    : string.Empty,
+                    ["File Caching"] = fileCachingCheckBox.Checked
+                };
+
+                string directJsonPath = Path.Combine(MovieFolder, "direct.json");
+
+                File.WriteAllText(directJsonPath, direct.ToString(Newtonsoft.Json.Formatting.Indented));
+
+                this.DialogResult = DialogResult.OK;
+                this.Close();
+            }
+            catch (Exception ex)
+            {
+                MessageBox.Show(this, "Failed to save settings: " + ex.Message, "Error", MessageBoxButtons.OK, MessageBoxIcon.Error);
+            }
+        };
+
+        contentPanel.Controls.Add(titleLabel);
+        contentPanel.Controls.Add(directoryLabel);
+        contentPanel.Controls.Add(directoryTextBox);
+        contentPanel.Controls.Add(directoryBrowse);
+        contentPanel.Controls.Add(overrideLabel);
+        contentPanel.Controls.Add(overrideComboBox);
+        contentPanel.Controls.Add(fileCachingCheckBox);
+        contentPanel.Controls.Add(saveButton);
+
+        Controls.Add(contentPanel);
+
+        this.Shown += (s, e) =>
+        {
+            int centerX = (this.ClientSize.Width - 360) / 2;
+
+            titleLabel.Location = new Point(centerX, 36);
+            titleLabel.Size = new Size(360, 30);
+
+            directoryLabel.Location = new Point(centerX, titleLabel.Bottom + 30);
+            directoryTextBox.Location = new Point(centerX, directoryLabel.Bottom + 8);
+            directoryTextBox.Width = 360 - 120;
+            directoryBrowse.Location = new Point(directoryTextBox.Right + 8, directoryTextBox.Top - 2);
+
+            overrideLabel.Location = new Point(centerX, directoryTextBox.Bottom + 18);
+            overrideComboBox.Location = new Point(centerX + 60, overrideLabel.Bottom + 8);
+            int maxComboWidth = Math.Max(160, (360 - 60 - 20));
+            overrideComboBox.Width = Math.Min(directoryTextBox.Width, maxComboWidth);
+
+            fileCachingCheckBox.Location = new Point(centerX, overrideComboBox.Bottom + 18);
+
+            saveButton.Location = new Point((this.ClientSize.Width - saveButton.Width) / 2, this.ClientSize.Height - saveButton.Height - 18);
+        };
+
+        this.Resize += (s, e) =>
+        {
+            var saveBtn = saveButton;
+            saveBtn.Location = new Point((this.ClientSize.Width - saveBtn.Width) / 2, this.ClientSize.Height - saveBtn.Height - 18);
+        };
+    }
+
+    private static string ShowOpenFileDialogSta(string title, string filter)
+    {
+        string result = null;
+        var thread = new Thread(() =>
+        {
+            try
+            {
+                using (var ofd = new OpenFileDialog())
+                {
+                    ofd.Title = title;
+                    ofd.Filter = filter;
+                    ofd.RestoreDirectory = true;
+                    if (ofd.ShowDialog() == DialogResult.OK)
+                    {
+                        result = ofd.FileName;
+                    }
+                }
+            }
+            catch
+            {
+                result = null;
+            }
+        });
+        thread.SetApartmentState(ApartmentState.STA);
+        thread.IsBackground = true;
+        thread.Start();
+        thread.Join();
+        return result;
     }
 }
