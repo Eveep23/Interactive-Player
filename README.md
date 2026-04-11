@@ -16,12 +16,13 @@ This is an emulator for Netflix's interactive movies and shows!
 
 # How to Use:
 
-To install an Interactive, all you need is the internal video. In the install menu (the + in the top left) find the interactive and select that video file!
+To install an Interactive, all you need is the internal video. In the install menu (the + in the top left) find the interactive name and select the corresponding video file!
+
 I don't supply the internal videos, but I know that people in this Discord server can probably help -> https://discord.gg/bYpcxUxkjm
 
-You can switch the audio and subtitle track in settings, as well as the output and many other settings.
+You can switch the audio and subtitle tracks in settings.
 
-When in an interactive, move your mouse cursor to the top of the window to pull up the media controls.
+When in an interactive, move your mouse cursor to the top of the window to display the media controls.
 
 # Currently Supported Interactives:
 
