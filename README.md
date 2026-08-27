@@ -1,30 +1,28 @@
 # Interactive Player
-This is an emulator for Netflix's interactive movies and shows!
+Is an emulator for Netflix's interactive movies and shows!
 
 # Screenshots:
-* Escape from the Undertaker:
-
-![image](https://github.com/user-attachments/assets/567d244a-dcff-4df0-bca8-29aa313f475f)
-
 * Minecraft Story Mode:
   
-![Screenshot 2025-01-17 185957](https://github.com/user-attachments/assets/60e9780d-0a94-4276-8aab-f63879548d94)
+<img width="2463" height="1389" alt="Screenshot 2026-08-12 205109" src="https://github.com/user-attachments/assets/4cc09a23-0b3e-4dac-a723-941f82f53265" />
 
-* Carmen Sandiego:
-  
-![Carmen](https://github.com/user-attachments/assets/4ff834f2-a88d-4b5c-a631-d6b7eb47be91)
+<img width="3840" height="2160" alt="Screenshot 2026-08-10 230339" src="https://github.com/user-attachments/assets/befb3c0e-a452-41b9-82e6-8c6a8180bfdd" />
 
-# How to Use:
+* Battle Kitty:
 
-To install an Interactive, all you need is the internal video. In the install menu (the + in the top left) find the interactive name and select the corresponding video file!
+<img width="2466" height="1389" alt="Screenshot 2026-08-12 204528" src="https://github.com/user-attachments/assets/59adca67-08d6-4657-93b4-67de1ca68963" />
 
-I don't supply the internal videos, but I know that people in this Discord server can probably help -> https://discord.gg/bYpcxUxkjm
+<img width="2601" height="1380" alt="Screenshot 2026-08-12 204050" src="https://github.com/user-attachments/assets/f90345e3-0ff5-4e78-9fec-29df169443ab" />
 
-You can switch the audio and subtitle tracks in settings.
+* Choose Love:
 
-When in an interactive, move your mouse cursor to the top of the window to display the media controls.
+<img width="2458" height="1379" alt="Screenshot 2026-08-12 205225" src="https://github.com/user-attachments/assets/1215371e-65bf-4e68-88b0-3711150079b0" />
 
-# Currently Supported Interactives:
+* Black Mirror Bandersnatch:
+
+<img width="3840" height="2160" alt="Screenshot 2026-08-09 135759" src="https://github.com/user-attachments/assets/9008149e-dd28-4fc9-94e1-e916cbf04bd6" />
+
+# Currently Supported Interactives (All of Them!):
 
 * Minecraft Story Mode (Ep.1-5)
 * Black Mirror: Bandersnatch
@@ -43,6 +41,7 @@ When in an interactive, move your mouse cursor to the top of the window to displ
 * Captain Underpants: Epic Choice-O-Rama 
 * The Boss Baby: Get That Baby
 * Trivia Quest (Ep.1-30)
+* Triviaverse
 * Jurassic World Camp Cretaceous: Hidden Adventure 
 * Animals on the Loose: A You vs Wild Movie 
 * You vs Wild: Out Cold
@@ -51,14 +50,5 @@ When in an interactive, move your mouse cursor to the top of the window to displ
 * We Lost Our Human
 * Choose Love 
 * Battle Kitty (Ep.1-9)
-
-# Dependencies:
-If you're looking to modify the emulator, it runs on these dependencies,
-
-* LibVLCSharp
-
-* SharpDX.XInput
-
-* SharpDX.DirectInput
 
 * Newtonsoft.Json
