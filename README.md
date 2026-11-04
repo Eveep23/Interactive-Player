@@ -50,5 +50,3 @@ Is an emulator for Netflix's interactive movies and shows!
 * We Lost Our Human
 * Choose Love 
 * Battle Kitty (Ep.1-9)
-
-* Newtonsoft.Json
